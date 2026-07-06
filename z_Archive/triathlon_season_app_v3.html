@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tri Momentum — Season Decision Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:ital,wght@0,400;0,500;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F2;--surface:#FFFFFF;--s2:#EEECE6;--s3:#E5E3DC;
+  --ink:#18180F;--ink2:#555550;--ink3:#9A9990;
+  --bd:rgba(24,24,15,0.10);--bd2:rgba(24,24,15,0.20);--bd3:rgba(24,24,15,0.38);
+  --acc:#2A5C3F;--accl:#EAF2EC;--accm:#4A8A63;
+  --tue:#1A4A8C;--thu:#3B6D11;--sun:#7B3F00;
+  --warn:#8C5A00;--warnl:#FFF4DC;
+  --rmd:8px;--rlg:14px;
+  --fd:'DM Serif Display',Georgia,serif;
+  --fb:'DM Sans',system-ui,sans-serif;
+  --fm:'DM Mono',monospace;
+  --sh:0 1px 4px rgba(0,0,0,0.06);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);font-family:var(--fb);color:var(--ink);min-height:100vh}
+
+/* ── APP SHELL ── */
+.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--surface);border-right:0.5px solid var(--bd2);
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.sb-logo{padding:1.25rem 1.25rem 1rem;border-bottom:0.5px solid var(--bd)}
+.sb-mark{font-family:var(--fm);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--accm);margin-bottom:3px}
+.sb-name{font-family:var(--fd);font-size:21px;line-height:1.1;color:var(--ink)}
+
+/* cycle toggle */
+.sb-cycle{padding:.9rem 1.25rem;border-bottom:0.5px solid var(--bd)}
+.sb-section-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.cycle-toggle{display:grid;grid-template-columns:1fr 1fr;background:var(--s2);border-radius:var(--rmd);padding:3px;gap:3px}
+.cyc-btn{font-family:var(--fm);font-size:11px;padding:6px 4px;border:none;border-radius:6px;background:transparent;color:var(--ink3);cursor:pointer;transition:all .15s;text-align:center}
+.cyc-btn.active{background:var(--surface);color:var(--ink);box-shadow:var(--sh)}
+
+/* patterns */
+.sb-patterns{padding:.9rem 1.25rem;border-bottom:0.5px solid var(--bd)}
+.pat-card{background:var(--s2);border-radius:var(--rmd);padding:10px 12px;margin-bottom:7px}
+.pat-stat{font-family:var(--fm);font-size:22px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:3px}
+.pat-stat.warn{color:var(--warn)}.pat-stat.good{color:var(--acc)}
+.pat-desc{font-size:11px;color:var(--ink2);line-height:1.45}
+.pat-empty{font-size:12px;color:var(--ink3);font-style:italic;line-height:1.55}
+
+/* calendar shortcut */
+.sb-cal-btn{display:flex;align-items:center;gap:8px;width:100%;padding:.9rem 1.25rem;border:none;border-bottom:0.5px solid var(--bd);background:transparent;color:var(--ink2);font-family:var(--fb);font-size:13px;cursor:pointer;text-align:left;transition:background .12s}
+.sb-cal-btn:hover{background:var(--s2)}
+.sb-cal-icon{width:22px;height:22px;background:var(--s2);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+
+/* week nav */
+.sb-nav{padding:.75rem 0 1rem;flex:1}
+.sb-nav-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding:0 1.25rem;margin-bottom:6px}
+.phase-group{margin-bottom:2px}
+.phase-header{font-family:var(--fm);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:6px 1.25rem 4px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.phase-header:hover{color:var(--ink2)}
+.phase-weeks{display:flex;flex-direction:column}
+.wk-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:5px 1.25rem 5px 1.5rem;border:none;background:transparent;color:var(--ink3);font-family:var(--fb);font-size:12.5px;cursor:pointer;transition:all .12s;text-align:left}
+.wk-btn:hover{background:var(--s2);color:var(--ink)}
+.wk-btn.active{color:var(--ink);font-weight:500}
+.wk-btn.active::before{content:'';position:absolute;left:0;width:3px;height:20px;background:var(--ink);border-radius:0 2px 2px 0}
+.wk-btn{position:relative}
+.wk-dot{width:6px;height:6px;border-radius:50%;background:var(--accm);opacity:0;flex-shrink:0}
+.wk-dot.on{opacity:1}
+.phase-weeks.collapsed{display:none}
+
+/* ── MAIN ── */
+.main{padding:2rem 2.25rem 4rem;max-width:700px}
+
+/* ── SETUP SCREEN ── */
+#setup-screen{display:none}
+#setup-screen.visible{display:block}
+#week-screen{display:none}
+#week-screen.visible{display:block}
+
+.setup-title{font-family:var(--fd);font-size:clamp(24px,4vw,32px);line-height:1.15;margin-bottom:.75rem}
+.setup-sub{font-size:14px;color:var(--ink2);line-height:1.65;max-width:520px;margin-bottom:2rem}
+
+.setup-section{margin-bottom:1.75rem}
+.setup-section-title{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
+.setup-section-title::after{content:'';flex:1;height:.5px;background:var(--bd)}
+
+/* day grid */
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px}
+.day-col{display:flex;flex-direction:column;align-items:center;gap:5px}
+.day-name{font-family:var(--fm);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding:3px 0}
+.session-slot{
+  width:100%;min-height:52px;border-radius:var(--rmd);border:0.5px dashed var(--bd2);
+  background:var(--s2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;position:relative;font-size:11px;color:var(--ink3);
+  text-align:center;padding:4px;line-height:1.3
+}
+.session-slot:hover{border-color:var(--bd3);background:var(--s3)}
+.session-slot.filled{border-style:solid;border-color:var(--bd2);background:var(--surface);color:var(--ink2)}
+.session-slot.filled.swim{border-color:rgba(26,74,140,0.3);background:#EAF0FA;color:var(--tue)}
+.session-slot.filled.bike{border-color:rgba(59,109,17,0.3);background:#EBF3E0;color:var(--thu)}
+.session-slot.filled.run{border-color:rgba(123,63,0,0.3);background:#FAF0E4;color:var(--sun)}
+.session-slot.filled.brick{border-color:rgba(42,92,63,0.3);background:var(--accl);color:var(--acc)}
+.session-slot.filled.strength{border-color:rgba(88,58,0,0.3);background:#F5EEE0;color:#583A00}
+.session-slot.filled.rest{border-color:var(--bd);background:var(--s2);color:var(--ink3)}
+.slot-remove{position:absolute;top:3px;right:5px;font-size:10px;color:var(--ink3);cursor:pointer;line-height:1}
+.slot-remove:hover{color:var(--ink)}
+
+/* session type picker */
+.type-picker{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.type-chip{padding:5px 12px;border-radius:20px;border:0.5px solid var(--bd2);background:var(--surface);font-size:12px;color:var(--ink2);cursor:pointer;transition:all .12s}
+.type-chip:hover{border-color:var(--bd3)}
+.type-chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* race date */
+.race-date-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.date-input{
+  padding:8px 12px;border-radius:var(--rmd);border:0.5px solid var(--bd2);
+  background:var(--surface);font-family:var(--fb);font-size:13px;color:var(--ink);
+  outline:none;transition:border-color .15s
+}
+.date-input:focus{border-color:var(--bd3)}
+.race-label{font-size:13px;color:var(--ink2)}
+
+/* setup complete btn */
+.setup-cta{
+  padding:12px 28px;background:var(--ink);color:var(--bg);border:none;
+  border-radius:var(--rmd);font-family:var(--fm);font-size:12px;letter-spacing:.06em;
+  cursor:pointer;transition:opacity .15s;margin-top:.5rem
+}
+.setup-cta:hover{opacity:.8}
+
+/* weekly calendar summary strip */
+.cal-strip{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;
+  background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--rlg);
+  padding:12px 14px;
+}
+.cal-strip-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);width:100%;margin-bottom:6px}
+.cal-day-cell{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:36px}
+.cal-day-name{font-family:var(--fm);font-size:9px;color:var(--ink3)}
+.cal-day-session{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--fm);font-weight:500}
+.cal-day-session.swim{background:#EAF0FA;color:var(--tue)}
+.cal-day-session.bike{background:#EBF3E0;color:var(--thu)}
+.cal-day-session.run{background:#FAF0E4;color:var(--sun)}
+.cal-day-session.brick{background:var(--accl);color:var(--acc)}
+.cal-day-session.strength{background:#F5EEE0;color:#583A00}
+.cal-day-session.rest{background:var(--s2);color:var(--ink3)}
+.cal-day-session.empty{background:transparent;color:var(--ink3)}
+.cal-edit-btn{font-family:var(--fm);font-size:10px;color:var(--ink3);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;align-self:center;margin-left:4px}
+.cal-edit-btn:hover{color:var(--ink)}
+
+/* ── SEASON HEADER ── */
+.season-eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.season-eyebrow::after{content:'';flex:1;height:.5px;background:var(--bd2)}
+.season-title{font-family:var(--fd);font-size:clamp(22px,4vw,32px);line-height:1.15;margin-bottom:10px}
+.season-sub{font-size:14px;color:var(--ink2);line-height:1.65;margin-bottom:1.75rem}
+
+/* cycle 2 banner */
+.c2-banner{background:var(--accl);border:0.5px solid rgba(42,92,63,.25);border-radius:var(--rlg);padding:14px 16px;margin-bottom:1.5rem;display:none}
+.c2-banner.on{display:block}
+.c2-banner-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:5px}
+.c2-banner-text{font-size:13px;color:var(--acc);line-height:1.55}
+
+/* week header */
+.week-header{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:.5px solid var(--bd)}
+.wk-num-lbl{font-family:var(--fm);font-size:11px;color:var(--ink3)}
+.pillar-badge{font-size:11px;font-weight:500;padding:3px 11px;border-radius:30px}
+.p1{background:#EEEDFE;color:#3C3489}.p2{background:#E1F5EE;color:#085041}
+.p3{background:#E6F1FB;color:#0C447C}.p4{background:#FAEEDA;color:#633806}
+.p5{background:#FAECE7;color:#712B13}.p6{background:#FBEAF0;color:#72243E}
+
+/* ── CARDS ── */
+.cards-grid{display:flex;flex-direction:column;gap:10px}
+.day-card{background:var(--surface);border:.5px solid var(--bd);border-radius:var(--rlg);overflow:hidden;transition:border-color .15s;box-shadow:var(--sh)}
+.day-card:hover{border-color:var(--bd2)}
+.day-card.expanded{border-color:var(--bd3)}
+.card-hdr{display:flex;align-items:flex-start;gap:12px;padding:1rem 1.25rem;cursor:pointer}
+.day-tag{font-family:var(--fm);font-size:10px;letter-spacing:.08em;text-transform:uppercase;min-width:72px;padding-top:3px;flex-shrink:0}
+.day-tag.tue{color:var(--tue)}.day-tag.thu{color:var(--thu)}.day-tag.sun{color:var(--sun)}
+.card-ttl{font-size:15px;font-weight:500;line-height:1.35;flex:1}
+.expand-ico{font-size:10px;color:var(--ink3);transition:transform .2s;padding-top:4px;flex-shrink:0}
+.expand-ico.open{transform:rotate(180deg)}
+.saved-dot{width:7px;height:7px;border-radius:50%;background:var(--accm);opacity:0;margin-top:5px;flex-shrink:0}
+.saved-dot.on{opacity:1}
+.card-body{display:none;padding:0 1.25rem 1.25rem;border-top:.5px solid var(--bd)}
+.card-body.on{display:block}
+.sec-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:14px 0 6px}
+.body-text{font-size:14px;color:var(--ink2);line-height:1.65}
+.prompt-block{background:var(--s2);border-radius:var(--rmd);padding:14px 16px;margin:12px 0}
+.prompt-text{font-size:14px;color:var(--ink);line-height:1.65;font-style:italic}
+.c2-insight{background:var(--accl);border-left:3px solid var(--accm);border-radius:0 var(--rmd) var(--rmd) 0;padding:12px 14px;margin:10px 0}
+.c2-insight-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:5px}
+.c2-insight-text{font-size:13px;color:var(--acc);line-height:1.55}
+.contrast-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cc{padding:10px 12px;border-radius:var(--rmd)}
+.cc.good{background:#EAF3DE}.cc.mid{background:var(--s2)}
+.cc-label{font-family:var(--fm);font-size:9px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.cc-label.good{color:#3B6D11}.cc-label.mid{color:var(--ink3)}
+.cc-text{font-size:12px;color:var(--ink2);line-height:1.5}
+
+/* ── REFLECTION MODULE ── */
+.refl-module{margin-top:16px;padding-top:16px;border-top:.5px solid var(--bd)}
+.refl-title{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sun);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.refl-title::after{content:'';flex:1;height:.5px;background:rgba(123,63,0,.2)}
+
+/* structured grid */
+.refl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.metric-box{background:var(--s2);border-radius:var(--rmd);padding:12px}
+.metric-lbl{font-family:var(--fm);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.rating-row{display:flex;gap:4px;flex-wrap:wrap}
+.r-btn{width:27px;height:27px;border-radius:6px;border:.5px solid var(--bd2);background:var(--surface);font-family:var(--fm);font-size:11px;color:var(--ink2);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center}
+.r-btn:hover{border-color:var(--bd3);color:var(--ink)}
+.r-btn.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* grey zone explainer */
+.gz-explainer{background:var(--warnl);border:.5px solid rgba(140,90,0,.2);border-radius:var(--rmd);padding:12px 14px;margin-bottom:10px}
+.gz-explainer-title{font-family:var(--fm);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--warn);margin-bottom:8px}
+.gz-zones{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+.gz-zone{background:var(--surface);border-radius:6px;padding:8px 10px}
+.gz-zone-name{font-family:var(--fm);font-size:9px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.gz-zone-name.ez{color:var(--thu)}.gz-zone-name.gz{color:var(--warn)}.gz-zone-name.hz{color:#A32D2D}
+.gz-zone-desc{font-size:11px;color:var(--ink2);line-height:1.45}
+.gz-zone-eg{font-size:10px;color:var(--ink3);margin-top:3px;font-style:italic}
+.gz-question{font-size:12px;color:var(--warn);line-height:1.5}
+
+/* session review — uses athlete's actual calendar */
+.session-review{background:var(--s2);border-radius:var(--rmd);padding:12px 14px;margin-bottom:10px}
+.session-review-title{font-family:var(--fm);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.session-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:.5px solid var(--bd)}
+.session-row:last-child{border-bottom:none}
+.session-row-name{font-size:13px;color:var(--ink2)}
+.session-status-btns{display:flex;gap:5px}
+.ss-btn{padding:4px 10px;border-radius:20px;border:.5px solid var(--bd2);background:var(--surface);font-size:11px;color:var(--ink3);cursor:pointer;transition:all .12s;font-family:var(--fm)}
+.ss-btn:hover{border-color:var(--bd3)}
+.ss-btn.done{background:#EAF3DE;color:#3B6D11;border-color:rgba(59,109,17,.3)}
+.ss-btn.skipped{background:#FAECE7;color:#712B13;border-color:rgba(210,90,48,.3)}
+.ss-btn.modified{background:var(--warnl);color:var(--warn);border-color:rgba(140,90,0,.3)}
+
+/* vulnerable session */
+.session-tags{display:flex;gap:5px;flex-wrap:wrap}
+.stag{padding:5px 10px;border-radius:20px;border:.5px solid var(--bd2);background:var(--surface);font-size:11px;color:var(--ink2);cursor:pointer;transition:all .12s}
+.stag:hover{border-color:var(--bd3)}
+.stag.sel{background:var(--warnl);color:var(--warn);border-color:rgba(140,90,0,.3)}
+
+/* grey zone selector */
+.gz-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.gz-btn{padding:5px 12px;border-radius:20px;border:.5px solid var(--bd2);background:var(--surface);font-family:var(--fm);font-size:11px;color:var(--ink2);cursor:pointer;transition:all .12s}
+.gz-btn:hover{border-color:var(--bd3)}
+.gz-btn.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* textarea */
+.refl-ta{width:100%;min-height:80px;background:var(--s2);border:.5px solid var(--bd);border-radius:var(--rmd);padding:12px;font-family:var(--fb);font-size:13px;color:var(--ink);line-height:1.6;resize:vertical;outline:none;transition:border-color .15s}
+.refl-ta::placeholder{color:var(--ink3);font-style:italic}
+.refl-ta:focus{border-color:var(--bd3)}
+.save-btn{margin-top:12px;padding:9px 20px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--rmd);font-family:var(--fm);font-size:11px;letter-spacing:.06em;cursor:pointer;transition:opacity .15s}
+.save-btn:hover{opacity:.8}
+.save-confirm{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-family:var(--fm);font-size:11px;color:var(--acc);opacity:0;transition:opacity .3s}
+.save-confirm.on{opacity:1}
+
+/* mobile */
+@media(max-width:680px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:static;height:auto;border-right:none;border-bottom:.5px solid var(--bd2)}
+  .main{padding:1.25rem 1rem 3rem}
+  .refl-grid,.contrast-row,.gz-zones{grid-template-columns:1fr}
+  .day-grid{grid-template-columns:repeat(7,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<aside class="sidebar">
+
+  <div class="sb-logo">
+    <div class="sb-mark">Decision Tool</div>
+    <div class="sb-name">Tri<br>Momentum</div>
+  </div>
+
+  <div class="sb-cycle">
+    <div class="sb-section-label">Race cycle</div>
+    <div class="cycle-toggle">
+      <button class="cyc-btn active" onclick="setCycle(1,this)">Cycle 1</button>
+      <button class="cyc-btn" onclick="setCycle(2,this)">Cycle 2</button>
+    </div>
+  </div>
+
+  <button class="sb-cal-btn" onclick="showSetup()">
+    <span class="sb-cal-icon">📅</span>
+    <span>Edit session calendar</span>
+  </button>
+
+  <div class="sb-patterns">
+    <div class="sb-section-label">Your patterns</div>
+    <div id="patterns-container">
+      <div class="pat-empty">Complete your first Sunday reflection to begin building your pattern profile.</div>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-nav-label">9-month season</div>
+    <div id="week-nav-list"></div>
+  </div>
+
+</aside>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main class="main">
+
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen">
+    <h1 class="setup-title">Set up your session calendar</h1>
+    <p class="setup-sub">Tell Tri Momentum which sessions are in your typical training week. Sunday reflections will be personalised to <em>your</em> actual schedule — not a generic template.</p>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Race target date</div>
+      <div class="race-date-row">
+        <span class="race-label">Race day:</span>
+        <input type="date" class="date-input" id="race-date" />
+        <span class="race-label" id="weeks-to-race"></span>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Select a session type to place</div>
+      <div class="type-picker">
+        <button class="type-chip active" data-type="swim" onclick="selectType('swim',this)">🏊 Swim</button>
+        <button class="type-chip" data-type="bike" onclick="selectType('bike',this)">🚴 Bike</button>
+        <button class="type-chip" data-type="run" onclick="selectType('run',this)">🏃 Run</button>
+        <button class="type-chip" data-type="brick" onclick="selectType('brick',this)">⚡ Brick</button>
+        <button class="type-chip" data-type="strength" onclick="selectType('strength',this)">💪 Strength</button>
+        <button class="type-chip" data-type="rest" onclick="selectType('rest',this)">😴 Rest / easy</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink3);margin-bottom:14px">Click a day slot below to assign the selected session type. Click an assigned slot to remove it.</p>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Typical training week</div>
+      <div class="day-grid" id="day-grid">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <div class="setup-section" id="second-swim-section" style="display:none">
+      <div class="setup-section-title">Morning / evening doubles</div>
+      <p style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:10px">You have more than one session on a single day. Use the second row below to add a second daily session where relevant.</p>
+      <div class="day-grid" id="day-grid-2"></div>
+    </div>
+
+    <button class="setup-cta" onclick="completeSetup()">Save calendar and start →</button>
+  </div>
+
+  <!-- WEEK SCREEN -->
+  <div id="week-screen">
+    <!-- Calendar strip -->
+    <div id="cal-strip-container"></div>
+
+    <div class="season-header" style="margin-bottom:1.5rem">
+      <div class="season-eyebrow" id="eyebrow">Cycle 1 · Season curriculum</div>
+      <h1 class="season-title" id="season-title">The season that sets you up<br>for the rest of your career.</h1>
+      <p class="season-sub">Tuesday challenges an assumption. Thursday sharpens your weekend. Sunday records your reflection — and builds your pattern profile.</p>
+    </div>
+
+    <div class="c2-banner" id="c2-banner">
+      <div class="c2-banner-label">Cycle 2 · Layered intelligence</div>
+      <div class="c2-banner-text" id="c2-banner-text"></div>
+    </div>
+
+    <div id="week-content"></div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SESSION_ABBR = {swim:'SW',bike:'BI',run:'RU',brick:'BK',strength:'ST',rest:'—'};
+const SESSION_LABELS = {swim:'Swim',bike:'Bike',run:'Run',brick:'Brick',strength:'Strength',rest:'Rest/easy'};
+
+// 39 weeks of content — pillar cycles every 7 weeks
+// Pillars: 1=Foundations, 2=Technique, 3=Durability, 4=Intensity, 5=RaceCraft, 6=Integration, 7=Reflection
+const PILLAR_CYCLE = [
+  {p:1,label:'Foundations & Consistency',pc:'p1'},
+  {p:2,label:'Technique & Efficiency',pc:'p2'},
+  {p:3,label:'Aerobic Durability',pc:'p3'},
+  {p:4,label:'Controlled Intensity',pc:'p4'},
+  {p:5,label:'Race Craft & Execution',pc:'p5'},
+  {p:6,label:'Integration & Resilience',pc:'p6'},
+];
+
+// Phase map for 39 weeks
+const PHASES = [
+  {label:'Base building',weeks:[1,2,3,4,5,6,7],collapsed:false},
+  {label:'Build 1',weeks:[8,9,10,11,12,13,14],collapsed:false},
+  {label:'Build 2',weeks:[15,16,17,18,19,20,21],collapsed:true},
+  {label:'Race preparation',weeks:[22,23,24,25,26],collapsed:true},
+  {label:'Recovery / reset',weeks:[27],collapsed:false},
+  {label:'Cycle 2 · Base',weeks:[28,29,30,31,32,33,34],collapsed:true},
+  {label:'Cycle 2 · Build',weeks:[35,36,37,38,39],collapsed:true},
+];
+
+// Card content keyed by pillar (1-6) — reused across weeks
+const CARD_CONTENT = {
+  1: {
+    tue:{title:"Your floor is not where you think it is",mechanism:"Most intermediate athletes confuse 'average week' with 'minimum viable week'. The floor is the lowest effort level that still produces adaptation — and most athletes have never consciously identified it. Without a defined floor, the first stressful work week deletes training entirely.",prompt:"What is the actual minimum — not ideal — training you would need to do every single week to arrive at the start line better than you are today? Name it in sessions. Write it down. Is it currently protected, or is it the first thing you sacrifice?",c2prompt:"Last cycle you identified a floor. Did it hold? How many weeks did you actually hit your stated minimum? The answer is your real floor — not the one you wrote down.",good:"Defines a non-negotiable floor. Misses a long ride but never misses the floor.",med:"Has an ideal week in mind. When life hits, the whole plan collapses."},
+    thu:{title:"Your aerobic zone is probably not Zone 2",mechanism:"Heart rate zones from max HR formulas can be off by 15–20 BPM for trained athletes. If your Zone 2 ceiling is too high, you accumulate fatigue debt without producing the aerobic base adaptation you think you're getting.",prompt:"In tomorrow's easy session, can you hold a full conversation without pausing for breath — genuinely comfortable? If the answer is 'mostly', your Zone 2 ceiling is set too high. Drop 10 BPM and observe how that changes Monday's readiness.",c2prompt:"Check your Cycle 1 Sunday readiness scores. If you consistently rated below 7, your aerobic zone was likely set too high all season. What are you changing this cycle?",good:"Accepts the humbling pace. Builds real aerobic base. Faster by month three.",med:"Defends the higher HR. Continues 'comfortable hard' as 'easy'. Wonders why they plateau."},
+    sun:{title:"The consistency audit",mechanism:"One week reveals your behavioural patterns more than your physiology. Specifically: which session was first to be shortened or skipped when pressure arrived?",prompt:"Look back at this week. Which session was the first to be shortened or dropped when pressure hit? That session is your early-warning indicator for every hard week ahead.",c2prompt:"Which session did you sacrifice most consistently last cycle? Is that still your weakest link, or has the pattern changed?",good:"Identifies the vulnerable session and protects it by scheduling it earlier.",med:"Frames the missed session as a one-off. The pattern repeats in week three."}
+  },
+  2: {
+    tue:{title:"Fitness is not fixing your swim",mechanism:"For most adult-learned swimmers, drag — not power — is the primary limiter. Adding swim volume to a high-drag stroke produces a fitter athlete who is still slow. The energy cost of your stroke must come down before additional volume pays a return.",prompt:"Take your last 400m swim time. If you held your current fitness but reduced frontal drag by 15% — keeping your head still, hips higher — how much time would you gain versus adding another 2km per week? Which investment would you choose if mutually exclusive?",c2prompt:"Last cycle, did you address swim technique or swim volume? If you added sessions without drilling mechanics, the drag problem is still there. What specific movement did you change — and can you measure it?",good:"Spends two weeks on catch drills and head position. Swims faster at the same heart rate.",med:"Adds another early morning session. Gets fitter. Doesn't get faster."},
+    thu:{title:"Cadence before power on the bike",mechanism:"Pushing big gears at low cadence (under 80 RPM) recruits fast-twitch muscle fibre — the exact resource you need to save for the run. High cadence (88–95 RPM) shifts load to the cardiovascular system, which recovers over race duration.",prompt:"In your ride this weekend, spend the first 30 minutes at a cadence 5 RPM higher than your default. Don't change your heart rate target. Notice how that changes the muscular feel in your legs at the 90-minute mark.",c2prompt:"Last cycle, what was your default race cadence? If it was below 85 RPM and your run off the bike was slow, those two facts are connected. What changes this cycle?",good:"Accepts the initial power drop. Adapts cadence. Arrives at T2 with functional legs.",med:"Finds high cadence 'spinny'. Returns to 75 RPM. Shuffles the first 3km of every run."},
+    sun:{title:"The efficiency question",mechanism:"Efficiency gains are invisible in training logs. But they compound — a 5% reduction in energy cost per stroke over a season produces a meaningfully different athlete by race day.",prompt:"Name one technical change you made this week. Did you feel a difference, or did you just think about making it? There is a gap between knowing a correction and having the neuromuscular pattern to execute it under fatigue.",c2prompt:"Which technical change from last cycle actually stuck — meaning you execute it automatically under fatigue? That one is yours. What's the single one to focus on this cycle?",good:"Identifies one specific movement change and tests it under increasing fatigue.",med:"Makes a mental note. Returns to default the moment intensity increases."}
+  },
+  3: {
+    tue:{title:"Volume without specificity is just mileage",mechanism:"Aerobic durability is the capacity to sustain race-pace effort in the final 20% of race duration — when glycogen is declining, neuromuscular fatigue is compounding, and decision-making is degraded. Easy long sessions alone do not produce this.",prompt:"In your last long ride, what happened in the final 30 minutes? Did you maintain form and power, or back off? Was that a conscious pacing decision, or were you genuinely running out of capacity? Endurance problem vs pacing problem require different solutions.",c2prompt:"Your Cycle 1 Sunday readiness scores tell a specific story. If you consistently scored below 6 after long sessions, you were exceeding recovery capacity, not building durability. What is the session length where you can finish controlled and score 7+ the next morning?",good:"Identifies a pacing problem. Starts practising negative-split long rides.",med:"Identifies an endurance problem. Adds more long sessions. The same thing happens in week 8."},
+    thu:{title:"The fat-burning question you are avoiding",mechanism:"At true Zone 2 intensity, the body preferentially burns fat. This is about fuel availability at race pace — not body composition. An athlete training in the grey zone has built neither aerobic nor threshold system effectively.",prompt:"In your long session this weekend, cover the first 45 minutes without consuming carbohydrates. Observe whether your pace drops, perceived effort rises, or you feel functionally normal. That response is your aerobic system reporting its fitness.",c2prompt:"Did you ever test your fat oxidation capacity last cycle — or did you fuel reactively every long session? If you always gelled at 20 minutes, your aerobic base is untested. Run the experiment this cycle with actual data.",good:"Completes the experiment honestly. Uses data to decide whether to add fat-adaptation work.",med:"Takes gels from minute 15 'just in case'. Gets no data. Has no idea where their aerobic base sits."},
+    sun:{title:"Did your long session build durability or confirm fatigue?",mechanism:"Supercompensation requires an adequate recovery window after the stimulus. A long session that leaves you unable to train well Tuesday produced the stimulus but blocked the adaptation. They are not the same event.",prompt:"How do you feel right now, the evening after your long session? Rate your readiness 1–10. If below 6, something — volume, fueling, pacing, or weekly load — exceeded your recovery capacity. What would you change to arrive at a 7?",c2prompt:"Your readiness trend from last cycle: did scores trend upward, downward, or stay flat? A downward trend means long sessions were accumulating debt, not building durability. What changes?",good:"Reduces duration or intensity by 10% next week to hit a sustainable readiness score.",med:"Views low readiness as evidence of hard training. Repeats the session. Starts week 5 suppressed."}
+  },
+  4: {
+    tue:{title:"Your strength work might be slowing you down",mechanism:"Strength training has one job: increase structural resilience so you can absorb more training stress. The moment a strength session compromises the subsequent endurance session, it has failed its brief — regardless of how the session looked in isolation.",prompt:"In your last strength session, how did your legs and CNS feel 16 hours later? If the answer is anything other than 'ready', your strength programme is competing with your training. Which specific exercise is the most likely culprit?",c2prompt:"Last cycle, did you reduce your identified culprit exercise? If not, you've been carrying the same structural cost for two full seasons. That's not a training problem — it's a decision problem. What makes this cycle different?",good:"Removes or reduces the offending exercise. Endurance sessions become more productive immediately.",med:"Decides they need to push through the adaptation phase. This phase lasts the entire season."},
+    thu:{title:"Sweetspot is not a safe zone — it is a precision tool",mechanism:"Sweetspot training (88–93% FTP) feels manageable and builds threshold fitness without VO2 recovery costs. But sweetspot on accumulated fatigue produces low-grade overreaching that doesn't announce itself until performance has already declined.",prompt:"In your next sweetspot block, observe your breathing in the final 5 minutes. Controlled and rhythmic means you are adapting. Ragged means you are in a different zone than intended. The session looks the same in both cases. The adaptation does not.",c2prompt:"Your Cycle 1 grey-zone percentage from Sunday reflections: if it averaged above 40%, much of what you called sweetspot was unstructured moderate work. What is your plan for knowing the difference in real time — not in retrospect?",good:"Adjusts target power down 3–5% when breathing becomes ragged. Trains the correct system.",med:"Treats ragged breathing as evidence of effort. Wonders why recovery takes longer than expected."},
+    sun:{title:"The intensity honesty check",mechanism:"Most intermediate athletes overestimate how much training is genuinely hard and underestimate how much is grey zone. This is the most common structural flaw in self-coached programmes and the primary reason athletes plateau.",prompt:"Categorise this week's sessions: genuinely easy (conversation comfortable), genuinely hard (at or above threshold), or grey zone (felt like work, no specific physiological target). What percentage was grey zone? What would the week look like with less grey zone?",c2prompt:"Last cycle your average grey-zone percentage was tracked in reflections. If above 40%, you've confirmed the pattern. This cycle's job is not to notice it — it's to eliminate it. What is your specific plan?",good:"Restructures next week with polarised intent. Easy sessions faster, hard sessions harder.",med:"Defends grey zone as 'moderate training'. The plateau continues into month three."}
+  },
+  5: {
+    tue:{title:"Race thinking starts in training",mechanism:"Decision-making under race-pace conditions is a learned skill. Athletes who have never rehearsed pacing decisions, fueling windows, or course-reading under fatigue are making those decisions for the first time on race day.",prompt:"In your last race-intensity session, did you make any active pacing decisions — or did you just hold on? If you were just holding on, you were not practising race craft. You were practising survival. What is the difference in your next hard session?",c2prompt:"Last cycle, how did your race-day pacing compare to your training intent? If you went out too hard, the rehearsal didn't happen in training. This cycle: which specific session will serve as a pacing dress rehearsal?",good:"Builds explicit pacing decisions into hard sessions. Arrives at race start with rehearsed instincts.",med:"Trains hard and hopes pacing instinct arrives on race day. It doesn't."},
+    thu:{title:"Your transition is a technical session",mechanism:"T1 and T2 are not administrative pauses. They are neuromuscular transition events happening when blood lactate is elevated and fine motor control is degraded. An unpractised transition at race pace is a different experience from an unpractised transition in the driveway.",prompt:"Set up your T1 or T2 this weekend after a hard bike or run effort. Practice the sequence when your heart rate is above 150 — not when you're fresh. Notice what goes wrong. That is the version that needs rehearsing.",c2prompt:"Last cycle, where did transition time go? If your T times were longer than planned, was it gear, movement sequence, or composure? Which one are you addressing this cycle?",good:"Automates the transition sequence under fatigue. Gains 30–60 seconds at no fitness cost.",med:"Practices transitions fresh. Panics in T1 at race pace. Loses time they can never recover."},
+    sun:{title:"Race craft post-session debrief",mechanism:"Race craft compounds only if you extract the lesson from each simulation. A hard session without a structured debrief is experience without learning.",prompt:"After your key session this week: what decision did you get right? What decision cost you time or energy? If you can name both, the session produced race intelligence. If you can only name the effort, you practised fitness — not craft.",c2prompt:"Last cycle's race debrief: what was the single most expensive decision you made on race day — pacing, fueling, or positioning? Is that pattern present in your training decisions this cycle?",good:"Names one right decision and one wrong one after every race-intensity session.",med:"Finishes the session, logs the time, moves on. The same decisions get made at the race."}
+  },
+  6: {
+    tue:{title:"Burnout is not about volume",mechanism:"Training burnout in intermediate athletes is rarely caused by too many kilometres. It is caused by sustained misalignment between training load, life stress, and recovery quality — compounded by the inability to identify early warning signs before they become mandatory rest.",prompt:"Outside of training, what is your current life stress load — 1 (low) to 5 (high)? Now look at your training plan for this week. Is the load calibrated to that number, or was it written for a 2 and you're currently living a 4?",c2prompt:"Last cycle, how often did you reduce training load in response to life stress — as a proactive decision, not because you were forced to? If the answer is rarely, you were not managing load. Load was managing you.",good:"Proactively reduces training intensity during high-stress weeks. Consistency survives the season.",med:"Maintains planned load regardless of life stress. Eventually breaks down mid-season and loses 3 weeks."},
+    thu:{title:"The session that repays the most",mechanism:"Not all sessions are equal. For any given athlete at a given phase of training, one session type produces the highest adaptation-per-fatigue-cost. Identifying that session and protecting it — even when everything else is compressed — is the highest-leverage training decision.",prompt:"If you could only do two sessions this week, which two would you choose? Not which two feel right — which two produce the most specific adaptation for your race target? Name them. Are those two currently protected in your schedule, or are they the ones most at risk?",c2prompt:"Last cycle, which two sessions most consistently correlated with better race performance in your reflections? This cycle, start from those and build outward.",good:"Identifies the two highest-leverage sessions and protects them unconditionally.",med:"Treats all sessions as equally important. Consistently misses the two that matter most."},
+    sun:{title:"The sustainability check",mechanism:"A season plan is only as good as it is sustainable. An athlete who arrives at the start line undertrained but rested will outperform an athlete who arrives overtrained and brittle.",prompt:"At the end of this week: do you feel like you could repeat this training load for the next four weeks without degrading performance or wellbeing? If the answer is no — what specifically would need to change?",c2prompt:"Last cycle, at which point did the training plan stop being sustainable? That inflection point is your Cycle 2 starting constraint. What have you changed in the structure to avoid hitting that same ceiling?",good:"Identifies the inflection point before it hits. Adjusts proactively.",med:"Waits until the inflection point forces the adjustment. Loses a week recovering."}
+  }
+};
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let currentCycle = 1;
+let currentWeek = 1;
+let selectedType = 'swim';
+let calendar = {}; // {Mon:['swim'], Tue:['bike','run'], ...}
+let reflections = {};
+let raceDate = null;
+let setupComplete = false;
+
+// ════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════
+async function loadAll() {
+  try {
+    const r = await window.storage.get('tri_reflections');
+    if (r?.value) reflections = JSON.parse(r.value);
+  } catch(e) {}
+  try {
+    const c = await window.storage.get('tri_calendar');
+    if (c?.value) {const d=JSON.parse(c.value);calendar=d.calendar||{};raceDate=d.raceDate||null;setupComplete=d.setupComplete||false;}
+  } catch(e) {}
+}
+
+async function persistReflections() {
+  try { await window.storage.set('tri_reflections', JSON.stringify(reflections)); } catch(e) {}
+}
+
+async function persistCalendar() {
+  try { await window.storage.set('tri_calendar', JSON.stringify({calendar, raceDate, setupComplete})); } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+// SETUP SCREEN
+// ════════════════════════════════════════════
+function showSetup() {
+  document.getElementById('setup-screen').classList.add('visible');
+  document.getElementById('week-screen').classList.remove('visible');
+  renderDayGrid();
+}
+
+function showWeekScreen() {
+  document.getElementById('setup-screen').classList.remove('visible');
+  document.getElementById('week-screen').classList.add('visible');
+}
+
+function selectType(type, btn) {
+  selectedType = type;
+  document.querySelectorAll('.type-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function renderDayGrid() {
+  const grid = document.getElementById('day-grid');
+  grid.innerHTML = DAYS.map(d => {
+    const sessions = calendar[d] || [];
+    const s = sessions[0];
+    return `<div class="day-col">
+      <div class="day-name">${d}</div>
+      <div class="session-slot ${s?'filled '+s:''}" onclick="toggleSlot('${d}',0)">
+        ${s ? `<span class="slot-remove" onclick="event.stopPropagation();removeSlot('${d}',0)">✕</span>${SESSION_LABELS[s]}` : '+'}
+      </div>
+    </div>`;
+  }).join('');
+  // second row if any day has 2 sessions
+  const has2 = DAYS.some(d => (calendar[d]||[]).length >= 2);
+  document.getElementById('second-swim-section').style.display = has2 ? 'block' : 'none';
+  if (has2) {
+    const g2 = document.getElementById('day-grid-2');
+    g2.innerHTML = DAYS.map(d => {
+      const sessions = calendar[d] || [];
+      const s = sessions[1];
+      return `<div class="day-col">
+        <div class="day-name" style="opacity:0">${d}</div>
+        <div class="session-slot ${s?'filled '+s:''}" onclick="toggleSlot('${d}',1)">
+          ${s ? `<span class="slot-remove" onclick="event.stopPropagation();removeSlot('${d}',1)">✕</span>${SESSION_LABELS[s]}` : '+'}
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function toggleSlot(day, slotIndex) {
+  if (!calendar[day]) calendar[day] = [];
+  if (calendar[day][slotIndex]) {
+    removeSlot(day, slotIndex);
+  } else {
+    calendar[day][slotIndex] = selectedType;
+    renderDayGrid();
+  }
+}
+
+function removeSlot(day, slotIndex) {
+  if (calendar[day]) {
+    calendar[day].splice(slotIndex, 1);
+    if (calendar[day].length === 0) delete calendar[day];
+  }
+  renderDayGrid();
+}
+
+// race date countdown
+document.getElementById('race-date').addEventListener('change', function() {
+  raceDate = this.value;
+  if (raceDate) {
+    const diff = Math.round((new Date(raceDate) - new Date()) / (1000*60*60*24*7));
+    document.getElementById('weeks-to-race').textContent = diff > 0 ? `${diff} weeks away` : 'Race passed';
+  }
+});
+
+async function completeSetup() {
+  setupComplete = true;
+  await persistCalendar();
+  renderCalStrip();
+  renderWeekNav();
+  renderPatterns();
+  showWeekScreen();
+  renderWeek(currentWeek);
+}
+
+// ════════════════════════════════════════════
+// CALENDAR STRIP (shown in week screen)
+// ════════════════════════════════════════════
+function renderCalStrip() {
+  const container = document.getElementById('cal-strip-container');
+  if (!setupComplete || Object.keys(calendar).length === 0) { container.innerHTML = ''; return; }
+  const cells = DAYS.map(d => {
+    const sessions = calendar[d] || [];
+    const s1 = sessions[0], s2 = sessions[1];
+    return `<div class="cal-day-cell">
+      <div class="cal-day-name">${d}</div>
+      <div class="cal-day-session ${s1||'empty'}">${s1 ? SESSION_ABBR[s1] : '—'}</div>
+      ${s2 ? `<div class="cal-day-session ${s2}">${SESSION_ABBR[s2]}</div>` : ''}
+    </div>`;
+  }).join('');
+  container.innerHTML = `<div class="cal-strip">
+    <div class="cal-strip-label">Your typical week <button class="cal-edit-btn" onclick="showSetup()">edit</button></div>
+    ${cells}
+  </div>`;
+}
+
+// ════════════════════════════════════════════
+// WEEK NAV — 39 weeks, phase-grouped
+// ════════════════════════════════════════════
+function renderWeekNav() {
+  const container = document.getElementById('week-nav-list');
+  container.innerHTML = PHASES.map((phase, pi) => {
+    const weekBtns = phase.weeks.map(wn => {
+      const refl = getRefl(currentCycle, wn);
+      const active = wn === currentWeek;
+      const pillarIdx = (wn - 1) % 6;
+      const pillar = PILLAR_CYCLE[pillarIdx];
+      return `<button class="wk-btn ${active?'active':''}" onclick="selectWeek(${wn})">
+        <span>Wk ${wn} <span style="font-size:10px;color:var(--ink3)">${pillar.label.split(' ')[0]}</span></span>
+        <span class="wk-dot ${refl.savedAt?'on':''}"></span>
+      </button>`;
+    }).join('');
+    return `<div class="phase-group" id="phase-${pi}">
+      <div class="phase-header" onclick="togglePhase(${pi})">
+        <span>${phase.label}</span>
+        <span style="font-size:9px">${phase.collapsed?'▶':'▼'}</span>
+      </div>
+      <div class="phase-weeks ${phase.collapsed?'collapsed':''}" id="phase-weeks-${pi}">${weekBtns}</div>
+    </div>`;
+  }).join('');
+}
+
+function togglePhase(pi) {
+  const weeks = document.getElementById(`phase-weeks-${pi}`);
+  const header = document.querySelector(`#phase-${pi} .phase-header span:last-child`);
+  const isCollapsed = weeks.classList.contains('collapsed');
+  weeks.classList.toggle('collapsed', !isCollapsed);
+  PHASES[pi].collapsed = !isCollapsed;
+  if (header) header.textContent = isCollapsed ? '▼' : '▶';
+}
+
+function selectWeek(num) {
+  currentWeek = num;
+  // auto-expand the phase containing this week
+  PHASES.forEach((p,i) => {
+    if (p.weeks.includes(num)) { PHASES[i].collapsed = false; }
+  });
+  renderWeekNav();
+  renderWeek(num);
+}
+
+// ════════════════════════════════════════════
+// CYCLE
+// ════════════════════════════════════════════
+function setCycle(n, btn) {
+  currentCycle = n;
+  document.querySelectorAll('.cyc-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const banner = document.getElementById('c2-banner');
+  if (n === 2) {
+    banner.classList.add('on');
+    const c1Refls = PHASES.flatMap(p=>p.weeks).filter(w=>w<=26).map(w=>getRefl(1,w)).filter(r=>r.savedAt);
+    const gzArr = c1Refls.filter(r=>r.greyZone).map(r=>r.greyZone);
+    const avgGZ = gzArr.length ? Math.round(gzArr.reduce((a,b)=>a+b,0)/gzArr.length) : null;
+    const rdArr = c1Refls.filter(r=>r.readiness).map(r=>r.readiness);
+    const avgRD = rdArr.length ? Math.round(rdArr.reduce((a,b)=>a+b,0)/rdArr.length*10)/10 : null;
+    let txt = 'Your Cycle 1 reflections are now informing this cycle\'s prompts.';
+    if (avgGZ && avgGZ > 40) txt += ` Grey zone averaged ${avgGZ}% — the prompts this cycle target that specifically.`;
+    if (avgRD && avgRD < 6.5) txt += ` Readiness averaged ${avgRD}/10 — long session load needs recalibrating.`;
+    document.getElementById('c2-banner-text').textContent = txt;
+  } else {
+    banner.classList.remove('on');
+  }
+  document.getElementById('eyebrow').textContent = `Cycle ${n} · Season curriculum`;
+  renderWeekNav();
+  renderWeek(currentWeek);
+}
+
+// ════════════════════════════════════════════
+// RENDER WEEK
+// ════════════════════════════════════════════
+function getPillar(weekNum) {
+  return PILLAR_CYCLE[(weekNum - 1) % 6];
+}
+
+function renderWeek(num) {
+  const pillar = getPillar(num);
+  const saved = getRefl(currentCycle, num);
+  const isCycle2 = currentCycle === 2;
+  const content = CARD_CONTENT[pillar.p];
+
+  const days = [
+    {badge:'tue',day:'Tuesday',data:content.tue},
+    {badge:'thu',day:'Thursday',data:content.thu},
+    {badge:'sun',day:'Sunday',data:content.sun,isReflection:true},
+  ];
+
+  const html = `
+    <div class="week-header">
+      <span class="wk-num-lbl">Week ${num}</span>
+      <span class="pillar-badge ${pillar.pc}">${pillar.label}</span>
+    </div>
+    <div class="cards-grid">
+      ${days.map(d => renderCard(d, saved, isCycle2, num)).join('')}
+    </div>
+  `;
+  document.getElementById('week-content').innerHTML = html;
+}
+
+function renderCard(d, saved, isCycle2, weekNum) {
+  const isReflection = !!d.isReflection;
+  const hasSaved = !!saved.savedAt;
+  const prompt = isCycle2 && d.data.c2prompt ? d.data.c2prompt : d.data.prompt;
+
+  let c2Block = '';
+  if (isCycle2) {
+    const c1 = getRefl(1, weekNum);
+    if (c1.savedAt) {
+      let txt = 'Your Cycle 1 reflection for this week is on record.';
+      if (isReflection && c1.readiness) txt = `Cycle 1 readiness this week: ${c1.readiness}/10${c1.notes?` · "${c1.notes.substring(0,70)}…"`:''}`;
+      c2Block = `<div class="c2-insight"><div class="c2-insight-label">From your Cycle 1 data</div><div class="c2-insight-text">${txt}</div></div>`;
+    }
+  }
+
+  let reflHTML = '';
+  if (isReflection) {
+    // Build session rows from athlete's calendar
+    const calSessions = Object.entries(calendar).flatMap(([day, types]) =>
+      types.map(t => ({day, type:t, label:`${day} ${SESSION_LABELS[t]}`}))
+    );
+    const sessionStatuses = saved.sessionStatuses || {};
+
+    const sessionRows = calSessions.length > 0
+      ? calSessions.map(s => {
+          const key = `${s.day}_${s.type}`;
+          const status = sessionStatuses[key];
+          return `<div class="session-row">
+            <span class="session-row-name">${s.label}</span>
+            <div class="session-status-btns">
+              <button class="ss-btn ${status==='done'?'done':''}" onclick="setSessionStatus(${weekNum},'${key}','done',this)">Done</button>
+              <button class="ss-btn ${status==='modified'?'modified':''}" onclick="setSessionStatus(${weekNum},'${key}','modified',this)">Modified</button>
+              <button class="ss-btn ${status==='skipped'?'skipped':''}" onclick="setSessionStatus(${weekNum},'${key}','skipped',this)">Skipped</button>
+            </div>
+          </div>`;
+        }).join('')
+      : `<div style="font-size:12px;color:var(--ink3);font-style:italic">No sessions in your calendar yet — <button onclick="showSetup()" style="font-size:12px;color:var(--accm);background:none;border:none;cursor:pointer;text-decoration:underline">set up your calendar</button> to track sessions here.</div>`;
+
+    // Grey zone explainer
+    const gzExplainer = `
+      <div class="gz-explainer">
+        <div class="gz-explainer-title">Understanding training zones</div>
+        <div class="gz-zones">
+          <div class="gz-zone">
+            <div class="gz-zone-name ez">Easy zone</div>
+            <div class="gz-zone-desc">Full conversation comfortable. Nose-breathing possible.</div>
+            <div class="gz-zone-eg">e.g. recovery spin, Zone 1–2 run, technique swim</div>
+          </div>
+          <div class="gz-zone">
+            <div class="gz-zone-name gz">Grey zone ⚠</div>
+            <div class="gz-zone-desc">Feels like effort but no clear physiological target. Too hard to be aerobic base work. Too easy to be threshold stimulus.</div>
+            <div class="gz-zone-eg">e.g. "moderate" ride without power target, "tempo-ish" run</div>
+          </div>
+          <div class="gz-zone">
+            <div class="gz-zone-name hz">Hard zone</div>
+            <div class="gz-zone-desc">At or above lactate threshold. Speaking is difficult. Specific power or pace target held.</div>
+            <div class="gz-zone-eg">e.g. 2×20 sweetspot, 5×400m intervals, race-pace brick</div>
+          </div>
+        </div>
+        <div class="gz-question">What % of this week's training time was in the grey zone — not easy enough, not hard enough?</div>
+        <div class="gz-btns" id="gz-btns-${weekNum}">
+          ${[['<20%',10],['20–40%',30],['40–60%',50],['>60%',70]].map(([lbl,val]) =>
+            `<button class="gz-btn ${saved.greyZone===val?'sel':''}" onclick="selectGZ(${weekNum},${val},this)">${lbl}</button>`
+          ).join('')}
+        </div>
+      </div>`;
+
+    reflHTML = `
+      <div class="refl-module">
+        <div class="refl-title">Sunday reflection</div>
+
+        <div class="sec-label">This week's sessions</div>
+        <div class="session-review">
+          <div class="session-review-title">Mark each session's outcome</div>
+          ${sessionRows}
+        </div>
+
+        <div class="sec-label" style="margin-bottom:8px">Readiness tomorrow (1–10)</div>
+        <div class="metric-box" style="margin-bottom:12px">
+          <div class="metric-lbl">How ready do you feel to train tomorrow?</div>
+          <div class="rating-row">
+            ${[1,2,3,4,5,6,7,8,9,10].map(n =>
+              `<button class="r-btn ${saved.readiness===n?'sel':''}" onclick="setRating(${weekNum},${n},this)">${n}</button>`
+            ).join('')}
+          </div>
+        </div>
+
+        ${gzExplainer}
+
+        <div class="sec-label" style="margin-bottom:8px">Most vulnerable session this week</div>
+        <div class="metric-box" style="margin-bottom:12px">
+          <div class="metric-lbl">Which session was first to be skipped, shortened, or compromised?</div>
+          <div class="session-tags">
+            ${(Object.entries(calendar).flatMap(([day,types])=>types.map(t=>SESSION_LABELS[t]))).filter((v,i,a)=>a.indexOf(v)===i).concat(['None — held the floor']).map(s =>
+              `<button class="stag ${saved.vulnSession===s?'sel':''}" onclick="setVuln(${weekNum},'${s}',this)">${s}</button>`
+            ).join('')}
+          </div>
+        </div>
+
+        <div class="sec-label">Open reflection</div>
+        <textarea class="refl-ta" id="notes-${weekNum}" placeholder="What did you notice this week? What decision did you get right — or wrong? What would you tell yourself next week?">${saved.notes||''}</textarea>
+
+        <div>
+          <button class="save-btn" onclick="saveReflection(${weekNum})">Save reflection</button>
+          <span class="save-confirm ${hasSaved?'on':''}" id="confirm-${weekNum}">✓ Saved${saved.savedAt?' · '+new Date(saved.savedAt).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):''}</span>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="day-card ${hasSaved&&isReflection?'expanded':''}" id="card-${d.badge}-${weekNum}">
+      <div class="card-hdr" onclick="toggleCard('${d.badge}',${weekNum})">
+        <span class="day-tag ${d.badge}">${d.day}</span>
+        <span class="card-ttl">${d.data.title}</span>
+        ${isReflection&&hasSaved?'<span class="saved-dot on"></span>':'<span class="saved-dot"></span>'}
+        <span class="expand-ico ${hasSaved&&isReflection?'open':''}">▼</span>
+      </div>
+      <div class="card-body ${hasSaved&&isReflection?'on':''}">
+        <div class="sec-label">Why it matters</div>
+        <div class="body-text">${d.data.mechanism}</div>
+        <div class="prompt-block">
+          <div class="sec-label">Today's prompt</div>
+          <div class="prompt-text">${prompt}</div>
+        </div>
+        ${c2Block}
+        <div class="sec-label">The difference it makes</div>
+        <div class="contrast-row">
+          <div class="cc good"><div class="cc-label good">Sharp athlete</div><div class="cc-text">${d.data.good}</div></div>
+          <div class="cc mid"><div class="cc-label mid">Mediocre athlete</div><div class="cc-text">${d.data.med}</div></div>
+        </div>
+        ${reflHTML}
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════
+// INTERACTIONS
+// ════════════════════════════════════════════
+function toggleCard(badge, week) {
+  const card = document.getElementById(`card-${badge}-${week}`);
+  const body = card.querySelector('.card-body');
+  const icon = card.querySelector('.expand-ico');
+  const isOpen = body.classList.contains('on');
+  document.querySelectorAll('.card-body').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.expand-ico').forEach(i=>i.classList.remove('open'));
+  document.querySelectorAll('.day-card').forEach(c=>c.classList.remove('expanded'));
+  if (!isOpen) { body.classList.add('on'); icon.classList.add('open'); card.classList.add('expanded'); }
+}
+
+function setRating(week, val, btn) {
+  btn.closest('.rating-row').querySelectorAll('.r-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  ensureRefl(week).readiness = val;
+}
+
+function selectGZ(week, val, btn) {
+  btn.closest('.gz-btns').querySelectorAll('.gz-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  ensureRefl(week).greyZone = val;
+}
+
+function setVuln(week, val, btn) {
+  btn.closest('.session-tags').querySelectorAll('.stag').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  ensureRefl(week).vulnSession = val;
+}
+
+function setSessionStatus(week, key, status, btn) {
+  const r = ensureRefl(week);
+  if (!r.sessionStatuses) r.sessionStatuses = {};
+  const current = r.sessionStatuses[key];
+  if (current === status) {
+    r.sessionStatuses[key] = null;
+    btn.classList.remove(status);
+  } else {
+    r.sessionStatuses[key] = status;
+    btn.closest('.session-status-btns').querySelectorAll('.ss-btn').forEach(b=>{b.classList.remove('done','modified','skipped')});
+    btn.classList.add(status);
+  }
+}
+
+async function saveReflection(week) {
+  const r = ensureRefl(week);
+  r.notes = document.getElementById(`notes-${week}`)?.value || '';
+  r.savedAt = Date.now();
+  await persistReflections();
+  const c = document.getElementById(`confirm-${week}`);
+  if (c) { c.textContent = `✓ Saved · ${new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short'})}`; c.classList.add('on'); }
+  const dot = document.querySelector(`#card-sun-${week} .saved-dot`);
+  if (dot) dot.classList.add('on');
+  renderPatterns();
+  renderWeekNav();
+}
+
+// ════════════════════════════════════════════
+// PATTERNS
+// ════════════════════════════════════════════
+function renderPatterns() {
+  const container = document.getElementById('patterns-container');
+  const allRefls = Object.entries(reflections)
+    .filter(([k])=>k.startsWith(`c${currentCycle}_`))
+    .map(([,v])=>v).filter(r=>r.savedAt);
+
+  if (allRefls.length === 0) {
+    container.innerHTML = '<div class="pat-empty">Complete your first Sunday reflection to begin building your pattern profile.</div>';
+    return;
+  }
+
+  const rdArr = allRefls.filter(r=>r.readiness).map(r=>r.readiness);
+  const avgRD = rdArr.length ? Math.round(rdArr.reduce((a,b)=>a+b,0)/rdArr.length*10)/10 : null;
+  const gzArr = allRefls.filter(r=>r.greyZone).map(r=>r.greyZone);
+  const avgGZ = gzArr.length ? Math.round(gzArr.reduce((a,b)=>a+b,0)/gzArr.length) : null;
+  const vs = allRefls.filter(r=>r.vulnSession&&r.vulnSession!=='None — held the floor').map(r=>r.vulnSession);
+  const vsCount = {}; vs.forEach(s=>{vsCount[s]=(vsCount[s]||0)+1});
+  const topVS = Object.entries(vsCount).sort((a,b)=>b[1]-a[1])[0];
+  const skipCounts = allRefls.map(r=>{
+    if (!r.sessionStatuses) return 0;
+    return Object.values(r.sessionStatuses).filter(v=>v==='skipped').length;
+  });
+  const avgSkips = skipCounts.length ? Math.round(skipCounts.reduce((a,b)=>a+b,0)/skipCounts.length*10)/10 : null;
+
+  let html = '';
+  if (avgRD !== null) {
+    const low = avgRD < 6.5;
+    html += `<div class="pat-card"><div class="pat-stat ${low?'warn':'good'}">${avgRD}</div><div class="pat-desc">Avg readiness score${low?' — long session load may be exceeding recovery capacity':' — within healthy range'}</div></div>`;
+  }
+  if (avgGZ !== null) {
+    const high = avgGZ > 40;
+    html += `<div class="pat-card"><div class="pat-stat ${high?'warn':'good'}">${avgGZ}%</div><div class="pat-desc">Avg grey-zone training${high?' — polarisation opportunity. Replace with true easy or true hard work':' — good polarisation'}</div></div>`;
+  }
+  if (topVS) {
+    html += `<div class="pat-card"><div class="pat-stat" style="font-size:13px;font-weight:500">${topVS[0]}</div><div class="pat-desc">Most frequently skipped session type (${topVS[1]} of ${allRefls.length} wks). Schedule it earlier in the week.</div></div>`;
+  }
+  if (avgSkips !== null) {
+    const high = avgSkips > 1;
+    html += `<div class="pat-card"><div class="pat-stat ${high?'warn':''}">${avgSkips}</div><div class="pat-desc">Avg sessions skipped per week${high?' — consistency risk':' — consistent execution'}</div></div>`;
+  }
+  html += `<div class="pat-card"><div class="pat-stat" style="font-size:13px">${allRefls.length}/${currentCycle===1?26:13}</div><div class="pat-desc">Sunday reflections logged this cycle</div></div>`;
+  container.innerHTML = html;
+}
+
+// ════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════
+function getRefl(cycle, week) {
+  return reflections[`c${cycle}_w${week}`] || {};
+}
+
+function ensureRefl(week) {
+  const key = `c${currentCycle}_w${week}`;
+  if (!reflections[key]) reflections[key] = {};
+  return reflections[key];
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+async function init() {
+  await loadAll();
+  renderPatterns();
+  renderWeekNav();
+  if (setupComplete && Object.keys(calendar).length > 0) {
+    renderCalStrip();
+    showWeekScreen();
+    renderWeek(currentWeek);
+  } else {
+    showSetup();
+    renderDayGrid();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

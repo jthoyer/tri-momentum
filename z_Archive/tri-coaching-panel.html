@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>The Panel — Tri Coaching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0C0D10;
+  --s1:#13141A;
+  --s2:#1A1B24;
+  --s3:#22242F;
+  --bd:rgba(255,255,255,0.06);
+  --bd2:rgba(255,255,255,0.10);
+  --ink:#F0EEE8;
+  --ink2:#9B9BAA;
+  --ink3:#5A5A6E;
+
+  --coach:#4A9EFF;    --coach-bg:rgba(74,158,255,0.10);  --coach-bd:rgba(74,158,255,0.25);
+  --nutri:#3EC98E;    --nutri-bg:rgba(62,201,142,0.10);  --nutri-bd:rgba(62,201,142,0.25);
+  --psych:#C084FC;    --psych-bg:rgba(192,132,252,0.10); --psych-bd:rgba(192,132,252,0.25);
+  --physio:#F97316;   --physio-bg:rgba(249,115,22,0.10); --physio-bd:rgba(249,115,22,0.25);
+  --strat:#F59E0B;    --strat-bg:rgba(245,158,11,0.10);  --strat-bd:rgba(245,158,11,0.25);
+  --panel:#E84393;    --panel-bg:rgba(232,67,147,0.10);  --panel-bd:rgba(232,67,147,0.25);
+
+  --r:12px;--r-sm:8px;--r-lg:18px;
+  --nav:60px;
+}
+
+html,body{height:100%;overflow:hidden;background:var(--bg);-webkit-tap-highlight-color:transparent}
+body{font-family:'Geist',sans-serif;color:var(--ink);font-size:15px}
+button{cursor:pointer;font-family:'Geist',sans-serif;background:none;border:none;color:inherit}
+
+/* ── SHELL ── */
+#app{height:100%;display:flex;flex-direction:column;max-width:430px;margin:0 auto;position:relative;overflow:hidden}
+
+/* ── SCREENS ── */
+.screen{display:none;flex-direction:column;height:100%}
+.screen.on{display:flex}
+
+/* ── NOISE OVERLAY ── */
+.noise{position:fixed;inset:0;opacity:.025;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px}
+
+/* ── BOTTOM NAV ── */
+#bottom-nav{
+  height:var(--nav);flex-shrink:0;
+  background:var(--s1);border-top:1px solid var(--bd);
+  display:grid;grid-template-columns:1fr 1fr;
+  position:relative;z-index:10;
+}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink3);padding-bottom:4px;transition:color .15s;font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
+.nav-btn.on{color:var(--ink)}
+.nav-btn.on::after{content:'';position:absolute;top:0;width:40px;height:1.5px;background:var(--ink)}
+.nav-icon{font-size:18px;line-height:1}
+
+/* ── SCROLLABLE ── */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ════════════════════════════════════════
+   LOG SCREEN
+════════════════════════════════════════ */
+#screen-log .hdr{padding:1.25rem 1.25rem .75rem;flex-shrink:0;border-bottom:1px solid var(--bd)}
+.eyebrow{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.hdr-title{font-family:'Instrument Serif',serif;font-size:28px;line-height:1.1;color:var(--ink)}
+.hdr-sub{font-size:13px;color:var(--ink2);margin-top:4px;line-height:1.5}
+
+/* Actor pills */
+.actor-strip{display:flex;gap:6px;overflow-x:auto;padding:.75rem 1.25rem;flex-shrink:0;border-bottom:1px solid var(--bd)}
+.actor-strip::-webkit-scrollbar{display:none}
+.actor-pill{flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid var(--bd2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);transition:all .15s;display:flex;align-items:center;gap:5px}
+.actor-pill.on-coach{background:var(--coach-bg);border-color:var(--coach-bd);color:var(--coach)}
+.actor-pill.on-nutri{background:var(--nutri-bg);border-color:var(--nutri-bd);color:var(--nutri)}
+.actor-pill.on-psych{background:var(--psych-bg);border-color:var(--psych-bd);color:var(--psych)}
+.actor-pill.on-physio{background:var(--physio-bg);border-color:var(--physio-bd);color:var(--physio)}
+.actor-pill.on-strat{background:var(--strat-bg);border-color:var(--strat-bd);color:var(--strat)}
+.actor-pill.on-panel{background:var(--panel-bg);border-color:var(--panel-bd);color:var(--panel)}
+
+/* Log form */
+.log-form{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px}
+.field-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.session-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stype-btn{padding:10px 6px;border-radius:var(--r-sm);border:1px solid var(--bd);background:var(--s1);font-size:12px;font-weight:500;color:var(--ink2);transition:all .15s;text-align:center}
+.stype-btn.sel-swim{background:rgba(74,158,255,0.12);border-color:rgba(74,158,255,0.3);color:#4A9EFF}
+.stype-btn.sel-bike{background:rgba(62,201,142,0.12);border-color:rgba(62,201,142,0.3);color:#3EC98E}
+.stype-btn.sel-run{background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.3);color:#F97316}
+.stype-btn.sel-brick{background:rgba(192,132,252,0.12);border-color:rgba(192,132,252,0.3);color:#C084FC}
+.stype-btn.sel-strength{background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3);color:#F59E0B}
+.stype-btn.sel-race{background:rgba(232,67,147,0.12);border-color:rgba(232,67,147,0.3);color:#E84393}
+
+.field-ta{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:10px 12px;color:var(--ink);font-size:13px;line-height:1.6;resize:none;outline:none;min-height:72px;transition:border-color .15s}
+.field-ta::placeholder{color:var(--ink3)}
+.field-ta:focus{border-color:var(--bd2)}
+.field-inp{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:9px 12px;color:var(--ink);font-size:13px;outline:none;transition:border-color .15s}
+.field-inp::placeholder{color:var(--ink3)}
+.field-inp:focus{border-color:var(--bd2)}
+
+/* RPE */
+.rpe-strip{display:flex;gap:4px}
+.rpe-btn{flex:1;padding:8px 2px;border-radius:6px;border:1px solid var(--bd);background:var(--s1);font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);transition:all .12s;text-align:center}
+.rpe-btn.sel{background:var(--s3);border-color:var(--bd2);color:var(--ink)}
+.rpe-btn[data-rpe="8"].sel,.rpe-btn[data-rpe="9"].sel,.rpe-btn[data-rpe="10"].sel{background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.3);color:#F97316}
+
+/* Flags */
+.flags-grid{display:flex;gap:6px;flex-wrap:wrap}
+.flag-btn{padding:5px 11px;border-radius:20px;border:1px solid var(--bd);background:var(--s1);font-size:11px;color:var(--ink3);transition:all .12s}
+.flag-btn.sel{background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.3);color:#F97316}
+
+/* Submit */
+.submit-btn{
+  width:100%;padding:14px;background:var(--ink);color:var(--bg);border:none;
+  border-radius:var(--r);font-family:'Geist',sans-serif;font-size:16px;font-weight:600;
+  letter-spacing:.01em;transition:opacity .15s;margin-top:4px;
+}
+.submit-btn:hover{opacity:.88}
+.submit-btn:disabled{opacity:.3}
+
+/* ════════════════════════════════════════
+   CHAT SCREEN
+════════════════════════════════════════ */
+#screen-chat .chat-hdr{
+  padding:.875rem 1.25rem;flex-shrink:0;
+  background:var(--s1);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:10px;
+}
+.chat-hdr-back{font-size:18px;color:var(--ink2);padding:4px 8px 4px 0}
+.actor-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.chat-hdr-name{font-family:'Geist',sans-serif;font-size:16px;font-weight:600;line-height:1.1}
+.chat-hdr-role{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.actor-sel-strip{display:flex;gap:5px;overflow-x:auto;padding:.625rem 1.25rem;flex-shrink:0;border-bottom:1px solid var(--bd)}
+.actor-sel-strip::-webkit-scrollbar{display:none}
+.asel{flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid var(--bd);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:5px;transition:all .15s}
+.asel.on{border-color:var(--bd2);color:var(--ink);background:var(--s2)}
+
+/* Messages */
+.messages{flex:1;overflow-y:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px}
+.messages::-webkit-scrollbar{display:none}
+
+.msg{display:flex;flex-direction:column;gap:6px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.msg-actor-row{display:flex;align-items:center;gap:7px}
+.msg-actor-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.msg-actor-name{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.msg-actor-role{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3)}
+
+.msg-bubble{padding:12px 14px;border-radius:var(--r);font-size:14px;line-height:1.65;border:1px solid var(--bd)}
+.msg-bubble.coach{background:var(--coach-bg);border-color:var(--coach-bd)}
+.msg-bubble.nutri{background:var(--nutri-bg);border-color:var(--nutri-bd)}
+.msg-bubble.psych{background:var(--psych-bg);border-color:var(--psych-bd)}
+.msg-bubble.physio{background:var(--physio-bg);border-color:var(--physio-bd)}
+.msg-bubble.strat{background:var(--strat-bg);border-color:var(--strat-bd)}
+.msg-bubble.panel{background:var(--panel-bg);border-color:var(--panel-bd)}
+.msg-bubble.user{background:var(--s2);border-color:var(--bd2);margin-left:2rem}
+.msg-bubble strong{font-weight:600}
+.msg-bubble em{font-style:italic;color:var(--ink2)}
+.msg-bubble .section-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:inherit;opacity:.65;margin-bottom:4px;margin-top:10px;display:block}
+.msg-bubble .section-title:first-child{margin-top:0}
+
+.msg-timestamp{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);padding-left:16px}
+
+/* Loading dots */
+.loading-dots span{animation:blink 1.4s infinite;display:inline-block}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* User input */
+.input-row{
+  display:flex;gap:8px;padding:.875rem 1.25rem;
+  background:var(--s1);border-top:1px solid var(--bd);
+  flex-shrink:0;align-items:flex-end;
+}
+.chat-input{
+  flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r-sm);
+  padding:9px 12px;color:var(--ink);font-size:14px;outline:none;
+  line-height:1.5;resize:none;max-height:100px;overflow-y:auto;
+  transition:border-color .15s;font-family:'Geist',sans-serif;
+}
+.chat-input::placeholder{color:var(--ink3)}
+.chat-input:focus{border-color:var(--bd2)}
+.send-btn{
+  width:38px;height:38px;border-radius:var(--r-sm);background:var(--ink);color:var(--bg);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:opacity .15s;
+}
+.send-btn:hover{opacity:.85}
+.send-btn:disabled{opacity:.3}
+
+/* ── SESSION LOG CARDS ── */
+.log-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:8px}
+.log-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.log-card-type{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.log-card-date{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3)}
+.log-card-body{font-size:13px;color:var(--ink2);line-height:1.55}
+.log-card-flags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.log-flag-chip{padding:2px 8px;border-radius:20px;font-size:10px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);color:#F97316;font-family:'DM Mono',monospace}
+.open-chat-btn{margin-top:8px;padding:5px 12px;border-radius:20px;border:1px solid var(--bd2);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);transition:all .15s}
+.open-chat-btn:hover{border-color:var(--bd2);color:var(--ink)}
+
+.history-empty{padding:2rem 1.25rem;text-align:center;color:var(--ink3);font-size:13px;line-height:1.6}
+
+/* ── ACTOR META ── */
+.actor-meta{
+  COACH:  {color:var(--coach);bg:var(--coach-bg);bd:var(--coach-bd);}
+}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div id="app">
+
+<!-- ════════ LOG SCREEN ════════ -->
+<div class="screen on" id="screen-log">
+  <div class="hdr">
+    <div class="eyebrow">The Panel · 70.3 Coaching</div>
+    <div class="hdr-title">Log a session</div>
+    <div class="hdr-sub">What happened. Five experts respond.</div>
+  </div>
+
+  <!-- Actor filter -->
+  <div class="actor-strip">
+    <button class="actor-pill" id="pill-all" onclick="setActorFilter('panel')">✦ Full panel</button>
+    <button class="actor-pill" id="pill-coach" onclick="setActorFilter('coach')">Coach</button>
+    <button class="actor-pill" id="pill-nutri" onclick="setActorFilter('nutri')">Nutritionist</button>
+    <button class="actor-pill" id="pill-psych" onclick="setActorFilter('psych')">Psychologist</button>
+    <button class="actor-pill" id="pill-physio" onclick="setActorFilter('physio')">Physio</button>
+    <button class="actor-pill" id="pill-strat" onclick="setActorFilter('strat')">Strategist</button>
+  </div>
+
+  <div class="scroll">
+    <form class="log-form" onsubmit="return false">
+
+      <div>
+        <div class="field-label">Session type</div>
+        <div class="session-type-grid">
+          <button type="button" class="stype-btn" data-type="swim" onclick="selectType(this)">🏊 Swim</button>
+          <button type="button" class="stype-btn" data-type="bike" onclick="selectType(this)">🚴 Bike</button>
+          <button type="button" class="stype-btn" data-type="run" onclick="selectType(this)">🏃 Run</button>
+          <button type="button" class="stype-btn" data-type="brick" onclick="selectType(this)">⚡ Brick</button>
+          <button type="button" class="stype-btn" data-type="strength" onclick="selectType(this)">💪 Strength</button>
+          <button type="button" class="stype-btn" data-type="race" onclick="selectType(this)">🏁 Race sim</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="field-label">Duration & distance (optional)</div>
+        <input class="field-inp" id="log-meta" placeholder="e.g. 2hr 30min · 90km · avg 38kph">
+      </div>
+
+      <div>
+        <div class="field-label">What happened</div>
+        <textarea class="field-ta" id="log-what" rows="3" placeholder="Describe the session — pacing, zones, intervals completed, how it felt physically and mentally…"></textarea>
+      </div>
+
+      <div>
+        <div class="field-label">RPE — rate of perceived exertion</div>
+        <div class="rpe-strip">
+          <button type="button" class="rpe-btn" data-rpe="1" onclick="selectRpe(this)">1</button>
+          <button type="button" class="rpe-btn" data-rpe="2" onclick="selectRpe(this)">2</button>
+          <button type="button" class="rpe-btn" data-rpe="3" onclick="selectRpe(this)">3</button>
+          <button type="button" class="rpe-btn" data-rpe="4" onclick="selectRpe(this)">4</button>
+          <button type="button" class="rpe-btn" data-rpe="5" onclick="selectRpe(this)">5</button>
+          <button type="button" class="rpe-btn" data-rpe="6" onclick="selectRpe(this)">6</button>
+          <button type="button" class="rpe-btn" data-rpe="7" onclick="selectRpe(this)">7</button>
+          <button type="button" class="rpe-btn" data-rpe="8" onclick="selectRpe(this)">8</button>
+          <button type="button" class="rpe-btn" data-rpe="9" onclick="selectRpe(this)">9</button>
+          <button type="button" class="rpe-btn" data-rpe="10" onclick="selectRpe(this)">10</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="field-label">Flags — tap all that apply</div>
+        <div class="flags-grid">
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">🤢 Gut issues</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">💤 Sleep poor</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">😤 Legs heavy</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">🔥 Sharp pain</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">🧠 Mentally flat</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">💧 Poor fuelling</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">🥵 Overheated</button>
+          <button type="button" class="flag-btn" onclick="toggleFlag(this)">📈 Felt great</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="field-label">Anything else to add</div>
+        <textarea class="field-ta" id="log-notes" rows="2" placeholder="Life stress, sleep, nutrition pre-session, upcoming race context…"></textarea>
+      </div>
+
+      <button type="button" class="submit-btn" id="submit-btn" disabled onclick="submitLog()">Get the panel's take →</button>
+    </form>
+
+    <!-- History -->
+    <div style="padding:1rem 1.25rem 0;border-top:1px solid var(--bd);margin-top:.5rem">
+      <div class="field-label" style="margin-bottom:10px">Previous sessions</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ CHAT SCREEN ════════ -->
+<div class="screen" id="screen-chat">
+  <div class="chat-hdr">
+    <button class="chat-hdr-back" onclick="backToLog()">←</button>
+    <div id="chat-actor-avatar" class="actor-avatar"></div>
+    <div>
+      <div class="chat-hdr-name" id="chat-actor-name">The Panel</div>
+      <div class="chat-hdr-role" id="chat-actor-role">Five experts · one session</div>
+    </div>
+  </div>
+  <div class="actor-sel-strip" id="actor-sel-strip"></div>
+  <div class="messages" id="messages"></div>
+  <div class="input-row">
+    <textarea class="chat-input" id="chat-input" placeholder="Ask anything about this session…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
+  </div>
+</div>
+
+<!-- ════════ BOTTOM NAV ════════ -->
+<nav id="bottom-nav">
+  <button class="nav-btn on" id="nav-log" onclick="switchMain('log',this)">
+    <span class="nav-icon">✦</span>
+    <span>Log</span>
+  </button>
+  <button class="nav-btn" id="nav-sessions" onclick="switchToSessions()">
+    <span class="nav-icon">◎</span>
+    <span>Sessions</span>
+  </button>
+</nav>
+
+</div>
+
+<script>
+// ════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════
+const ACTORS = {
+  coach: {
+    name:'The Coach',
+    role:'Training structure & load',
+    emoji:'🎯',
+    color:'var(--coach)',
+    cls:'coach',
+    system: `You are an elite triathlon coach specialising in 70.3 Ironman for competitive age-group athletes targeting 4:30–5:00 finish times. The athlete trains 10–15hr/week.
+
+Your voice: Direct, mechanism-first, evidence-grounded. Never generic. Never vague. Challenge assumptions before confirming them. Speak in physiology.
+
+Your focus areas: Training load management, session quality, zone prescription, periodisation, brick execution, taper timing, progressive overload.
+
+Key athlete context: Fixed Tuesday and Thursday morning swim squad (threshold). Wednesday is the key structured bike session. Saturday is brick. Sunday is long hilly run. Gut sensitivity is a known constraint — managed through specific nutrition protocol.
+
+Response format: 2–4 short paragraphs. Lead with mechanism (WHY before WHAT). End with one pointed question or observation if relevant. No bullet points. No headers. No encouragement. State what is true.`
+  },
+  nutri: {
+    name:'The Nutritionist',
+    role:'Fuel, gut & race nutrition',
+    emoji:'🧪',
+    color:'var(--nutri)',
+    cls:'nutri',
+    system: `You are a performance sports nutritionist specialising in endurance athletes with gut sensitivity. This athlete uses a homemade dual-carb gel (2:1 maltodextrin:fructose, food-grade DE 15–20, ~25g carbs per 40ml serve) paired with SportsFuel 101 (Bulk Nutrients). They target ~55–60g carbs/hr on the bike. Race nutrition rules: last bike gel at 1:50 mark, water-only final 40min of bike, 12-minute water-only buffer at run start before Gel 5, caffeinated gel (25–50mg) restricted to run 0:45 only.
+
+Your voice: Precise, mechanism-based. You understand osmolality, SGLT1/GLUT5 transport pathways, gastric emptying rates. You don't do vague "eat more carbs" advice. 
+
+Your focus: Fuelling execution quality, gut distress diagnosis, absorption windows, hydration, pre/post session nutrition, race-day protocol adherence.
+
+Response format: 2–3 tight paragraphs. Mechanism first. Quantify where possible. Flag any protocol deviations directly. No fluff.`
+  },
+  psych: {
+    name:'The Psychologist',
+    role:'Mental performance & resilience',
+    emoji:'🧠',
+    color:'var(--psych)',
+    cls:'psych',
+    system: `You are a sport psychologist working with competitive age-group triathletes. Your approach draws on Acceptance and Commitment Therapy (ACT), cognitive behavioural methods, and performance psychology. You are not a therapist — you are a performance practitioner.
+
+Your voice: Curious, precise, non-judgmental but direct. You don't offer reassurance for free. You name patterns. You distinguish between discomfort that signals adaptation and distress that signals something to address.
+
+Your focus: Confidence and self-efficacy, pre-race anxiety, managing training motivation, performance under pressure, identity and expectations, sleep and stress load.
+
+Response format: 2–3 paragraphs. Name what you observe from the log. Offer a reframe or insight. Ask one useful question if relevant. No platitudes. No "great job". Be real.`
+  },
+  physio: {
+    name:'The Physio',
+    role:'Injury risk & movement quality',
+    emoji:'🔬',
+    color:'var(--physio)',
+    cls:'physio',
+    system: `You are a sports physiotherapist specialising in endurance athletes. You have deep knowledge of overuse injury patterns in triathlon: swim shoulder, cyclist's knee, runner's hip/IT band, Achilles loading, plantar issues.
+
+Your voice: Clinical, direct. You triage. You distinguish between DOMS and injury signals, between load tolerance and structural risk. You do not diagnose remotely — you flag, explain mechanism, and recommend action tier (monitor / reduce / stop / see someone).
+
+Your focus: Pain and sharp sensation flags, load distribution across disciplines, fatigue patterns suggesting structural stress, recovery quality, warm-up and cool-down adequacy.
+
+Response format: 2–3 paragraphs. Triage first (what level of concern, why). Mechanism second. Clear action recommendation. If nothing concerning: confirm what looks fine and what to watch. No medical drama. No catastrophising.`
+  },
+  strat: {
+    name:'The Strategist',
+    role:'Race execution & decision-making',
+    emoji:'♟️',
+    color:'var(--strat)',
+    cls:'strat',
+    system: `You are a race execution strategist for 70.3 Ironman. Your job is not fitness — it's decision-making under race conditions. You analyse training data through the lens of what it reveals about race-day choices: pacing discipline, transition execution, mid-race adjustments, negative splitting, managing unexpected events.
+
+Your voice: Sharp, tactical, slightly challenging. You notice when athletes train in ways that will produce bad race-day habits. You care about rehearsal quality — are they practising the right decisions?
+
+Your focus: Pacing decisions in training vs race, transition protocols, nutrition timing adherence, managing bad patches, split targets, confidence in execution.
+
+Response format: 2–3 paragraphs. Frame everything through "what does this tell us about race day?". Be specific. One tactical observation per response. End with a decision or question they should be thinking about.`
+  }
+};
+
+const PANEL_ACTORS = ['coach','nutri','psych','physio','strat'];
+
+// ════════════════════════════════════
+// STATE
+// ════════════════════════════════════
+let selectedType = null;
+let selectedRpe = null;
+let selectedFlags = new Set();
+let actorFilter = 'panel';
+let sessionLog = [];
+let currentSessionIdx = null;
+let activeActor = 'panel'; // in chat
+let conversationHistory = []; // full chat history for API
+
+// ════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════
+async function save() {
+  try { await window.storage.set('panel_v1', JSON.stringify(sessionLog)); } catch(e) {}
+}
+async function load() {
+  try {
+    const r = await window.storage.get('panel_v1');
+    if (r?.value) sessionLog = JSON.parse(r.value);
+  } catch(e) {}
+}
+
+// ════════════════════════════════════
+// LOG FORM
+// ════════════════════════════════════
+function selectType(btn) {
+  document.querySelectorAll('.stype-btn').forEach(b => b.className='stype-btn');
+  const t = btn.dataset.type;
+  btn.classList.add(`sel-${t}`);
+  selectedType = t;
+  checkSubmit();
+}
+
+function selectRpe(btn) {
+  document.querySelectorAll('.rpe-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  selectedRpe = parseInt(btn.dataset.rpe);
+  checkSubmit();
+}
+
+function toggleFlag(btn) {
+  btn.classList.toggle('sel');
+  const txt = btn.textContent.trim();
+  if (btn.classList.contains('sel')) selectedFlags.add(txt);
+  else selectedFlags.delete(txt);
+}
+
+function checkSubmit() {
+  const what = document.getElementById('log-what').value.trim();
+  document.getElementById('submit-btn').disabled = !(selectedType && what.length > 10);
+}
+
+document.getElementById('log-what').addEventListener('input', checkSubmit);
+
+function setActorFilter(f) {
+  actorFilter = f;
+  document.querySelectorAll('.actor-pill').forEach(p => {
+    p.className = 'actor-pill';
+  });
+  const map = {panel:'pill-all',coach:'pill-coach',nutri:'pill-nutri',psych:'pill-psych',physio:'pill-physio',strat:'pill-strat'};
+  const pill = document.getElementById(map[f]);
+  if (pill) pill.classList.add(`on-${f}`);
+}
+// init
+setActorFilter('panel');
+
+// ════════════════════════════════════
+// SUBMIT LOG → CHAT
+// ════════════════════════════════════
+async function submitLog() {
+  const what = document.getElementById('log-what').value.trim();
+  const meta = document.getElementById('log-meta').value.trim();
+  const notes = document.getElementById('log-notes').value.trim();
+  const flags = Array.from(selectedFlags);
+
+  const session = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}),
+    type: selectedType,
+    meta, what, notes, flags,
+    rpe: selectedRpe,
+    actorFilter,
+    messages: []
+  };
+
+  sessionLog.unshift(session);
+  currentSessionIdx = 0;
+  await save();
+
+  // Open chat and trigger initial panel response
+  openChat(0, true);
+}
+
+// ════════════════════════════════════
+// CHAT SCREEN
+// ════════════════════════════════════
+function openChat(idx, isNew = false) {
+  currentSessionIdx = idx;
+  const session = sessionLog[idx];
+  conversationHistory = session.messages || [];
+  activeActor = session.actorFilter || 'panel';
+
+  // Build header
+  updateChatHeader();
+  buildActorStrip();
+  renderMessages();
+
+  showScreen('screen-chat');
+
+  if (isNew) {
+    // Show user's log as first message
+    const userSummary = buildSessionSummary(session);
+    addUserMessage(userSummary, false);
+    triggerActorResponse(session, isNew);
+  }
+}
+
+function buildSessionSummary(s) {
+  const parts = [`Session: ${s.type.toUpperCase()}`];
+  if (s.meta) parts.push(s.meta);
+  if (s.rpe) parts.push(`RPE ${s.rpe}/10`);
+  parts.push(s.what);
+  if (s.flags.length) parts.push(`Flags: ${s.flags.join(', ')}`);
+  if (s.notes) parts.push(s.notes);
+  return parts.join('\n');
+}
+
+function updateChatHeader() {
+  const session = sessionLog[currentSessionIdx];
+  const filter = session?.actorFilter || activeActor;
+  if (filter !== 'panel' && ACTORS[filter]) {
+    const a = ACTORS[filter];
+    document.getElementById('chat-actor-avatar').textContent = a.emoji;
+    document.getElementById('chat-actor-avatar').style.background = `${a.color}22`;
+    document.getElementById('chat-actor-name').textContent = a.name;
+    document.getElementById('chat-actor-role').textContent = a.role;
+  } else {
+    document.getElementById('chat-actor-avatar').textContent = '✦';
+    document.getElementById('chat-actor-avatar').style.background = 'var(--panel-bg)';
+    document.getElementById('chat-actor-name').textContent = 'The Panel';
+    document.getElementById('chat-actor-role').textContent = 'Five experts · one session';
+  }
+}
+
+function buildActorStrip() {
+  const strip = document.getElementById('actor-sel-strip');
+  const opts = [{id:'panel',label:'Full panel',emoji:'✦'}, ...PANEL_ACTORS.map(k=>({id:k,...ACTORS[k]}))];
+  strip.innerHTML = opts.map(o => `
+    <button class="asel ${activeActor===o.id?'on':''}" onclick="switchActor('${o.id}')">
+      ${o.emoji||o.label} ${o.name||o.label}
+    </button>`).join('');
+}
+
+function switchActor(actor) {
+  activeActor = actor;
+  buildActorStrip();
+  updateChatHeader();
+}
+
+// ════════════════════════════════════
+// MESSAGES
+// ════════════════════════════════════
+function renderMessages() {
+  const el = document.getElementById('messages');
+  el.innerHTML = '';
+  conversationHistory.forEach(m => appendMessageEl(m));
+  scrollBottom();
+}
+
+function appendMessageEl(msg) {
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  if (msg.role === 'user') {
+    div.innerHTML = `<div class="msg-bubble user">${esc(msg.content).replace(/\n/g,'<br>')}</div>
+    <div class="msg-timestamp">${msg.time||''}</div>`;
+  } else {
+    const a = ACTORS[msg.actor] || ACTORS.coach;
+    div.innerHTML = `
+      <div class="msg-actor-row">
+        <div class="msg-actor-dot" style="background:${a.color}"></div>
+        <span class="msg-actor-name" style="color:${a.color}">${a.name}</span>
+        <span class="msg-actor-role">· ${a.role}</span>
+      </div>
+      <div class="msg-bubble ${a.cls}">${formatMsg(msg.content)}</div>
+      <div class="msg-timestamp">${msg.time||''}</div>`;
+  }
+  el.appendChild(div);
+}
+
+function formatMsg(text) {
+  return esc(text)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/\n\n/g,'</p><p style="margin-top:8px">')
+    .replace(/\n/g,'<br>');
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function addUserMessage(content, save=true) {
+  const msg = {role:'user', content, time:now()};
+  conversationHistory.push(msg);
+  appendMessageEl(msg);
+  scrollBottom();
+  if (save && currentSessionIdx !== null) {
+    sessionLog[currentSessionIdx].messages = conversationHistory;
+    window.save?.();
+  }
+}
+
+function addLoadingBubble(actor) {
+  const a = ACTORS[actor] || ACTORS.coach;
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg'; div.id='loading-bubble';
+  div.innerHTML = `
+    <div class="msg-actor-row">
+      <div class="msg-actor-dot" style="background:${a.color}"></div>
+      <span class="msg-actor-name" style="color:${a.color}">${a.name}</span>
+    </div>
+    <div class="msg-bubble ${a.cls}"><span class="loading-dots"><span>●</span><span>●</span><span>●</span></span></div>`;
+  el.appendChild(div);
+  scrollBottom();
+}
+
+function removeLoadingBubble() {
+  document.getElementById('loading-bubble')?.remove();
+}
+
+function addActorMessage(actor, content) {
+  const msg = {role:'assistant', actor, content, time:now()};
+  conversationHistory.push(msg);
+  appendMessageEl(msg);
+  scrollBottom();
+  if (currentSessionIdx !== null) {
+    sessionLog[currentSessionIdx].messages = conversationHistory;
+    save();
+  }
+}
+
+function scrollBottom() {
+  const el = document.getElementById('messages');
+  setTimeout(() => el.scrollTop = el.scrollHeight, 50);
+}
+
+function now() {
+  return new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ════════════════════════════════════
+// API CALLS
+// ════════════════════════════════════
+async function triggerActorResponse(session, isNew) {
+  const filter = activeActor;
+  const actors = filter === 'panel' ? PANEL_ACTORS : [filter];
+  const userSummary = buildSessionSummary(session);
+
+  for (const actor of actors) {
+    await callActor(actor, userSummary, true);
+  }
+}
+
+async function callActor(actor, userMsg, isInitial = false) {
+  const a = ACTORS[actor];
+  if (!a) return;
+
+  addLoadingBubble(actor);
+
+  // Build messages for this actor
+  const apiMessages = [];
+  
+  // Add relevant history
+  conversationHistory.filter(m => m.role === 'user' || m.actor === actor).forEach(m => {
+    if (m.role === 'user') {
+      apiMessages.push({role:'user', content: m.content});
+    } else {
+      apiMessages.push({role:'assistant', content: m.content});
+    }
+  });
+
+  // If last isn't user, add current user msg
+  if (!apiMessages.length || apiMessages[apiMessages.length-1].role !== 'user') {
+    apiMessages.push({role:'user', content: userMsg});
+  }
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system: a.system,
+        messages: apiMessages
+      })
+    });
+    const data = await res.json();
+    const text = data?.content?.filter(c=>c.type==='text').map(c=>c.text).join('') || 'Unable to respond right now.';
+    removeLoadingBubble();
+    addActorMessage(actor, text);
+  } catch(err) {
+    removeLoadingBubble();
+    addActorMessage(actor, `_Connection error — try again._`);
+  }
+}
+
+// ════════════════════════════════════
+// USER SENDS MESSAGE IN CHAT
+// ════════════════════════════════════
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = '';
+  document.getElementById('send-btn').disabled = true;
+
+  addUserMessage(text);
+
+  const actors = activeActor === 'panel' ? PANEL_ACTORS : [activeActor];
+  for (const actor of actors) {
+    await callActor(actor, text, false);
+  }
+
+  document.getElementById('send-btn').disabled = false;
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+
+function backToLog() {
+  showScreen('screen-log');
+  renderHistory();
+  resetForm();
+}
+
+function switchMain(tab, btn) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function switchToSessions() {
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('nav-sessions').classList.add('on');
+  showScreen('screen-log');
+  renderHistory();
+  // scroll to history section
+  setTimeout(()=>{
+    document.querySelector('#history-list')?.scrollIntoView({behavior:'smooth'});
+  },100);
+}
+
+// ════════════════════════════════════
+// HISTORY
+// ════════════════════════════════════
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!sessionLog.length) {
+    el.innerHTML = `<div class="history-empty">No sessions logged yet.<br>Fill in the form above to get started.</div>`;
+    return;
+  }
+  el.innerHTML = sessionLog.map((s,i) => {
+    const typeEmoji = {swim:'🏊',bike:'🚴',run:'🏃',brick:'⚡',strength:'💪',race:'🏁'}[s.type]||'◎';
+    const flagChips = s.flags.map(f=>`<span class="log-flag-chip">${f}</span>`).join('');
+    const rpe = s.rpe ? `RPE ${s.rpe}` : '';
+    const meta = [s.meta,rpe].filter(Boolean).join(' · ');
+    return `<div class="log-card">
+      <div class="log-card-hdr">
+        <span class="log-card-type" style="color:${typeColorFor(s.type)}">${typeEmoji} ${s.type.toUpperCase()}</span>
+        <span class="log-card-date">${s.date}</span>
+      </div>
+      <div class="log-card-body">
+        ${meta?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);margin-bottom:4px">${meta}</div>`:''}
+        ${s.what.substring(0,100)}${s.what.length>100?'…':''}
+      </div>
+      ${flagChips?`<div class="log-card-flags">${flagChips}</div>`:''}
+      <button class="open-chat-btn" onclick="openChat(${i})">Continue with panel →</button>
+    </div>`;
+  }).join('');
+}
+
+function typeColorFor(type) {
+  const map = {swim:'var(--coach)',bike:'var(--nutri)',run:'var(--physio)',brick:'var(--psych)',strength:'var(--strat)',race:'var(--panel)'};
+  return map[type]||'var(--ink2)';
+}
+
+function resetForm() {
+  selectedType = null; selectedRpe = null; selectedFlags.clear();
+  document.querySelectorAll('.stype-btn').forEach(b=>b.className='stype-btn');
+  document.querySelectorAll('.rpe-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelectorAll('.flag-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('log-what').value='';
+  document.getElementById('log-meta').value='';
+  document.getElementById('log-notes').value='';
+  document.getElementById('submit-btn').disabled=true;
+  setActorFilter('panel');
+}
+
+// ════════════════════════════════════
+// INIT
+// ════════════════════════════════════
+async function init() {
+  await load();
+  renderHistory();
+}
+
+window.save = save;
+init();
+</script>
+</body>
+</html>

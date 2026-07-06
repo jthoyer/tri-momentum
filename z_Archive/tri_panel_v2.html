@@ -1,0 +1,230 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+#panel{font-family:var(--font-sans);color:var(--color-text-primary);display:flex;flex-direction:column;gap:0}
+.hdr{padding:1.25rem 1.25rem .875rem;border-bottom:0.5px solid var(--color-border-tertiary)}
+.eyebrow{font-size:11px;color:var(--color-text-tertiary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.htitle{font-size:20px;font-weight:500;line-height:1.1}
+.hsub{font-size:13px;color:var(--color-text-secondary);margin-top:3px}
+.astrip{display:flex;gap:6px;overflow-x:auto;padding:.75rem 1.25rem;border-bottom:0.5px solid var(--color-border-tertiary);scrollbar-width:none}
+.apill{flex-shrink:0;padding:4px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-secondary);cursor:pointer;transition:all .15s}
+.form-area{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:14px}
+.flabel{font-size:11px;color:var(--color-text-tertiary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tbtn{padding:9px 6px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);font-size:12px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;text-align:center;transition:all .15s;line-height:1.3}
+.rpebar{display:flex;gap:3px}
+.rpebtn{flex:1;padding:7px 2px;border-radius:6px;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);font-size:11px;color:var(--color-text-tertiary);cursor:pointer;text-align:center;transition:all .12s}
+.flags{display:flex;gap:6px;flex-wrap:wrap}
+.fbtn{padding:5px 11px;border-radius:20px;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);font-size:11px;color:var(--color-text-secondary);cursor:pointer;transition:all .12s}
+.fbtn.on{background:var(--color-background-warning);border-color:var(--color-border-warning);color:var(--color-text-warning)}
+.submitbtn{width:100%;padding:12px;background:var(--color-text-primary);color:var(--color-background-primary);border:none;border-radius:var(--border-radius-md);font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s;margin-top:2px}
+.submitbtn:disabled{opacity:.3;cursor:not-allowed}
+.divider{height:0.5px;background:var(--color-border-tertiary);margin:.75rem 1.25rem 0}
+.hist-area{padding:1rem 1.25rem 1.5rem}
+.hcard{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.875rem 1rem;margin-bottom:8px}
+.hcard-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.hcard-type{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.hcard-date{font-size:11px;color:var(--color-text-tertiary)}
+.hcard-body{font-size:13px;color:var(--color-text-secondary);line-height:1.5}
+.hcard-meta{font-size:11px;color:var(--color-text-tertiary);margin-bottom:3px}
+.flag-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.fchip{padding:2px 8px;border-radius:20px;font-size:10px;background:var(--color-background-warning);border:0.5px solid var(--color-border-warning);color:var(--color-text-warning)}
+.openbtn{margin-top:7px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-secondary);cursor:pointer;background:transparent;transition:all .15s}
+.openbtn:hover{background:var(--color-background-secondary)}
+.chat-view{display:flex;flex-direction:column;min-height:520px}
+.chat-hdr{padding:.875rem 1.25rem;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px}
+.backbtn{font-size:18px;color:var(--color-text-secondary);cursor:pointer;background:none;border:none;padding:0 8px 0 0;line-height:1}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.chat-hdr-name{font-size:15px;font-weight:500;line-height:1.1}
+.chat-hdr-role{font-size:11px;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase}
+.session-tag{margin-left:auto;font-size:11px;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase}
+.msgs{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px;min-height:320px}
+.msg-actor-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.adot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.aname{font-size:11px;letter-spacing:.07em;text-transform:uppercase;font-weight:500}
+.arole{font-size:11px;color:var(--color-text-tertiary)}
+.bubble{padding:11px 13px;border-radius:var(--border-radius-md);font-size:13px;line-height:1.65;border:0.5px solid var(--color-border-tertiary)}
+.ububble{padding:11px 13px;border-radius:var(--border-radius-md);font-size:13px;line-height:1.65;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);margin-left:3rem}
+.ts{font-size:11px;color:var(--color-text-tertiary);padding-left:14px;margin-top:2px}
+.dot-anim span{display:inline-block;animation:bl 1.4s infinite;margin-right:2px;opacity:.4}
+.dot-anim span:nth-child(2){animation-delay:.2s}
+.dot-anim span:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.input-row{display:flex;gap:8px;padding:.875rem 1.25rem;border-top:0.5px solid var(--color-border-tertiary);align-items:flex-end;margin-top:auto}
+.cinput{flex:1;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:9px 12px;font-size:13px;outline:none;resize:none;font-family:var(--font-sans);line-height:1.5;background:var(--color-background-secondary);color:var(--color-text-primary)}
+.sendbtn{width:36px;height:36px;border-radius:var(--border-radius-md);background:var(--color-text-primary);color:var(--color-background-primary);border:none;cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:opacity .15s}
+.sendbtn:disabled{opacity:.3;cursor:not-allowed}
+</style>
+<div id="panel"></div>
+<script>
+const ACTORS={
+  coach:{name:"Coach",full:"The Coach",role:"Training & load",color:"#185FA5",bg:"#E6F1FB",bc:"#B5D4F4",tc:"#0C447C"},
+  nutri:{name:"Nutritionist",full:"The Nutritionist",role:"Fuel & gut",color:"#0F6E56",bg:"#E1F5EE",bc:"#9FE1CB",tc:"#085041"},
+  psych:{name:"Psychologist",full:"The Psychologist",role:"Mental performance",color:"#534AB7",bg:"#EEEDFE",bc:"#CECBF6",tc:"#3C3489"},
+  physio:{name:"Physio",full:"The Physio",role:"Injury & movement",color:"#993C1D",bg:"#FAECE7",bc:"#F5C4B3",tc:"#712B13"},
+  strat:{name:"Strategist",full:"The Strategist",role:"Race execution",color:"#854F0B",bg:"#FAEEDA",bc:"#FAC775",tc:"#633806"}
+};
+const PANEL=["coach","nutri","psych","physio","strat"];
+const FLAGS=["Gut issues","Sleep poor","Legs heavy","Sharp pain","Mentally flat","Poor fuelling","Overheated","Felt great"];
+const TYPES=[{id:"swim",label:"Swim"},{id:"bike",label:"Bike"},{id:"run",label:"Run"},{id:"brick",label:"Brick"},{id:"strength",label:"Strength"},{id:"race",label:"Race sim"}];
+const TC={swim:"#185FA5",bike:"#0F6E56",run:"#993C1D",brick:"#534AB7",strength:"#854F0B",race:"#72243E"};
+const SYSTEMS={
+  coach:`You are an elite triathlon coach for competitive age-group athletes targeting 4:30-5:00 70.3 finish times, training 10-15hr/week. Fixed Tue/Thu morning swim squad, Wednesday key bike, Saturday brick, Sunday long hilly run. Athlete has known gut sensitivity managed via dual-carb gel protocol (2:1 maltodextrin:fructose, food-grade DE15-20). Voice: direct, mechanism-first, no motivation speak. Format: 2-4 short paragraphs, WHY before WHAT, one pointed question at end if useful. No bullet points. No headers. State what is true.`,
+  nutri:`You are a performance sports nutritionist for endurance athletes with gut sensitivity. Protocol: homemade 2:1 maltodextrin:fructose gel (~25g carbs/40ml), SportsFuel 101 (Bulk Nutrients), target 55-60g carbs/hr bike. Race rules: last bike gel at 1:50, water-only final 40min bike, 12-min water-only buffer run start, caffeinated gel (25-50mg) run 0:45 only. Voice: precise, mechanism-based, quantify where possible. Format: 2-3 tight paragraphs, flag protocol deviations directly.`,
+  psych:`You are a sport psychologist for competitive age-group triathletes. ACT and performance psychology practitioner. Voice: curious, precise, non-judgmental but direct. Name patterns. Distinguish adaptation discomfort from distress. Format: 2-3 paragraphs, name what you observe, offer reframe, one useful question if relevant. No platitudes.`,
+  physio:`You are a sports physiotherapist specialising in endurance athletes. Expert in triathlon overuse patterns: swim shoulder, cyclist knee, IT band, Achilles, plantar. Voice: clinical, direct. Triage first. Action tiers: monitor/reduce/stop/see someone. Format: 2-3 paragraphs, triage level and reason, mechanism, clear action. If no concern, confirm what looks fine and what to watch.`,
+  strat:`You are a race execution strategist for 70.3 Ironman. Focus: decision-making under race conditions, not fitness. Voice: sharp, tactical, slightly challenging. Notice when training produces bad race-day habits. Format: 2-3 paragraphs, frame everything through what this tells us about race day, one specific tactical observation.`
+};
+
+let sessions=[],curIdx=null,msgs=[],activeActor="panel",actorFilter="panel",sending=false;
+let selType=null,selRpe=null,selFlags=new Set(),logWhat="",logMeta="",logNotes="";
+
+function nowT(){return new Date().toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/\n\n/g,"</p><p style='margin-top:7px'>").replace(/\n/g,"<br>")}
+function buildSum(s){const p=[`Session: ${s.type.toUpperCase()}`];if(s.meta)p.push(`Duration/distance: ${s.meta}`);if(s.rpe)p.push(`RPE: ${s.rpe}/10`);p.push(`What happened: ${s.what}`);if(s.flags?.length)p.push(`Flags: ${s.flags.join(", ")}`);if(s.notes)p.push(`Additional context: ${s.notes}`);return p.join("\n")}
+
+async function save(){try{await window.storage.set("tri_panel_v3",JSON.stringify(sessions));}catch{}}
+async function load(){try{const r=await window.storage.get("tri_panel_v3");if(r?.value)sessions=JSON.parse(r.value);}catch{}}
+
+async function callActor(key,apiMsgs){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:900,system:SYSTEMS[key],messages:apiMsgs})});
+  const d=await r.json();
+  return d?.content?.filter(c=>c.type==="text").map(c=>c.text).join("")||"Unable to respond right now.";
+}
+
+function render(){
+  const el=document.getElementById("panel");
+  if(curIdx!==null){el.innerHTML=chatHTML();bindChat();}
+  else{el.innerHTML=logHTML();bindLog();}
+}
+
+function logHTML(){
+  const actorOpts=[{id:"panel",label:"Full panel",color:"#72243E"},...PANEL.map(k=>({id:k,label:ACTORS[k].name,color:ACTORS[k].color}))];
+  const pillsHTML=actorOpts.map(o=>`<button class="apill" data-af="${o.id}" style="${actorFilter===o.id?`background:${o.color}18;border-color:${o.color}55;color:${o.color}`:""}">${o.label}</button>`).join("");
+  const typesHTML=TYPES.map(t=>`<button class="tbtn" data-type="${t.id}" style="${selType===t.id?`background:${TC[t.id]}18;border-color:${TC[t.id]}55;color:${TC[t.id]}`:""}">${t.label}</button>`).join("");
+  const rpeHTML=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="rpebtn" data-rpe="${n}" style="${selRpe===n?"background:var(--color-background-secondary);border-color:var(--color-border-primary);color:var(--color-text-primary)":""}">${n}</button>`).join("");
+  const flagsHTML=FLAGS.map(f=>`<button class="fbtn${selFlags.has(f)?" on":""}" data-flag="${esc(f)}">${f}</button>`).join("");
+  const canSub=selType&&logWhat.trim().length>10;
+  const histHTML=sessions.length===0?`<p style="font-size:13px;color:var(--color-text-tertiary)">No sessions logged yet.</p>`:sessions.map((s,i)=>`<div class="hcard"><div class="hcard-hdr"><span class="hcard-type" style="color:${TC[s.type]||"var(--color-text-secondary)"}">${s.type.toUpperCase()}</span><span class="hcard-date">${s.date}</span></div>${s.meta?`<div class="hcard-meta">${esc(s.meta)}${s.rpe?` · RPE ${s.rpe}`:""}</div>`:""}<div class="hcard-body">${esc(s.what.substring(0,110))}${s.what.length>110?"…":""}</div>${s.flags?.length?`<div class="flag-chips">${s.flags.map(f=>`<span class="fchip">${esc(f)}</span>`).join("")}</div>`:""}<button class="openbtn" data-hi="${i}">Continue with panel</button></div>`).join("");
+  return`<div class="hdr"><div class="eyebrow">The Panel · 70.3</div><div class="htitle">Log a session</div><div class="hsub">Five experts respond to what you report.</div></div><div class="astrip">${pillsHTML}</div><div class="form-area"><div><div class="flabel">Session type</div><div class="tgrid">${typesHTML}</div></div><div><div class="flabel">Duration & distance</div><input id="li-meta" placeholder="e.g. 2hr 30min · 90km · avg 38kph" style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 12px;font-size:13px;background:var(--color-background-secondary);color:var(--color-text-primary);outline:none" value="${esc(logMeta)}"></div><div><div class="flabel">What happened</div><textarea id="li-what" rows="3" placeholder="Pacing, zones, intervals, how it felt physically and mentally…" style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 12px;font-size:13px;background:var(--color-background-secondary);color:var(--color-text-primary);outline:none;resize:none;line-height:1.6;min-height:75px;font-family:var(--font-sans)">${esc(logWhat)}</textarea></div><div><div class="flabel">RPE</div><div class="rpebar">${rpeHTML}</div></div><div><div class="flabel">Flags</div><div class="flags">${flagsHTML}</div></div><div><div class="flabel">Anything else</div><textarea id="li-notes" rows="2" placeholder="Life stress, sleep, nutrition context, race proximity…" style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 12px;font-size:13px;background:var(--color-background-secondary);color:var(--color-text-primary);outline:none;resize:none;line-height:1.6;font-family:var(--font-sans)">${esc(logNotes)}</textarea></div><button class="submitbtn" id="submit-btn" ${canSub?"":"disabled"}>Get the panel's take</button></div>${sessions.length>0?`<div class="divider"></div><div class="hist-area"><div class="flabel" style="margin-bottom:10px">Previous sessions</div>${histHTML}</div>`:""}`;
+}
+
+function chatHTML(){
+  const session=sessions[curIdx];
+  const da=activeActor!=="panel"?ACTORS[activeActor]:null;
+  const actorOpts=[{id:"panel",label:"Full panel",color:"#72243E"},...PANEL.map(k=>({id:k,label:ACTORS[k].name,color:ACTORS[k].color}))];
+  const pillsHTML=actorOpts.map(o=>`<button class="apill" data-aa="${o.id}" style="${activeActor===o.id?`background:${o.color}18;border-color:${o.color}55;color:${o.color}`:""}">${o.label}</button>`).join("");
+  const msgsHTML=msgs.map(m=>{
+    if(m.role==="user")return`<div><div class="ububble">${fmt(m.content)}</div><div class="ts">${m.time||""}</div></div>`;
+    const a=ACTORS[m.actor];if(!a)return"";
+    return`<div><div class="msg-actor-row"><div class="adot" style="background:${a.color}"></div><span class="aname" style="color:${a.color}">${a.full}</span><span class="arole">· ${a.role}</span></div><div class="bubble" style="background:${a.bg};border-color:${a.bc}">${m.loading?`<span class="dot-anim"><span style="color:${a.color}">●</span><span style="color:${a.color}">●</span><span style="color:${a.color}">●</span></span>`:fmt(m.content)}</div>${m.loading?"":`<div class="ts">${m.time||""}</div>`}</div>`;
+  }).join("");
+  return`<div class="chat-view"><div class="chat-hdr"><button class="backbtn" id="back-btn">←</button><div class="av" style="background:${da?da.bg:"#FBEAF0"};color:${da?da.color:"#72243E"}">${da?"◎":"✦"}</div><div><div class="chat-hdr-name">${da?da.full:"The Panel"}</div><div class="chat-hdr-role">${da?da.role:"Five experts · one session"}</div></div>${session?`<div class="session-tag">${esc(session.type)} · ${esc(session.date)}</div>`:""}</div><div class="astrip">${pillsHTML}</div><div class="msgs" id="msgs-el">${msgsHTML}</div><div class="input-row"><textarea class="cinput" id="chat-inp" rows="1" placeholder="Ask anything about this session…"></textarea><button class="sendbtn" id="send-btn" ${sending?"disabled":""}>↑</button></div></div>`;
+}
+
+function bindLog(){
+  document.querySelectorAll(".apill[data-af]").forEach(b=>b.onclick=()=>{actorFilter=b.dataset.af;render();});
+  document.querySelectorAll(".tbtn").forEach(b=>b.onclick=()=>{selType=b.dataset.type;syncForm();render();});
+  document.querySelectorAll(".rpebtn").forEach(b=>b.onclick=()=>{selRpe=parseInt(b.dataset.rpe);render();});
+  document.querySelectorAll(".fbtn").forEach(b=>b.onclick=()=>{const f=b.dataset.flag;selFlags.has(f)?selFlags.delete(f):selFlags.add(f);render();});
+  const ta=document.getElementById("li-what");if(ta){ta.oninput=()=>{logWhat=ta.value;const s=document.getElementById("submit-btn");if(s)s.disabled=!(selType&&logWhat.trim().length>10);}}
+  const mi=document.getElementById("li-meta");if(mi)mi.oninput=()=>logMeta=mi.value;
+  const ni=document.getElementById("li-notes");if(ni)ni.oninput=()=>logNotes=ni.value;
+  const sb=document.getElementById("submit-btn");if(sb)sb.onclick=doSubmit;
+  document.querySelectorAll(".openbtn[data-hi]").forEach(b=>b.onclick=()=>doOpenChat(parseInt(b.dataset.hi)));
+}
+
+function syncForm(){logWhat=document.getElementById("li-what")?.value||logWhat;logMeta=document.getElementById("li-meta")?.value||logMeta;logNotes=document.getElementById("li-notes")?.value||logNotes;}
+
+function bindChat(){
+  document.getElementById("back-btn").onclick=()=>{curIdx=null;render();};
+  document.querySelectorAll(".apill[data-aa]").forEach(b=>b.onclick=()=>{activeActor=b.dataset.aa;render();scrollMsgs();});
+  const si=document.getElementById("chat-inp");
+  const sb=document.getElementById("send-btn");
+  if(si){si.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();doSend();}};si.oninput=()=>{si.style.height="auto";si.style.height=Math.min(si.scrollHeight,100)+"px";};}
+  if(sb)sb.onclick=doSend;
+  scrollMsgs();
+}
+
+function scrollMsgs(){setTimeout(()=>{const el=document.getElementById("msgs-el");if(el)el.scrollTop=el.scrollHeight;},50);}
+
+async function doSubmit(){
+  syncForm();
+  if(!selType||logWhat.trim().length<10)return;
+  const session={id:Date.now(),date:new Date().toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}),type:selType,meta:logMeta,what:logWhat,notes:logNotes,flags:Array.from(selFlags),rpe:selRpe,actorFilter,messages:[]};
+  sessions.unshift(session);await save();
+  selType=null;selRpe=null;selFlags=new Set();logWhat="";logMeta="";logNotes="";
+  curIdx=0;msgs=[];activeActor=session.actorFilter||"panel";
+  render();
+  const summary=buildSum(session);
+  const userMsg={role:"user",content:summary,time:nowT()};
+  msgs.push(userMsg);
+  const actors=actorFilter==="panel"?PANEL:[actorFilter];
+  for(const ak of actors){
+    const lm={role:"assistant",actor:ak,loading:true,_id:Math.random()};
+    msgs.push(lm);renderMsgsOnly();
+    try{
+      const api=msgs.filter(m=>!m.loading&&(m.role==="user"||m.actor===ak)).map(m=>({role:m.role==="user"?"user":"assistant",content:m.content}));
+      if(!api.length||api[api.length-1].role!=="user")api.push({role:"user",content:summary});
+      const text=await callActor(ak,api);
+      const idx=msgs.findIndex(m=>m._id===lm._id);
+      if(idx>-1)msgs[idx]={role:"assistant",actor:ak,content:text,time:nowT()};
+    }catch(e){
+      const idx=msgs.findIndex(m=>m._id===lm._id);
+      if(idx>-1)msgs[idx]={role:"assistant",actor:ak,content:"Connection error. Please try again.",time:nowT()};
+    }
+    renderMsgsOnly();
+  }
+  sessions[0].messages=msgs;await save();
+}
+
+async function doOpenChat(idx){
+  curIdx=idx;
+  const session=sessions[idx];
+  msgs=session.messages||[];
+  activeActor=session.actorFilter||"panel";
+  render();
+}
+
+async function doSend(){
+  if(sending)return;
+  const inp=document.getElementById("chat-inp");
+  const text=inp?.value?.trim();
+  if(!text)return;
+  inp.value="";sending=true;
+  const um={role:"user",content:text,time:nowT()};
+  msgs.push(um);renderMsgsOnly();
+  const actors=activeActor==="panel"?PANEL:[activeActor];
+  for(const ak of actors){
+    const lm={role:"assistant",actor:ak,loading:true,_id:Math.random()};
+    msgs.push(lm);renderMsgsOnly();
+    try{
+      const api=msgs.filter(m=>!m.loading&&(m.role==="user"||m.actor===ak)).map(m=>({role:m.role==="user"?"user":"assistant",content:m.content}));
+      const t=await callActor(ak,api);
+      const idx2=msgs.findIndex(m=>m._id===lm._id);
+      if(idx2>-1)msgs[idx2]={role:"assistant",actor:ak,content:t,time:nowT()};
+    }catch{
+      const idx2=msgs.findIndex(m=>m._id===lm._id);
+      if(idx2>-1)msgs[idx2]={role:"assistant",actor:ak,content:"Error. Try again.",time:nowT()};
+    }
+    renderMsgsOnly();
+  }
+  if(curIdx!==null){sessions[curIdx].messages=msgs;await save();}
+  sending=false;
+  const sb=document.getElementById("send-btn");if(sb)sb.disabled=false;
+}
+
+function renderMsgsOnly(){
+  const el=document.getElementById("msgs-el");
+  if(!el)return;
+  el.innerHTML=msgs.map(m=>{
+    if(m.role==="user")return`<div><div class="ububble">${fmt(m.content)}</div><div class="ts">${m.time||""}</div></div>`;
+    const a=ACTORS[m.actor];if(!a)return"";
+    return`<div><div class="msg-actor-row"><div class="adot" style="background:${a.color}"></div><span class="aname" style="color:${a.color}">${a.full}</span><span class="arole">· ${a.role}</span></div><div class="bubble" style="background:${a.bg};border-color:${a.bc}">${m.loading?`<span class="dot-anim"><span style="color:${a.color}">●</span><span style="color:${a.color}">●</span><span style="color:${a.color}">●</span></span>`:fmt(m.content)}</div>${m.loading?"":`<div class="ts">${m.time||""}</div>`}</div>`;
+  }).join("");
+  scrollMsgs();
+}
+
+(async()=>{await load();render();})();
+</script>
