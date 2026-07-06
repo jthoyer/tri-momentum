@@ -1,4 +1,4 @@
-const CACHE = 'tri-momentum-v1';
+const CACHE = 'tri-momentum-v2';
 const APP_SHELL = [
   './',
   './index.html',

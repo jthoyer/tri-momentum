@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRI Momentum — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Pulls the app's actual stylesheet so every swatch/component below is the real, current styling — not a re-implementation. -->
+<link rel="stylesheet" href="preview-site/styles.css">
+<style>
+  /* ══ Showcase-only chrome — namespaced so it never collides with app.* classes ══ */
+  html,body{height:auto;overflow:auto}
+  #app{display:none} /* styles.css sets #app layout rules we don't want here */
+
+  body.ds-body{
+    max-width:none;margin:0;overflow:auto;height:auto;
+    background:var(--bg);font-family:var(--fb);color:var(--ink);
+  }
+  .ds-shell{max-width:1080px;margin:0 auto;padding:0 0 6rem}
+
+  .ds-hero{
+    background:var(--ink);color:#fff;padding:3rem 2rem 2.5rem;
+  }
+  .ds-hero-eyebrow{font-family:var(--fm);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:10px}
+  .ds-hero-title{font-family:var(--fd);font-size:34px;font-weight:600;letter-spacing:-.5px;line-height:1.1}
+  .ds-hero-sub{font-size:15px;color:rgba(255,255,255,.72);line-height:1.6;margin-top:10px;max-width:560px}
+
+  .ds-nav{
+    position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+    border-bottom:0.5px solid var(--bd2);display:flex;gap:2px;overflow-x:auto;padding:0 1.5rem;
+  }
+  .ds-nav a{
+    flex-shrink:0;font-family:var(--fm);font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink3);text-decoration:none;padding:14px 10px;border-bottom:2px solid transparent;transition:all .15s;
+  }
+  .ds-nav a:hover{color:var(--ink)}
+
+  .ds-section{padding:3rem 2rem 0;border-bottom:0.5px solid var(--bd)}
+  .ds-section:last-of-type{border-bottom:none;padding-bottom:3rem}
+  .ds-section-kicker{font-family:var(--fm);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+  .ds-section-title{font-family:var(--fd);font-size:24px;font-weight:600;letter-spacing:-.3px;color:var(--ink)}
+  .ds-section-desc{font-size:15px;color:var(--ink2);line-height:1.6;margin-top:6px;max-width:640px}
+  .ds-section-body{padding:1.75rem 0 3rem}
+
+  .ds-subhead{font-family:var(--fm);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:2rem 0 .9rem}
+  .ds-subhead:first-child{margin-top:0}
+
+  /* Color swatches */
+  .ds-swatch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .ds-swatch{border:1px solid var(--bd2);border-radius:var(--rlg);overflow:hidden;background:#fff}
+  .ds-swatch-color{height:64px}
+  .ds-swatch-meta{padding:10px 12px}
+  .ds-swatch-name{font-family:var(--fm);font-size:13px;color:var(--ink);font-weight:500}
+  .ds-swatch-hex{font-family:var(--fm);font-size:12px;color:var(--ink3);margin-top:2px}
+
+  /* Type specimens */
+  .ds-type-row{display:flex;align-items:baseline;gap:20px;padding:14px 0;border-top:0.5px solid var(--bd)}
+  .ds-type-row:first-child{border-top:none}
+  .ds-type-label{font-family:var(--fm);font-size:12px;color:var(--ink3);width:150px;flex-shrink:0}
+  .ds-type-sample{flex:1;color:var(--ink)}
+
+  /* Spacing / radius tokens */
+  .ds-token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+  .ds-token{border:1px solid var(--bd2);border-radius:var(--rmd);padding:14px;background:#fff;text-align:center}
+  .ds-token-box{background:var(--blue-l);border:1px solid var(--blue);margin:0 auto 10px}
+  .ds-token-name{font-family:var(--fm);font-size:12px;color:var(--ink);font-weight:500}
+  .ds-token-val{font-family:var(--fm);font-size:12px;color:var(--ink3);margin-top:2px}
+
+  /* Component display grid */
+  .ds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .ds-frame{border:1px dashed var(--bd2);border-radius:var(--rlg);padding:1.25rem;background:var(--bg)}
+  .ds-frame-lbl{font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px;display:block}
+  .ds-row-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .ds-col-wrap{display:flex;flex-direction:column;gap:8px}
+
+  .ds-phone{max-width:340px;margin:0 auto;background:#fff;border-radius:var(--rxl);border:1px solid var(--bd2);overflow:hidden}
+
+  @media (max-width:640px){
+    .ds-hero{padding:2rem 1.25rem}
+    .ds-section{padding:2rem 1.25rem 0}
+  }
+</style>
+</head>
+<body class="ds-body">
+
+<div class="ds-hero">
+  <div class="ds-hero-eyebrow">TRI Momentum</div>
+  <div class="ds-hero-title">Design system</div>
+  <div class="ds-hero-sub">A living reference for the colors, type, spacing, and components that make up the app. Everything on this page renders with the app's own <code>styles.css</code> — if that file changes, this page changes with it.</div>
+</div>
+
+<nav class="ds-nav">
+  <a href="#colors">Colors</a>
+  <a href="#type">Typography</a>
+  <a href="#tokens">Spacing &amp; radius</a>
+  <a href="#buttons">Buttons &amp; chips</a>
+  <a href="#badges">Badges &amp; pills</a>
+  <a href="#forms">Form controls</a>
+  <a href="#cards">Cards</a>
+  <a href="#nav">Navigation</a>
+  <a href="#accessibility">Accessibility notes</a>
+</nav>
+
+<div class="ds-shell">
+
+  <!-- ═══ COLORS ═══ -->
+  <section class="ds-section" id="colors">
+    <div class="ds-section-kicker">Foundations</div>
+    <div class="ds-section-title">Color</div>
+    <div class="ds-section-desc">Ink and surface tones drive most of the UI; pillar colors identify session types consistently across Today, Week, Tips, and Calendar.</div>
+    <div class="ds-section-body">
+
+      <div class="ds-subhead">Ink &amp; surfaces</div>
+      <div class="ds-swatch-grid" data-swatches>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--ink)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--ink</div><div class="ds-swatch-hex" data-var="--ink"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--ink2)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--ink2</div><div class="ds-swatch-hex" data-var="--ink2"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--ink3)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--ink3</div><div class="ds-swatch-hex" data-var="--ink3"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--bg);border-bottom:1px solid var(--bd)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--bg</div><div class="ds-swatch-hex" data-var="--bg"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--s1);border-bottom:1px solid var(--bd)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--s1 / --s2</div><div class="ds-swatch-hex" data-var="--s1"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--s3)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--s3</div><div class="ds-swatch-hex" data-var="--s3"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--s4)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--s4</div><div class="ds-swatch-hex" data-var="--s4"></div></div></div>
+      </div>
+
+      <div class="ds-subhead">Brand &amp; borders</div>
+      <div class="ds-swatch-grid" data-swatches>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--blue)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--blue</div><div class="ds-swatch-hex" data-var="--blue"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--blue-l)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--blue-l</div><div class="ds-swatch-hex" data-var="--blue-l"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--blue-m)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--blue-m</div><div class="ds-swatch-hex" data-var="--blue-m"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--bd3)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--bd3 (25%)</div><div class="ds-swatch-hex" data-var="--bd3"></div></div></div>
+      </div>
+
+      <div class="ds-subhead">Pillar / session-type colors</div>
+      <div class="ds-swatch-grid" data-swatches>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--swim)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">🏊 --swim</div><div class="ds-swatch-hex" data-var="--swim"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--bike)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">🚴 --bike</div><div class="ds-swatch-hex" data-var="--bike"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--run)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">🏃 --run</div><div class="ds-swatch-hex" data-var="--run"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--brick)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">⚡ --brick</div><div class="ds-swatch-hex" data-var="--brick"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--strength)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">💪 --strength</div><div class="ds-swatch-hex" data-var="--strength"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--rest)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">😴 --rest</div><div class="ds-swatch-hex" data-var="--rest"></div></div></div>
+      </div>
+
+      <div class="ds-subhead">Status colors (session logging)</div>
+      <div class="ds-swatch-grid" data-swatches>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--done)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--done</div><div class="ds-swatch-hex" data-var="--done"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--skipped)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--skipped</div><div class="ds-swatch-hex" data-var="--skipped"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--modified)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--modified</div><div class="ds-swatch-hex" data-var="--modified"></div></div></div>
+      </div>
+
+      <div class="ds-subhead">Training phase colors</div>
+      <div class="ds-swatch-grid" data-swatches>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--base)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--base</div><div class="ds-swatch-hex" data-var="--base"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--build)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--build</div><div class="ds-swatch-hex" data-var="--build"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--peak)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--peak</div><div class="ds-swatch-hex" data-var="--peak"></div></div></div>
+        <div class="ds-swatch"><div class="ds-swatch-color" style="background:var(--taper)"></div><div class="ds-swatch-meta"><div class="ds-swatch-name">--taper</div><div class="ds-swatch-hex" data-var="--taper"></div></div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ TYPOGRAPHY ═══ -->
+  <section class="ds-section" id="type">
+    <div class="ds-section-kicker">Foundations</div>
+    <div class="ds-section-title">Typography</div>
+    <div class="ds-section-desc">DM Sans handles both display headings (<code>--fd</code>) and body copy (<code>--fb</code>); DM Mono (<code>--fm</code>) marks eyebrows, labels, and numerals. Base body size is 16px — every smaller size below is a deliberate step down, not a default.</div>
+    <div class="ds-section-body">
+
+      <div class="ds-subhead">Font families</div>
+      <div class="ds-type-row">
+        <div class="ds-type-label">--fd / --fb</div>
+        <div class="ds-type-sample" style="font-family:var(--fd);font-size:20px;font-weight:600">DM Sans — display &amp; body</div>
+      </div>
+      <div class="ds-type-row">
+        <div class="ds-type-label">--fm</div>
+        <div class="ds-type-sample" style="font-family:var(--fm);font-size:16px;letter-spacing:.04em;text-transform:uppercase">DM Mono — labels &amp; numerals</div>
+      </div>
+
+      <div class="ds-subhead">Scale</div>
+      <div class="ds-type-row"><div class="ds-type-label">34 / hero</div><div class="ds-type-sample" style="font-family:var(--fd);font-size:34px;font-weight:600;letter-spacing:-.5px">Better decisions.</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">26 / page-title</div><div class="ds-type-sample" style="font-family:var(--fd);font-size:26px;font-weight:600;letter-spacing:-.3px">Today</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">22 / ob-title</div><div class="ds-type-sample" style="font-family:var(--fd);font-size:22px;font-weight:600">Build your typical training week</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">20 / empty-title</div><div class="ds-type-sample" style="font-family:var(--fd);font-size:20px;font-weight:600">Rest day</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">17 / card-title</div><div class="ds-type-sample" style="font-family:var(--fd);font-size:17px;font-weight:600">Threshold intervals</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">16 / body / cta</div><div class="ds-type-sample" style="font-size:16px">Rate your readiness to train tomorrow 1–10.</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">15 / prompt copy</div><div class="ds-type-sample" style="font-size:15px;color:var(--ink2)">Reduces duration or intensity by 10% next week to hit a sustainable readiness score.</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">13 / secondary</div><div class="ds-type-sample" style="font-size:13px;color:var(--ink2)">Session type · button label</div></div>
+      <div class="ds-type-row"><div class="ds-type-label">12 / mono label</div><div class="ds-type-sample" style="font-family:var(--fm);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)">Uppercase eyebrow label</div></div>
+
+    </div>
+  </section>
+
+  <!-- ═══ SPACING & RADIUS ═══ -->
+  <section class="ds-section" id="tokens">
+    <div class="ds-section-kicker">Foundations</div>
+    <div class="ds-section-title">Spacing &amp; radius</div>
+    <div class="ds-section-desc">Three corner radii cover the whole app — no ad-hoc values. Touch targets are held to a 44×44px minimum per WCAG 2.5.5, shown at right.</div>
+    <div class="ds-section-body">
+      <div class="ds-token-grid">
+        <div class="ds-token"><div class="ds-token-box" style="width:64px;height:64px;border-radius:var(--rmd)"></div><div class="ds-token-name">--rmd</div><div class="ds-token-val">10px</div></div>
+        <div class="ds-token"><div class="ds-token-box" style="width:64px;height:64px;border-radius:var(--rlg)"></div><div class="ds-token-name">--rlg</div><div class="ds-token-val">16px</div></div>
+        <div class="ds-token"><div class="ds-token-box" style="width:64px;height:64px;border-radius:var(--rxl)"></div><div class="ds-token-name">--rxl</div><div class="ds-token-val">22px</div></div>
+        <div class="ds-token"><div class="ds-token-box" style="width:44px;height:44px;border-radius:8px"></div><div class="ds-token-name">Min touch target</div><div class="ds-token-val">44 × 44px</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BUTTONS & CHIPS ═══ -->
+  <section class="ds-section" id="buttons">
+    <div class="ds-section-kicker">Components</div>
+    <div class="ds-section-title">Buttons &amp; chips</div>
+    <div class="ds-section-desc">Primary actions use the solid CTA; everything else is a chip, tag, or ghost button so the hierarchy stays obvious at a glance. All buttons share one 10px corner radius (<code>--rmd</code>) — no more pill-shaped chips at 20px. Primary buttons are never shown disabled: gate progress with inline validation instead of a CTA the user can't tell is broken.</div>
+    <div class="ds-section-body">
+      <div class="ds-grid">
+
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Primary / ghost</span>
+          <div class="ds-col-wrap">
+            <button class="cta-btn">Start my season →</button>
+            <button class="ghost-btn">Skip for now</button>
+          </div>
+        </div>
+
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Session type chips</span>
+          <div class="ds-row-wrap">
+            <button class="type-chip active-swim">🏊 Swim</button>
+            <button class="type-chip active-bike">🚴 Bike</button>
+            <button class="type-chip active-run">🏃 Run</button>
+            <button class="type-chip active-brick">⚡ Brick</button>
+            <button class="type-chip active-strength">💪 Strength</button>
+            <button class="type-chip active-rest">😴 Rest</button>
+          </div>
+        </div>
+
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Status buttons (session log)</span>
+          <div class="ds-row-wrap">
+            <button class="status-btn done-active">✓ Done</button>
+            <button class="status-btn skip-active">Skipped</button>
+            <button class="status-btn mod-active">Modified</button>
+            <button class="status-btn">Not logged</button>
+          </div>
+        </div>
+
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Tips filter</span>
+          <div class="ds-row-wrap">
+            <button class="tf-btn active">All weeks</button>
+            <button class="tf-btn">Durability</button>
+            <button class="tf-btn">Race craft</button>
+          </div>
+        </div>
+
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Grey-zone / vuln tags</span>
+          <div class="ds-row-wrap">
+            <button class="gzb sel">Easy</button>
+            <button class="gzb">Grey zone</button>
+            <button class="stag sel">Time-crunched</button>
+            <button class="stag">Travel</button>
+          </div>
+        </div>
+
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Readiness rating strip</span>
+          <div class="rating-strip" style="grid-template-columns:repeat(10,1fr)">
+            <button class="rb">1</button><button class="rb">2</button><button class="rb">3</button>
+            <button class="rb">4</button><button class="rb">5</button><button class="rb sel">6</button>
+            <button class="rb">7</button><button class="rb">8</button><button class="rb">9</button><button class="rb">10</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BADGES & PILLS ═══ -->
+  <section class="ds-section" id="badges">
+    <div class="ds-section-kicker">Components</div>
+    <div class="ds-section-title">Badges &amp; pills</div>
+    <div class="ds-section-desc">Compact, non-interactive labels for phase, pillar, and week context.</div>
+    <div class="ds-section-body">
+      <div class="ds-grid">
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Week phase pill</span>
+          <div class="ds-row-wrap">
+            <span class="week-phase-pill phase-base">Base</span>
+            <span class="week-phase-pill phase-build">Build</span>
+            <span class="week-phase-pill phase-peak">Peak</span>
+            <span class="week-phase-pill phase-taper">Taper</span>
+          </div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Tip pillar tags</span>
+          <div class="ds-row-wrap">
+            <span class="wtc-pillar p1">Foundations</span>
+            <span class="wtc-pillar p2">Technique</span>
+            <span class="wtc-pillar p3">Durability</span>
+            <span class="wtc-pillar p4">Intensity</span>
+            <span class="wtc-pillar p5">Race craft</span>
+            <span class="wtc-pillar p6">Integration</span>
+          </div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Week nav</span>
+          <div class="ds-row-wrap">
+            <button class="week-num-btn">1</button>
+            <button class="week-num-btn cur">2</button>
+            <button class="week-num-btn">3</button>
+          </div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Weeks-to-race badge</span>
+          <div class="date-row">
+            <input type="date" class="date-inp" value="2026-10-04">
+            <div class="weeks-badge">13 wks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FORM CONTROLS ═══ -->
+  <section class="ds-section" id="forms">
+    <div class="ds-section-kicker">Components</div>
+    <div class="ds-section-title">Form controls</div>
+    <div class="ds-section-desc">Reflection inputs are the app's core data-capture moment, so they get generous padding and 15–16px text for comfortable typing.</div>
+    <div class="ds-section-body">
+      <div class="ds-grid">
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Mini reflection textarea</span>
+          <textarea class="mini-ta" placeholder="How did the session feel?"></textarea>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Full reflection textarea</span>
+          <textarea class="refl-ta" placeholder="What would you change about today's session?"></textarea>
+          <button class="save-refl-btn" style="margin-top:10px">Save reflection</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CARDS ═══ -->
+  <section class="ds-section" id="cards">
+    <div class="ds-section-kicker">Components</div>
+    <div class="ds-section-title">Cards</div>
+    <div class="ds-section-desc">Every screen in the app is composed from a small set of card shells — mode selection, session logging, day prompts, and the key-insight banner.</div>
+    <div class="ds-section-body">
+
+      <div class="ds-subhead">Mode card</div>
+      <div class="mode-cards" style="max-width:480px">
+        <div class="mode-card sel">
+          <div class="mode-card-icon">🏁</div>
+          <div>
+            <div class="mode-card-title">Race day target</div>
+            <div class="mode-card-desc">Set your race date. Training builds toward it — base, build, peak, and taper auto-structured around your deadline.</div>
+          </div>
+        </div>
+        <div class="mode-card">
+          <div class="mode-card-icon">📈</div>
+          <div>
+            <div class="mode-card-title">General training</div>
+            <div class="mode-card-desc">No race target yet. Track trend and consistency across 9 months.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-subhead">Key insight banner</div>
+      <div class="insight-card" style="margin:0;max-width:480px">
+        <div class="insight-label">This week's key reminder</div>
+        <div class="insight-text">Volume is high this week — protect Tuesday's swim by keeping Monday's ride in zone 2.</div>
+      </div>
+
+      <div class="ds-subhead">Session card</div>
+      <div class="session-card" style="max-width:480px">
+        <div class="session-card-hdr">
+          <span class="session-type-dot dot-run"></span>
+          <span class="session-card-name">Tempo run</span>
+          <span class="session-card-day">TUE</span>
+        </div>
+        <div class="status-row">
+          <button class="status-btn done-active">✓ Done</button>
+          <button class="status-btn">Skipped</button>
+          <button class="status-btn">Modified</button>
+        </div>
+      </div>
+
+      <div class="ds-subhead">Day prompt card (Week tab)</div>
+      <div class="day-prompt-card" style="max-width:480px">
+        <div class="dpc-hdr">
+          <span class="dpc-day sun">SUN</span>
+          <span class="dpc-title">Did your long session build durability or confirm fatigue?</span>
+          <span class="dpc-chevron open">▲</span>
+        </div>
+        <div class="dpc-body on">
+          <div class="dpc-prompt">Rate your readiness to train tomorrow 1–10. If below 6: what would you change about today's session to arrive at a 7?</div>
+          <div class="contrast-pair">
+            <div class="cp-cell cp-good"><div class="cp-lbl g">Sharp</div><div class="cp-txt">Reduces duration or intensity by 10% next week to hit a sustainable readiness score.</div></div>
+            <div class="cp-cell cp-mid"><div class="cp-lbl m">Mediocre</div><div class="cp-txt">Views low readiness as evidence of hard training. Repeats the session. Starts week 5 suppressed.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-subhead">Empty state</div>
+      <div style="max-width:480px;background:#fff;border:0.5px solid var(--bd2);border-radius:var(--rlg)">
+        <div class="empty-today">
+          <div class="empty-icon">😴</div>
+          <div class="empty-title">Rest day</div>
+          <div class="empty-desc">No sessions scheduled. Recovery is part of the plan.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ NAVIGATION ═══ -->
+  <section class="ds-section" id="nav">
+    <div class="ds-section-kicker">Components</div>
+    <div class="ds-section-title">Navigation</div>
+    <div class="ds-section-desc">Four-tab bottom nav, rendered here inside a phone-width frame for scale reference.</div>
+    <div class="ds-section-body">
+      <div class="ds-phone">
+        <nav id="bottom-nav" style="position:static">
+          <button class="nav-item active"><span class="nav-icon">◎</span><span>Today</span></button>
+          <button class="nav-item"><span class="nav-icon">⬡</span><span>Week</span></button>
+          <button class="nav-item"><span class="nav-icon">⬢</span><span>Tips</span></button>
+          <button class="nav-item"><span class="nav-icon">▦</span><span>Calendar</span></button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ACCESSIBILITY ═══ -->
+  <section class="ds-section" id="accessibility">
+    <div class="ds-section-kicker">Guidelines</div>
+    <div class="ds-section-title">Accessibility notes</div>
+    <div class="ds-section-desc">Constraints baked into the tokens above — worth restating so future components don't regress them.</div>
+    <div class="ds-section-body">
+      <div class="ds-grid">
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Text size</span>
+          <div style="font-size:15px;color:var(--ink2);line-height:1.6">Base body is 16px. Nothing below 12px is used for reading content — the only sub-12px elements are single-glyph decorative icons (chevrons, delete ×).</div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Touch targets</span>
+          <div style="font-size:15px;color:var(--ink2);line-height:1.6">Interactive controls hold a 44×44px minimum (WCAG 2.5.5). Where a visual element is smaller, it shares its parent's hit area rather than shrinking the target.</div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Contrast</span>
+          <div style="font-size:15px;color:var(--ink2);line-height:1.6"><code>--ink2</code> and <code>--ink3</code> on white or <code>--s3</code> both clear 4.5:1 (WCAG AA) for normal text.</div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">Zoom</span>
+          <div style="font-size:15px;color:var(--ink2);line-height:1.6">The viewport meta tag sets <code>initial-scale=1.0</code> only — no <code>maximum-scale</code> or <code>user-scalable=no</code>, so pinch-zoom always works.</div>
+        </div>
+        <div class="ds-frame">
+          <span class="ds-frame-lbl">No disabled CTAs</span>
+          <div style="font-size:15px;color:var(--ink2);line-height:1.6">A primary button that looks clickable but silently does nothing is a dark pattern. Missing input should surface as a visible message, not a disabled affordance.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // Fill in live hex/rgba values read straight from the stylesheet, so labels
+  // never drift out of sync if a token in styles.css is edited later.
+  document.querySelectorAll('[data-var]').forEach(function(el){
+    var name = el.getAttribute('data-var');
+    var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    el.textContent = value;
+  });
+</script>
+</body>
+</html>
