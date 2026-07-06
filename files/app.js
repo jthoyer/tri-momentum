@@ -350,7 +350,7 @@ function renderWeekTab() {
       if (wn < 1 || wn > 39) return '';
       const isCur = wn === currentWeekNum;
       const hasRefl = !!reflections[`w${wn}`]?.savedAt;
-      return `<button onclick="selectWeekNum(${wn})" style="flex-shrink:0;padding:6px 12px;border-radius:20px;border:1px solid ${isCur?'var(--blue)':'var(--bd2)'};background:${isCur?'var(--blue-l)':'transparent'};font-family:var(--fm);font-size:11px;color:${isCur?'var(--blue)':'var(--ink3)'};position:relative">
+      return `<button class="week-num-btn${isCur?' cur':''}" onclick="selectWeekNum(${wn})">
         Wk ${wn}${hasRefl?'<span style="position:absolute;top:3px;right:5px;width:5px;height:5px;border-radius:50%;background:var(--done)"></span>':''}
       </button>`;
     }).join('')}
@@ -571,7 +571,7 @@ function renderTips() {
               <div style="font-size:11px;color:var(--ink2);line-height:1.45">${content.sun.med}</div>
             </div>
           </div>
-          ${isCurrent?`<button onclick="event.stopPropagation();switchTab('week',document.querySelectorAll('.nav-item')[1])" style="margin-top:10px;width:100%;padding:9px;background:var(--blue-l);border:1px solid var(--blue);border-radius:8px;font-family:var(--fm);font-size:11px;letter-spacing:.04em;color:var(--blue)">Go to this week's prompts ↗</button>`:''}
+          ${isCurrent?`<button class="wtc-goto-btn" onclick="event.stopPropagation();switchTab('week',document.querySelectorAll('.nav-item')[1])">Go to this week's prompts ↗</button>`:''}
         </div>
       </div>`;
     });
