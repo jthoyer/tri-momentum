@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<!-- Zoom is deliberately NOT capped (no maximum-scale) — WCAG 2.2 1.4.4 -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After-session check-in — TRI Momentum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: only light;
+  /* ── Design tokens: taken verbatim from triathlon_momentum_v5.html ── */
+  --bg:#F7F8FC;--s1:#FFFFFF;--s2:#FFFFFF;--s3:#F0F2F8;--s4:#E8EBF5;
+  --ink:#0E1020;--ink2:#4B5278;--ink3:#8B93B8;
+  --bd:rgba(14,16,32,0.08);--bd2:rgba(14,16,32,0.14);--bd3:rgba(14,16,32,0.25);
+  --blue:#1650C8;--blue-l:#E8EFFE;--blue-m:#4F7BE8;
+  --swim:#1650C8;--swim-l:#E8EFFE;
+  --bike:#0F6E56;--bike-l:#E1F5EE;
+  --run:#993C1D;--run-l:#FAECE7;
+  --brick:#534AB7;--brick-l:#EEEDFE;
+  --strength:#854F0B;--strength-l:#FAEEDA;
+  --rest:#8B93B8;--rest-l:#F0F2F8;
+  --base:#1650C8;--build:#0F6E56;--peak:#993C1D;--taper:#534AB7;
+  --done:#0F6E56;--done-l:#E1F5EE;
+  --skipped:#993C1D;--skipped-l:#FAECE7;
+  --modified:#854F0B;--modified-l:#FAEEDA;
+  --acc:#1650C8;--acc-l:#E8EFFE;
+  --rmd:10px;--rlg:16px;--rxl:22px;
+  --fd:'DM Sans',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);font-family:var(--fb);color:var(--ink);
+  font-size:15px;line-height:1.5;
+  min-height:100vh;
+}
+/* App column — never wider than 430px, centred, 20px gutters */
+#app{max-width:430px;margin:0 auto;padding:0 1.25rem 3rem;min-height:100vh}
+
+/* ── Visible focus everywhere (2px, >=3:1) ── */
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+/* keep a fallback for browsers without :focus-visible */
+a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);outline-offset:2px}
+
+.visually-hidden{
+  position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ── Screens ── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── Headers ── */
+.hdr{padding:1.5rem 0 .5rem}
+.eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+h1{font-family:var(--fd);font-size:26px;font-weight:600;letter-spacing:-.3px;line-height:1.15;color:var(--ink)}
+h1:focus{outline:none}
+h1:focus-visible{outline:none}
+.lede{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px}
+
+h2{font-family:var(--fd);font-size:17px;font-weight:600;color:var(--ink);letter-spacing:-.2px}
+
+/* ── Cards ── */
+.card{background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);padding:1rem 1.05rem;margin-top:.85rem}
+
+/* ── Fieldsets / question groups ── */
+.q{border:none;margin-top:1.35rem;padding:0}
+.q.first{margin-top:1rem}
+.q > legend{
+  font-family:var(--fd);font-size:15.5px;font-weight:600;color:var(--ink);
+  line-height:1.4;padding:0;margin-bottom:.6rem;
+}
+.q .hint{display:block;font-family:var(--fb);font-size:12.5px;font-weight:400;color:var(--ink2);margin-top:3px;line-height:1.5}
+.group-label{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:1.9rem 0 -.2rem}
+.group-label:first-of-type{margin-top:.6rem}
+
+/* ── Choice chips (radio buttons visually) ── */
+.choices{display:flex;flex-direction:column;gap:8px}
+.choices.grid2{flex-direction:row;flex-wrap:wrap}
+.choices.grid2 .choice{flex:1 1 46%}
+.opt{position:relative}
+.opt input{
+  position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;margin:0;cursor:pointer;
+}
+.choice{
+  display:flex;align-items:center;gap:10px;
+  min-height:48px;padding:11px 14px;
+  background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rmd);
+  font-size:14.5px;color:var(--ink);line-height:1.35;
+  cursor:pointer;
+}
+.opt input:checked + .choice{
+  border-color:var(--blue);background:var(--blue-l);color:var(--blue);font-weight:600;
+}
+.opt input:focus-visible + .choice{outline:3px solid var(--blue);outline-offset:2px}
+.choice .tick{
+  flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--bd3);
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;
+}
+.opt input:checked + .choice .tick{border-color:var(--blue);background:var(--blue);color:#fff}
+.choice .glyph{flex-shrink:0;font-family:var(--fm);font-weight:500;font-size:13px;width:22px;text-align:center}
+
+/* affect / body severity dot — text is always present, colour only reinforces */
+.sev{flex-shrink:0;width:12px;height:12px;border-radius:3px;border:1px solid rgba(14,16,32,.25)}
+.sev-strong{background:var(--done)}
+.sev-solid{background:var(--blue-m)}
+.sev-flat{background:var(--modified)}
+.sev-rough{background:var(--run)}
+.sev-1{background:var(--done-l);border-color:var(--done)}
+.sev-2{background:#CFE8DE}
+.sev-3{background:var(--modified);}
+.sev-4{background:var(--run)}
+
+/* ── RPE 1–10 scale: 5×2 grid, every target >=48px ── */
+.rpe{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:2px}
+.rpe .opt{}
+.rpe .choice{justify-content:center;min-height:52px;padding:8px 4px;font-family:var(--fm);font-size:17px;font-weight:500}
+.rpe-scale{display:flex;justify-content:space-between;font-family:var(--fm);font-size:10.5px;color:var(--ink3);margin-top:8px;letter-spacing:.02em}
+
+/* ── Duration chips ── */
+.dur{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dur .choice{justify-content:center;min-height:48px;font-family:var(--fm);font-size:13.5px}
+
+/* ── Discipline chips ── */
+.disc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.disc .choice{justify-content:center;min-height:48px;font-size:13.5px}
+
+/* ── Note ── */
+label.note-lbl{display:block;font-family:var(--fd);font-size:15.5px;font-weight:600;margin:1.6rem 0 .5rem}
+.note-lbl .hint{display:block;font-weight:400;font-size:12.5px;color:var(--ink2);margin-top:3px}
+textarea{
+  width:100%;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);
+  font-size:14.5px;color:var(--ink);background:var(--s1);resize:vertical;min-height:52px;line-height:1.5;
+}
+textarea::placeholder{color:var(--ink3)}
+
+/* ── Buttons ── */
+.actions{margin-top:2rem;display:flex;flex-direction:column;gap:10px}
+.btn{
+  width:100%;min-height:52px;padding:14px;border-radius:var(--rmd);
+  font-family:var(--fd);font-size:17px;font-weight:600;letter-spacing:.01em;
+  border:1px solid transparent;cursor:pointer;
+}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--bd2)}
+.btn-primary:hover{background:#1246ad}
+.btn-ghost:hover{background:var(--s3)}
+
+/* ── Home: logged-session list ── */
+.count-pill{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:11px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);
+  background:var(--s3);border-radius:20px;padding:6px 12px;margin-top:2px;
+}
+.log-list{list-style:none;margin-top:.4rem}
+.log-item{
+  display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--s1);
+  border:0.5px solid var(--bd2);border-radius:var(--rmd);margin-top:8px;font-size:13.5px;
+}
+.log-day{font-family:var(--fm);font-size:11px;color:var(--ink3);width:32px;flex-shrink:0}
+.log-disc{font-family:var(--fm);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:6px;flex-shrink:0}
+.log-meta{color:var(--ink2);font-size:12.5px;margin-left:auto;text-align:right;line-height:1.35}
+.empty{color:var(--ink3);font-size:13.5px;font-style:italic;padding:.6rem 0}
+
+/* ── Roll-up input rows ── */
+.input-row{padding:.95rem 0;border-bottom:0.5px solid var(--bd)}
+.input-row:last-of-type{border-bottom:none}
+.input-top{display:flex;align-items:baseline;gap:10px}
+.input-code{font-family:var(--fm);font-weight:500;font-size:13px;color:#fff;background:var(--ink);border-radius:6px;padding:3px 8px;flex-shrink:0}
+.input-level{font-family:var(--fd);font-weight:600;font-size:15px;color:var(--ink)}
+.input-name{font-family:var(--fm);font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-left:auto}
+.input-desc{color:var(--ink2);font-size:13.5px;margin-top:5px;line-height:1.5}
+.input-prov{font-family:var(--fm);font-size:11px;color:var(--ink3);margin-top:6px;letter-spacing:.01em}
+.flag{display:inline-block;margin-top:6px;font-family:var(--fm);font-size:11px;color:var(--modified);background:var(--modified-l);border-radius:6px;padding:3px 8px}
+
+/* notes block on roll-up */
+.notes-block{margin-top:.4rem}
+.note-line{background:var(--s3);border-left:3px solid var(--bd3);border-radius:8px;padding:9px 12px;margin-top:8px;font-size:13.5px;color:var(--ink2);font-style:italic}
+
+.callout{background:var(--blue-l);border-left:3px solid var(--blue);border-radius:var(--rmd);padding:12px 14px;margin-top:1rem;font-size:13.5px;color:var(--ink);line-height:1.6}
+.callout.warn{background:var(--modified-l);border-left-color:var(--modified);color:#5b3806}
+
+.provenance-note{font-size:12px;color:var(--ink3);margin-top:1.4rem;line-height:1.55}
+
+details.instr{margin-top:1rem;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--s1)}
+details.instr summary{padding:12px 14px;font-family:var(--fd);font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink)}
+details.instr[open] summary{border-bottom:0.5px solid var(--bd)}
+details.instr .body{padding:4px 14px 14px;font-size:13px;color:var(--ink2);line-height:1.6}
+details.instr .body ul{margin:.4rem 0 .4rem 1.1rem}
+details.instr .body li{margin:.25rem 0}
+
+.section-gap{margin-top:1.8rem}
+.divider-label{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:1.8rem 0 .3rem}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+@media (prefers-reduced-motion: no-preference){
+  .btn,.choice,.opt input:checked + .choice{transition:background .15s, border-color .15s, color .15s}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ SCREEN: HOME ══════════ -->
+  <section id="screen-home" class="screen active" aria-labelledby="home-h1">
+    <header class="hdr">
+      <p class="eyebrow">TRI Momentum · Prototype 02</p>
+      <h1 id="home-h1" tabindex="-1">After-session check-in</h1>
+      <p class="lede">Log each session the moment you finish it. At week's end the app computes drift, execution, fuelling, structure and state from what you logged — no recalling eight sessions from memory.</p>
+    </header>
+
+    <p class="count-pill" id="count-pill" aria-live="polite">No sessions logged yet</p>
+
+    <ul class="log-list" id="log-list" aria-label="Sessions logged this week"></ul>
+    <p class="empty" id="log-empty">Nothing logged yet. Log your first session to start the week.</p>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="btn-log">Log a session</button>
+      <button type="button" class="btn btn-ghost" id="btn-weekend">See week's end</button>
+    </div>
+
+    <details class="instr">
+      <summary>For testers — how this works</summary>
+      <div class="body">
+        <p>This is a working prototype of the per-session check-in. In the real app it fires automatically when a session ends and pulls the session's discipline, intended intensity and duration from your plan. Here you declare those yourself so there's something to compute from.</p>
+        <ul>
+          <li><strong>Time cost is real:</strong> three decisioning taps + three feeling taps + an optional note is about 15–20 seconds, not 10. That's deliberate — the extra feeling taps are what let the app compute your structure and state instead of asking you on Sunday.</li>
+          <li><strong>Log several sessions</strong> to build up a week, then tap <em>See week's end</em>.</li>
+          <li>State resets when you reload — nothing is saved anywhere.</li>
+        </ul>
+      </div>
+    </details>
+    <p class="provenance-note">Prototype only — no accounts, no data leaves this page, no browser storage. Sessions live in memory for this visit and clear on reload.</p>
+  </section>
+
+  <!-- ══════════ SCREEN: CHECK-IN ══════════ -->
+  <section id="screen-checkin" class="screen" aria-labelledby="ci-h1">
+    <header class="hdr">
+      <p class="eyebrow">Just finished</p>
+      <h1 id="ci-h1" tabindex="-1">How did that session go?</h1>
+    </header>
+
+    <form id="checkin-form" novalidate>
+
+      <!-- Session context (from the plan in production; declared here) -->
+      <p class="group-label">The session you just did</p>
+
+      <fieldset class="q first">
+        <legend>Which session was it?</legend>
+        <div class="choices disc" role="radiogroup">
+          <div class="opt"><input type="radio" id="disc-swim" name="disc" value="swim"><label class="choice" for="disc-swim">Swim</label></div>
+          <div class="opt"><input type="radio" id="disc-bike" name="disc" value="bike"><label class="choice" for="disc-bike">Bike</label></div>
+          <div class="opt"><input type="radio" id="disc-run" name="disc" value="run"><label class="choice" for="disc-run">Run</label></div>
+          <div class="opt"><input type="radio" id="disc-brick" name="disc" value="brick"><label class="choice" for="disc-brick">Brick</label></div>
+          <div class="opt"><input type="radio" id="disc-strength" name="disc" value="strength"><label class="choice" for="disc-strength">Strength</label></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="q">
+        <legend>Was it meant to be easy or hard?<span class="hint">Drift is only measured on the sessions you intended to keep easy.</span></legend>
+        <div class="choices grid2" role="radiogroup">
+          <div class="opt choice-wrap"><input type="radio" id="int-easy" name="intensity" value="easy"><label class="choice" for="int-easy"><span class="tick" aria-hidden="true">✓</span>Easy / steady</label></div>
+          <div class="opt choice-wrap"><input type="radio" id="int-hard" name="intensity" value="hard"><label class="choice" for="int-hard"><span class="tick" aria-hidden="true">✓</span>Hard / quality</label></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="q">
+        <legend>Roughly how long?</legend>
+        <div class="choices dur" role="radiogroup">
+          <div class="opt"><input type="radio" id="dur-30" name="duration" value="30"><label class="choice" for="dur-30">≤ 30 min</label></div>
+          <div class="opt"><input type="radio" id="dur-45" name="duration" value="45"><label class="choice" for="dur-45">45 min</label></div>
+          <div class="opt"><input type="radio" id="dur-60" name="duration" value="60"><label class="choice" for="dur-60">60 min</label></div>
+          <div class="opt"><input type="radio" id="dur-75" name="duration" value="75"><label class="choice" for="dur-75">75 min</label></div>
+          <div class="opt"><input type="radio" id="dur-90" name="duration" value="90"><label class="choice" for="dur-90">90 min</label></div>
+          <div class="opt"><input type="radio" id="dur-150" name="duration" value="150"><label class="choice" for="dur-150">2 hr +</label></div>
+        </div>
+      </fieldset>
+
+      <!-- GROUP A — DECISIONING -->
+      <p class="group-label">Decisioning</p>
+
+      <fieldset class="q">
+        <legend>Did this finish at the effort you intended?<span class="hint">You set a ceiling this morning — did you stop at it?</span></legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" id="a1-intent" name="a1" value="intent"><label class="choice" for="a1-intent"><span class="tick" aria-hidden="true">✓</span>At intent</label></div>
+          <div class="opt"><input type="radio" id="a1-slight" name="a1" value="slight"><label class="choice" for="a1-slight"><span class="tick" aria-hidden="true">✓</span>Slightly over</label></div>
+          <div class="opt"><input type="radio" id="a1-well" name="a1" value="well"><label class="choice" for="a1-well"><span class="tick" aria-hidden="true">✓</span>Well over</label></div>
+          <div class="opt"><input type="radio" id="a1-none" name="a1" value="none"><label class="choice" for="a1-none"><span class="tick" aria-hidden="true">✓</span>I hadn't set one</label></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="q">
+        <legend>Did you do it as planned?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" id="a2-planned" name="a2" value="planned"><label class="choice" for="a2-planned"><span class="tick" aria-hidden="true">✓</span>As planned</label></div>
+          <div class="opt"><input type="radio" id="a2-short" name="a2" value="short"><label class="choice" for="a2-short"><span class="tick" aria-hidden="true">✓</span>Shortened, same structure</label></div>
+          <div class="opt"><input type="radio" id="a2-sub" name="a2" value="sub"><label class="choice" for="a2-sub"><span class="tick" aria-hidden="true">✓</span>Substituted</label></div>
+          <div class="opt"><input type="radio" id="a2-didnt" name="a2" value="didnt"><label class="choice" for="a2-didnt"><span class="tick" aria-hidden="true">✓</span>Didn't do it</label></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="q" id="a3-fieldset" hidden>
+        <legend>Did you fuel during it?<span class="hint">Only asked for sessions over 45 minutes.</span></legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" id="a3-race" name="a3" value="race"><label class="choice" for="a3-race"><span class="tick" aria-hidden="true">✓</span>At race concentration</label></div>
+          <div class="opt"><input type="radio" id="a3-lighter" name="a3" value="lighter"><label class="choice" for="a3-lighter"><span class="tick" aria-hidden="true">✓</span>Lighter than race</label></div>
+          <div class="opt"><input type="radio" id="a3-no" name="a3" value="no"><label class="choice" for="a3-no"><span class="tick" aria-hidden="true">✓</span>No</label></div>
+        </div>
+      </fieldset>
+
+      <!-- GROUP B — FEELING -->
+      <p class="group-label">Feeling</p>
+
+      <fieldset class="q">
+        <legend>How hard was it, out of 10?<span class="hint">Perceived effort — how the whole thing felt, not what your plan said.</span></legend>
+        <div class="rpe" role="radiogroup" aria-label="Perceived effort from 1 to 10">
+          <div class="opt"><input type="radio" id="rpe-1" name="rpe" value="1"><label class="choice" for="rpe-1">1</label></div>
+          <div class="opt"><input type="radio" id="rpe-2" name="rpe" value="2"><label class="choice" for="rpe-2">2</label></div>
+          <div class="opt"><input type="radio" id="rpe-3" name="rpe" value="3"><label class="choice" for="rpe-3">3</label></div>
+          <div class="opt"><input type="radio" id="rpe-4" name="rpe" value="4"><label class="choice" for="rpe-4">4</label></div>
+          <div class="opt"><input type="radio" id="rpe-5" name="rpe" value="5"><label class="choice" for="rpe-5">5</label></div>
+          <div class="opt"><input type="radio" id="rpe-6" name="rpe" value="6"><label class="choice" for="rpe-6">6</label></div>
+          <div class="opt"><input type="radio" id="rpe-7" name="rpe" value="7"><label class="choice" for="rpe-7">7</label></div>
+          <div class="opt"><input type="radio" id="rpe-8" name="rpe" value="8"><label class="choice" for="rpe-8">8</label></div>
+          <div class="opt"><input type="radio" id="rpe-9" name="rpe" value="9"><label class="choice" for="rpe-9">9</label></div>
+          <div class="opt"><input type="radio" id="rpe-10" name="rpe" value="10"><label class="choice" for="rpe-10">10</label></div>
+        </div>
+        <div class="rpe-scale"><span>1 · very easy</span><span>10 · maximal</span></div>
+      </fieldset>
+
+      <fieldset class="q">
+        <legend>How did it <em>feel</em>?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" id="b2-strong" name="b2" value="strong"><label class="choice" for="b2-strong"><span class="sev sev-strong" aria-hidden="true"></span>Strong</label></div>
+          <div class="opt"><input type="radio" id="b2-solid" name="b2" value="solid"><label class="choice" for="b2-solid"><span class="sev sev-solid" aria-hidden="true"></span>Solid</label></div>
+          <div class="opt"><input type="radio" id="b2-flat" name="b2" value="flat"><label class="choice" for="b2-flat"><span class="sev sev-flat" aria-hidden="true"></span>Flat</label></div>
+          <div class="opt"><input type="radio" id="b2-rough" name="b2" value="rough"><label class="choice" for="b2-rough"><span class="sev sev-rough" aria-hidden="true"></span>Rough</label></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="q">
+        <legend>Anything from the body?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" id="b3-nothing" name="b3" value="nothing"><label class="choice" for="b3-nothing"><span class="sev sev-1" aria-hidden="true"></span>Nothing</label></div>
+          <div class="opt"><input type="radio" id="b3-warmed" name="b3" value="warmed"><label class="choice" for="b3-warmed"><span class="sev sev-2" aria-hidden="true"></span>Warmed up and went</label></div>
+          <div class="opt"><input type="radio" id="b3-end" name="b3" value="end"><label class="choice" for="b3-end"><span class="sev sev-3" aria-hidden="true"></span>There at the end</label></div>
+          <div class="opt"><input type="radio" id="b3-changed" name="b3" value="changed"><label class="choice" for="b3-changed"><span class="sev sev-4" aria-hidden="true"></span>Changed how I moved, or stopped me</label></div>
+        </div>
+      </fieldset>
+
+      <!-- GROUP C — NOTE -->
+      <label class="note-lbl" for="note">Anything to add? <span class="hint">Optional — one line. Not scored, just surfaced back to you at week's end.</span></label>
+      <textarea id="note" name="note" rows="1" maxlength="140" placeholder="e.g. left calf tight from 20 min · gut off after gel 4"></textarea>
+
+      <p id="ci-error" role="alert" aria-live="assertive" style="color:var(--run);font-size:13px;margin-top:1rem;min-height:1px"></p>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" id="btn-save">Save session</button>
+        <button type="button" class="btn btn-ghost" id="btn-cancel">Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ══════════ SCREEN: MORNING SAFETY CHECK ══════════ -->
+  <section id="screen-safety" class="screen" aria-labelledby="sf-h1">
+    <header class="hdr">
+      <p class="eyebrow">Before the week's-end review</p>
+      <h1 id="sf-h1" tabindex="-1">One morning check</h1>
+      <p class="lede">The only thing the app can't read from your sessions is how your body woke up. This is the single systemic signal it needs before rolling up your week.</p>
+    </header>
+
+    <form id="safety-form" novalidate>
+      <fieldset class="q first">
+        <legend>Before caffeine this morning — any of these?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" id="sf-yes" name="safety" value="yes"><label class="choice" for="sf-yes"><span class="tick" aria-hidden="true">✓</span>Yes — slept badly / resting HR up, or feeling unwell or run down</label></div>
+          <div class="opt"><input type="radio" id="sf-no" name="safety" value="no"><label class="choice" for="sf-no"><span class="tick" aria-hidden="true">✓</span>No — none of these</label></div>
+        </div>
+      </fieldset>
+      <p id="sf-error" role="alert" aria-live="assertive" style="color:var(--run);font-size:13px;margin-top:1rem;min-height:1px"></p>
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" id="btn-safety-next">See my week</button>
+        <button type="button" class="btn btn-ghost" id="btn-safety-back">Back</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ══════════ SCREEN: ROLL-UP (COMPUTED) ══════════ -->
+  <section id="screen-rollup" class="screen" aria-labelledby="ru-h1">
+    <header class="hdr">
+      <p class="eyebrow">Week's end · computed from your sessions</p>
+      <h1 id="ru-h1" tabindex="-1">What your week rolled up to</h1>
+      <p class="lede">These are the five inputs the Weekly Verdict reads. Four of them were computed from what you logged; state also uses this morning's check.</p>
+    </header>
+
+    <div class="card" id="rollup-inputs" aria-live="polite"></div>
+
+    <div id="rollup-notes-wrap">
+      <p class="divider-label">Your notes, verbatim</p>
+      <div class="notes-block" id="rollup-notes"></div>
+    </div>
+
+    <div class="callout">
+      These five inputs feed the twelve-rule cascade that issues your verdict and carryable rule. That screen is the Weekly Verdict (Prototype 01) — this check-in ends here and hands these values to it.
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="btn-verdict">Continue to verdict →</button>
+      <button type="button" class="btn btn-ghost" id="btn-rollup-home">Back to sessions</button>
+    </div>
+  </section>
+
+  <!-- ══════════ SCREEN: RECALL FALLBACK ══════════ -->
+  <section id="screen-fallback" class="screen" aria-labelledby="fb-h1">
+    <header class="hdr">
+      <p class="eyebrow">Week's end</p>
+      <h1 id="fb-h1" tabindex="-1">Not enough logged to compute</h1>
+    </header>
+    <div class="callout warn" id="fb-reason">
+      You logged too few sessions this week for the computed roll-up to be trustworthy. A number built from sparse data looks authoritative without the evidence to back it. Answer these five from memory instead.
+    </div>
+
+    <form id="fallback-form" novalidate>
+      <fieldset class="q">
+        <legend>How often did easy sessions finish harder than you intended?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" name="fD" value="D1" id="fD1"><label class="choice" for="fD1"><span class="tick" aria-hidden="true">✓</span>None — easy stayed easy</label></div>
+          <div class="opt"><input type="radio" name="fD" value="D2" id="fD2"><label class="choice" for="fD2"><span class="tick" aria-hidden="true">✓</span>One or two</label></div>
+          <div class="opt"><input type="radio" name="fD" value="D3" id="fD3"><label class="choice" for="fD3"><span class="tick" aria-hidden="true">✓</span>Three or more</label></div>
+          <div class="opt"><input type="radio" name="fD" value="D4" id="fD4"><label class="choice" for="fD4"><span class="tick" aria-hidden="true">✓</span>I hadn't set intended efforts</label></div>
+        </div>
+      </fieldset>
+      <fieldset class="q">
+        <legend>How much of the planned week did you complete?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" name="fE" value="E1" id="fE1"><label class="choice" for="fE1"><span class="tick" aria-hidden="true">✓</span>All of them</label></div>
+          <div class="opt"><input type="radio" name="fE" value="E2" id="fE2"><label class="choice" for="fE2"><span class="tick" aria-hidden="true">✓</span>Missed one or two</label></div>
+          <div class="opt"><input type="radio" name="fE" value="E3" id="fE3"><label class="choice" for="fE3"><span class="tick" aria-hidden="true">✓</span>Missed about half</label></div>
+          <div class="opt"><input type="radio" name="fE" value="E4" id="fE4"><label class="choice" for="fE4"><span class="tick" aria-hidden="true">✓</span>Lost the week</label></div>
+        </div>
+      </fieldset>
+      <fieldset class="q">
+        <legend>Your two longest sessions — did you fuel them at race concentration?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" name="fF" value="F1" id="fF1"><label class="choice" for="fF1"><span class="tick" aria-hidden="true">✓</span>Both at race concentration</label></div>
+          <div class="opt"><input type="radio" name="fF" value="F2" id="fF2"><label class="choice" for="fF2"><span class="tick" aria-hidden="true">✓</span>Both, lighter</label></div>
+          <div class="opt"><input type="radio" name="fF" value="F3" id="fF3"><label class="choice" for="fF3"><span class="tick" aria-hidden="true">✓</span>One of two</label></div>
+          <div class="opt"><input type="radio" name="fF" value="F4" id="fF4"><label class="choice" for="fF4"><span class="tick" aria-hidden="true">✓</span>Neither</label></div>
+        </div>
+      </fieldset>
+      <fieldset class="q">
+        <legend>How are you right now?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" name="fS" value="S1" id="fS1"><label class="choice" for="fS1"><span class="tick" aria-hidden="true">✓</span>Fresh — would race today</label></div>
+          <div class="opt"><input type="radio" name="fS" value="S2" id="fS2"><label class="choice" for="fS2"><span class="tick" aria-hidden="true">✓</span>Normal — training fatigue, expected</label></div>
+          <div class="opt"><input type="radio" name="fS" value="S3" id="fS3"><label class="choice" for="fS3"><span class="tick" aria-hidden="true">✓</span>Flat — heavy for three days or more</label></div>
+          <div class="opt"><input type="radio" name="fS" value="S4" id="fS4"><label class="choice" for="fS4"><span class="tick" aria-hidden="true">✓</span>Broken — sleep disrupted, resting HR up, or unwell</label></div>
+        </div>
+      </fieldset>
+      <fieldset class="q">
+        <legend>Anything from the body this week?</legend>
+        <div class="choices" role="radiogroup">
+          <div class="opt"><input type="radio" name="fN" value="N1" id="fN1"><label class="choice" for="fN1"><span class="tick" aria-hidden="true">✓</span>Nothing</label></div>
+          <div class="opt"><input type="radio" name="fN" value="N2" id="fN2"><label class="choice" for="fN2"><span class="tick" aria-hidden="true">✓</span>A niggle that warms up and goes</label></div>
+          <div class="opt"><input type="radio" name="fN" value="N3" id="fN3"><label class="choice" for="fN3"><span class="tick" aria-hidden="true">✓</span>Still there at the end of the session</label></div>
+          <div class="opt"><input type="radio" name="fN" value="N4" id="fN4"><label class="choice" for="fN4"><span class="tick" aria-hidden="true">✓</span>Changed how I move, or stopped a session</label></div>
+        </div>
+      </fieldset>
+      <p id="fb-error" role="alert" aria-live="assertive" style="color:var(--run);font-size:13px;margin-top:1rem;min-height:1px"></p>
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Continue to verdict →</button>
+        <button type="button" class="btn btn-ghost" id="btn-fb-home">Back to sessions</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ══════════ SCREEN: VERDICT HANDOFF (conceptual) ══════════ -->
+  <section id="screen-verdict" class="screen" aria-labelledby="vd-h1">
+    <header class="hdr">
+      <p class="eyebrow">Hand-off</p>
+      <h1 id="vd-h1" tabindex="-1">Five inputs, ready for the verdict</h1>
+      <p class="lede">The Weekly Verdict cascade (Prototype 01) takes it from here. This prototype's job — replacing weekly recall with per-session capture — ends at these values.</p>
+    </header>
+    <div class="card" id="verdict-inputs"></div>
+    <p class="input-prov" id="verdict-source" style="margin-top:1rem"></p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="btn-new-week">Start a fresh week</button>
+      <button type="button" class="btn btn-ghost" id="btn-verdict-home">Back to sessions</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+(function(){
+  // ── In-memory session log for this visit only. No localStorage / sessionStorage. ──
+  var sessions = [];
+  var DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  // Notional planned sessions in a week — degradation gate is <60% of this.
+  var PLANNED_SESSIONS_PER_WEEK = 8;
+  // Result object carried into the verdict hand-off (either computed or recalled).
+  var lastInputs = null;
+
+  var DISC_COLOUR = {
+    swim:['var(--swim)','var(--swim-l)'], bike:['var(--bike)','var(--bike-l)'],
+    run:['var(--run)','var(--run-l)'], brick:['var(--brick)','var(--brick-l)'],
+    strength:['var(--strength)','var(--strength-l)']
+  };
+  var DISC_LABEL = {swim:'Swim',bike:'Bike',run:'Run',brick:'Brick',strength:'Strength'};
+
+  // ─────────────────────────────────────────────────────────────
+  // Screen management + focus handling (keyboard-first)
+  // ─────────────────────────────────────────────────────────────
+  function show(id){
+    var screens = document.querySelectorAll('.screen');
+    for(var i=0;i<screens.length;i++){ screens[i].classList.remove('active'); }
+    var el = document.getElementById(id);
+    el.classList.add('active');
+    // Move focus to the screen's heading so screen-reader + keyboard users land correctly.
+    var h1 = el.querySelector('h1');
+    if(h1){ h1.focus(); }
+    window.scrollTo(0,0);
+  }
+
+  function val(name, root){
+    var el = (root||document).querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : null;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // HOME
+  // ─────────────────────────────────────────────────────────────
+  function renderHome(){
+    var list = document.getElementById('log-list');
+    var empty = document.getElementById('log-empty');
+    var pill = document.getElementById('count-pill');
+    list.innerHTML = '';
+    if(sessions.length === 0){
+      empty.style.display = 'block';
+      pill.textContent = 'No sessions logged yet';
+    } else {
+      empty.style.display = 'none';
+      pill.textContent = sessions.length + (sessions.length===1?' session logged':' sessions logged');
+      sessions.forEach(function(s, idx){
+        var li = document.createElement('li');
+        li.className = 'log-item';
+        var col = DISC_COLOUR[s.disc] || ['var(--ink2)','var(--s3)'];
+        var intensity = s.intensity === 'easy' ? 'easy' : 'hard';
+        li.innerHTML =
+          '<span class="log-day">'+DAYS[idx % 7]+'</span>'+
+          '<span class="log-disc" style="color:'+col[0]+';background:'+col[1]+'">'+DISC_LABEL[s.disc]+'</span>'+
+          '<span class="log-meta">'+intensity+' · '+s.duration+' min · RPE '+s.rpe+'</span>';
+        list.appendChild(li);
+      });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CHECK-IN
+  // ─────────────────────────────────────────────────────────────
+  function resetCheckin(){
+    document.getElementById('checkin-form').reset();
+    document.getElementById('a3-fieldset').hidden = true;
+    document.getElementById('ci-error').textContent = '';
+  }
+
+  // Show A3 (fuelling) only for sessions declared over 45 minutes.
+  function updateA3Visibility(){
+    var dur = val('duration');
+    var show45 = dur !== null && parseInt(dur,10) > 45;
+    var fs = document.getElementById('a3-fieldset');
+    fs.hidden = !show45;
+    if(!show45){
+      var checked = fs.querySelector('input:checked');
+      if(checked){ checked.checked = false; }
+    }
+  }
+
+  document.querySelectorAll('input[name="duration"]').forEach(function(r){
+    r.addEventListener('change', updateA3Visibility);
+  });
+
+  document.getElementById('checkin-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var err = document.getElementById('ci-error');
+    // Load-bearing fields must be answered; the note is optional and A3 is conditional.
+    var required = ['disc','intensity','duration','a1','a2','rpe','b2','b3'];
+    for(var i=0;i<required.length;i++){
+      if(val(required[i]) === null){
+        err.textContent = 'Please answer every question before saving (the note is optional).';
+        return;
+      }
+    }
+    var dur = parseInt(val('duration'),10);
+    var s = {
+      disc: val('disc'),
+      intensity: val('intensity'),
+      duration: dur,
+      a1: val('a1'),           // D
+      a2: val('a2'),           // E
+      a3: dur > 45 ? val('a3') : null,  // F (only meaningful > 45 min)
+      rpe: parseInt(val('rpe'),10),
+      b2: val('b2'),           // S (affect)
+      b3: val('b3'),           // N (body)
+      note: document.getElementById('note').value.trim()
+    };
+    sessions.push(s);
+    renderHome();
+    show('screen-home');
+    document.getElementById('count-pill').focus && null; // pill announces via aria-live
+  });
+
+  document.getElementById('btn-log').addEventListener('click', function(){
+    resetCheckin();
+    show('screen-checkin');
+  });
+  document.getElementById('btn-cancel').addEventListener('click', function(){
+    show('screen-home');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // MORNING SAFETY BACKSTOP  — isolated so it can be deleted in one edit.
+  //
+  // This is the ONE state per-session logs cannot reconstruct: S4 (broken —
+  // poor sleep, elevated resting HR, unwell) is a morning systemic reading.
+  // It fires once on the weekly open and, on "yes", forces S = S4.
+  // To remove the backstop entirely: delete morningSafetyCheck(), delete the
+  // #screen-safety section, and route "See week's end" straight to runRollup(false).
+  // S will then compute purely from affect (S1–S3), accepting the S4 false-negative risk.
+  // ─────────────────────────────────────────────────────────────
+  var pendingSafetyAnswer = null;
+  function morningSafetyCheck(){
+    // Returns true when the athlete reports a systemic morning signal (forces S4).
+    return pendingSafetyAnswer === 'yes';
+  }
+
+  document.getElementById('btn-weekend').addEventListener('click', function(){
+    // Weekly open → run the morning safety backstop first, before any roll-up.
+    document.getElementById('safety-form').reset();
+    document.getElementById('sf-error').textContent = '';
+    pendingSafetyAnswer = null;
+    show('screen-safety');
+  });
+  document.getElementById('btn-safety-back').addEventListener('click', function(){
+    show('screen-home');
+  });
+  document.getElementById('safety-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = val('safety');
+    if(v === null){
+      document.getElementById('sf-error').textContent = 'Please pick one before continuing.';
+      return;
+    }
+    pendingSafetyAnswer = v;
+    runWeekEnd();
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // COMPUTATION  — D, E, F, N, S per Concept 03
+  // ─────────────────────────────────────────────────────────────
+
+  // D — drift. Operates over EASY sessions only.
+  function computeD(sess){
+    var easy = sess.filter(function(s){ return s.intensity === 'easy'; });
+    var n = easy.length;
+    if(n === 0){ return {level:'D1', n:0}; }
+    var noIntent = easy.filter(function(s){ return s.a1 === 'none'; }).length;
+    var wellOver = easy.filter(function(s){ return s.a1 === 'well'; }).length;
+    var slightly = easy.filter(function(s){ return s.a1 === 'slight'; }).length;
+    // Order matters — first match wins.
+    if(noIntent >= n/2){ return {level:'D4', n:n}; }                 // >= half no intent
+    if(wellOver >= 3 || (slightly / n) >= 0.6){ return {level:'D3', n:n}; } // 3+ well over OR uniform-overshoot clause
+    if(wellOver >= 1){ return {level:'D2', n:n}; }                   // 1–2 well over
+    return {level:'D1', n:n};
+  }
+
+  // E — execution. Counts "Didn't do it" only. Shortened/Substituted count as completed.
+  function computeE(sess){
+    var missed = sess.filter(function(s){ return s.a2 === 'didnt'; }).length;
+    var subs   = sess.filter(function(s){ return s.a2 === 'sub'; }).length;
+    var completed = sess.length - missed;
+    // E4 = "lost the week": 6+ missed, or nothing actually completed.
+    // (Concept 03's "nothing logged for five days" is a calendar signal not available
+    //  to this in-memory prototype; approximated here by completed === 0.)
+    var level;
+    if(missed >= 6 || completed === 0){ level = 'E4'; }
+    else if(missed >= 3){ level = 'E3'; }   // 3–5
+    else if(missed >= 1){ level = 'E2'; }   // 1–2
+    else { level = 'E1'; }                   // 0
+    return {level:level, missed:missed, subs:subs, total:sess.length};
+  }
+
+  // F — fuelling. Read off the two longest logged sessions.
+  function computeF(sess){
+    if(sess.length === 0){ return {level:'F4', n:0}; }
+    var sorted = sess.slice().sort(function(a,b){ return b.duration - a.duration; });
+    var top = sorted.slice(0,2);
+    function fuelled(s){ return s && (s.a3 === 'race' || s.a3 === 'lighter'); }
+    function race(s){ return s && s.a3 === 'race'; }
+    var a = top[0], b = top[1] || null;   // if only one session, b is null (treated as unfuelled)
+    var fA = fuelled(a), fB = fuelled(b);
+    var level;
+    if(race(a) && race(b)){ level = 'F1'; }              // both at race concentration
+    else if(fA && fB){ level = 'F2'; }                    // both fuelled, at least one lighter
+    else if(fA || fB){ level = 'F3'; }                    // one of two
+    else { level = 'F4'; }                                // neither
+    return {level:level, n:top.length};
+  }
+
+  // N — structure. Worst (max) body severity across the week.
+  function computeN(sess){
+    var sevMap = {nothing:1, warmed:2, end:3, changed:4};
+    var worst = 0;
+    sess.forEach(function(s){ if(sevMap[s.b3] > worst){ worst = sevMap[s.b3]; } });
+    if(worst === 0){ worst = 1; }
+    return {level:'N'+worst, n:sess.length};
+  }
+
+  // S — state. From affect (S1–S3), overridden to S4 by the morning backstop.
+  function computeS(sess, forceS4){
+    var flatRough = sess.filter(function(s){ return s.b2 === 'flat' || s.b2 === 'rough'; });
+    var count = flatRough.length;
+    // longest consecutive run of flat/rough in log order
+    var run = 0, best = 0;
+    sess.forEach(function(s){
+      if(s.b2 === 'flat' || s.b2 === 'rough'){ run++; if(run > best){ best = run; } }
+      else { run = 0; }
+    });
+    var candidate;
+    if(count >= 3 || best >= 3){ candidate = 'S3'; }
+    else if(sess.length > 0 && count === 0){ candidate = 'S1'; } // all strong/solid, none flat/rough
+    else { candidate = 'S2'; }
+    var level = forceS4 ? 'S4' : candidate;
+    return {level:level, n:sess.length, forcedS4: !!forceS4, candidate: candidate};
+  }
+
+  // ── Descriptors for display ──
+  var LEVELS = {
+    D:{name:'Drift', D1:'None — easy stayed easy', D2:'One or two ran hot', D3:'Three or more, or running systematically hot', D4:'No stated intent to measure against'},
+    E:{name:'Execution', E1:'Delivered all of them', E2:'Missed one or two', E3:'Missed about half', E4:'Lost the week'},
+    F:{name:'Fuelling', F1:'Both long sessions at race concentration', F2:'Both fuelled, at least one lighter', F3:'One of two fuelled', F4:'Neither long session fuelled'},
+    N:{name:'Structure', N1:'Nothing', N2:'A niggle that warmed up and went', N3:'Still there at the end of a session', N4:'Changed how you moved, or stopped a session'},
+    S:{name:'State', S1:'Fresh — would race today', S2:'Normal — training fatigue, expected', S3:'Flat — heavy for three days or more', S4:'Broken — sleep, resting HR, or illness'}
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // WEEK'S END — degradation gate, then compute or fall back
+  // ─────────────────────────────────────────────────────────────
+  function runWeekEnd(){
+    var threshold = 0.6 * PLANNED_SESSIONS_PER_WEEK; // 4.8 → need >=5 logged
+    if(sessions.length < threshold){
+      // Degradation is mandatory: do not compute from sparse data.
+      document.getElementById('fallback-form').reset();
+      document.getElementById('fb-error').textContent = '';
+      document.getElementById('fb-reason').innerHTML =
+        'You logged <strong>'+sessions.length+'</strong> of a notional <strong>'+PLANNED_SESSIONS_PER_WEEK+'</strong>-session week — under the 60% needed to compute. '+
+        'A value built from sparse data carries the authority of a calculation without the evidence for it, which is worse than an honest recall answer. Answer these five from memory instead.';
+      show('screen-fallback');
+      return;
+    }
+    runRollup(morningSafetyCheck());
+  }
+
+  function inputRow(code, res){
+    var meta = LEVELS[code];
+    var lvl = res.level;
+    var flag = '';
+    if(code === 'S' && res.forcedS4){
+      flag = '<span class="flag">Forced to S4 by this morning’s safety check</span>';
+    }
+    if(code === 'E' && res.subs > 0){
+      flag = '<span class="flag">'+res.subs+' substituted session'+(res.subs>1?'s':'')+' — counts as completed, flagged here</span>';
+    }
+    var prov = provenance(code, res);
+    return '<div class="input-row">'+
+      '<div class="input-top">'+
+        '<span class="input-code">'+lvl+'</span>'+
+        '<span class="input-level">'+meta[lvl]+'</span>'+
+        '<span class="input-name">'+meta.name+'</span>'+
+      '</div>'+
+      '<p class="input-prov">'+prov+'</p>'+
+      flag+
+    '</div>';
+  }
+
+  function provenance(code, res){
+    switch(code){
+      case 'D': return 'Computed from '+res.n+' easy session'+(res.n===1?'':'s');
+      case 'E': return 'Computed from '+res.total+' logged session'+(res.total===1?'':'s');
+      case 'F': return 'Read off the '+res.n+' longest session'+(res.n===1?'':'s');
+      case 'N': return 'Worst signal across '+res.n+' session'+(res.n===1?'':'s')+' (not the most common)';
+      case 'S': return res.forcedS4
+        ? 'From '+res.n+' affect rating'+(res.n===1?'':'s')+' (would have been '+res.candidate+') + morning check'
+        : 'From '+res.n+' affect rating'+(res.n===1?'':'s');
+    }
+    return '';
+  }
+
+  function runRollup(forceS4){
+    var D = computeD(sessions);
+    var E = computeE(sessions);
+    var F = computeF(sessions);
+    var N = computeN(sessions);
+    var S = computeS(sessions, forceS4);
+
+    lastInputs = {D:D.level, E:E.level, F:F.level, N:N.level, S:S.level, source:'computed'};
+
+    var html = inputRow('D',D) + inputRow('E',E) + inputRow('F',F) + inputRow('N',N) + inputRow('S',S);
+    document.getElementById('rollup-inputs').innerHTML = html;
+
+    // Notes verbatim (only sessions that carried one)
+    var noted = sessions.filter(function(s){ return s.note && s.note.length; });
+    var wrap = document.getElementById('rollup-notes-wrap');
+    var notesEl = document.getElementById('rollup-notes');
+    if(noted.length === 0){
+      wrap.style.display = 'none';
+    } else {
+      wrap.style.display = 'block';
+      notesEl.innerHTML = noted.map(function(s){
+        return '<p class="note-line">“'+escapeHtml(s.note)+'”</p>';
+      }).join('');
+    }
+    show('screen-rollup');
+  }
+
+  function escapeHtml(t){
+    return t.replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  document.getElementById('btn-rollup-home').addEventListener('click', function(){ show('screen-home'); });
+
+  // ─────────────────────────────────────────────────────────────
+  // RECALL FALLBACK
+  // ─────────────────────────────────────────────────────────────
+  document.getElementById('fallback-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var err = document.getElementById('fb-error');
+    var names = ['fD','fE','fF','fS','fN'];
+    var out = {};
+    for(var i=0;i<names.length;i++){
+      var v = val(names[i]);
+      if(v === null){ err.textContent = 'Please answer all five to continue.'; return; }
+      out[names[i]] = v;
+    }
+    lastInputs = {D:out.fD, E:out.fE, F:out.fF, N:out.fN, S:out.fS, source:'recall'};
+    renderVerdict();
+  });
+  document.getElementById('btn-fb-home').addEventListener('click', function(){ show('screen-home'); });
+
+  // ─────────────────────────────────────────────────────────────
+  // VERDICT HAND-OFF (conceptual — cascade itself is Prototype 01)
+  // ─────────────────────────────────────────────────────────────
+  function renderVerdict(){
+    var codes = ['D','E','F','N','S'];
+    var html = codes.map(function(c){
+      var lvl = lastInputs[c];
+      return '<div class="input-row">'+
+        '<div class="input-top">'+
+          '<span class="input-code">'+lvl+'</span>'+
+          '<span class="input-level">'+LEVELS[c][lvl]+'</span>'+
+          '<span class="input-name">'+LEVELS[c].name+'</span>'+
+        '</div></div>';
+    }).join('');
+    document.getElementById('verdict-inputs').innerHTML = html;
+    document.getElementById('verdict-source').textContent =
+      lastInputs.source === 'computed'
+        ? 'Source: computed from your logged sessions.'
+        : 'Source: recall fallback — marked recall-derived, exactly as a cold start or a sparsely-logged week would be.';
+    show('screen-verdict');
+  }
+  document.getElementById('btn-verdict').addEventListener('click', renderVerdict);
+  document.getElementById('btn-verdict-home').addEventListener('click', function(){ show('screen-home'); });
+  document.getElementById('btn-new-week').addEventListener('click', function(){
+    sessions = [];
+    lastInputs = null;
+    pendingSafetyAnswer = null;
+    renderHome();
+    show('screen-home');
+  });
+
+  // init
+  renderHome();
+})();
+</script>
+</body>
+</html>
