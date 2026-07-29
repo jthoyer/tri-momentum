@@ -276,7 +276,8 @@ details.instr .body p{margin-top:.7rem}
   <details class="instr">
     <summary>Your data</summary>
     <div class="body">
-      <p>Every session you log is stored only in this browser, on this device — there is no server and no account. Clearing your browser's site data, or switching phones, loses your history unless you back it up first.</p>
+      <p>Every session you log is stored in this browser, on this device — there is no account. Clearing your browser's site data, or switching phones, loses what's here unless you back it up first (the dashboards always read from this on-device copy).</p>
+      <p>Each save is also mirrored, best-effort, to a private Google Sheet you own — a second, human-readable copy of the same log. That sync happens quietly in the background and never blocks or fails the check-in if it can't reach the sheet.</p>
       <p>Adding this page to your phone's home screen (Share → Add to Home Screen on iOS, ⋮ → Add to phone on Android/Chrome) gives you an app icon that opens straight to this log — the data lives with the browser either way, not the icon.</p>
       <div class="data-actions">
         <button type="button" class="data-btn" id="btn-export">Export backup (download .json)</button>
@@ -441,6 +442,37 @@ details.instr .body p{margin-top:.7rem}
   function persistPhase(v){
     if(!storageOk){ return; }
     try{ window.localStorage.setItem(PHASE_KEY, v); } catch(e){}
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // GOOGLE SHEET SYNC — best-effort write only. localStorage above is the
+  // source of truth this app reads from; this just mirrors every saved
+  // session to the athlete's own Sheet as a second, human-readable copy
+  // (and a path to pull the log into anything else later). Fire-and-forget:
+  // a failed or blocked write never blocks or fails the check-in itself.
+  //
+  // Endpoint is a Google Apps Script Web App bound to
+  // https://docs.google.com/spreadsheets/d/15I6fMqoJjlakSrmbqgPkgz44eZ955LOUUrlvUh3IRy0/edit
+  // — see apps-script/Code.gs for the script and column schema. mode:'no-cors'
+  // avoids a CORS preflight the endpoint can't answer, at the cost of an
+  // opaque response (can't tell success from failure client-side) — the
+  // next time the Sheet is opened is the real confirmation a write landed.
+  // ═══════════════════════════════════════════════════════════════
+  var TRAINING_LOG_WRITE_URL = 'https://script.google.com/macros/s/AKfycbxqgAW5vtM3OonTIFQk_634WJLlk2f5YujJ5D65Nw76l8shoj4R1pf2zgrmHmKzY7_e_g/exec';
+  function submitSessionToSheet(entry){
+    if(!TRAINING_LOG_WRITE_URL){ return; }
+    var payload = {
+      when: entry.date, disc: entry.disc, duration: entry.duration, intensity: entry.intensity,
+      rpe: entry.rpe, a1: entry.a1, a2: entry.a2, a3: entry.a3, b2: entry.b2, b3: entry.b3,
+      note: entry.note, phase: entry.phase
+    };
+    try{
+      fetch(TRAINING_LOG_WRITE_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify(payload)
+      });
+    } catch(err){ /* best-effort — never let a sync failure disrupt the check-in flow */ }
   }
   function loadAutoAdvance(){
     if(!storageOk){ return true; }
@@ -1214,6 +1246,7 @@ details.instr .body p{margin-top:.7rem}
     };
     log.push(entry);
     persistLog();
+    submitSessionToSheet(entry);
     state.mode = 'saved';
     render();
     var n = loggedCountThisWeek();
