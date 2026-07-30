@@ -117,7 +117,7 @@ textarea::placeholder{color:var(--ink3)}
 .flow-foot .btn-primary::after{content:"\2192";margin-left:8px;font-weight:600;display:inline-block}
 
 /* ── One-time training phase screen ── */
-.period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem;display:flex;flex-direction:column;justify-content:center}
+.period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h));display:flex;flex-direction:column;justify-content:center}
 .period[hidden]{display:none}
 
 /* ── Bottom tabs ── */
@@ -205,7 +205,7 @@ textarea::placeholder{color:var(--ink3)}
   </section>
 
   <!-- ══════════ VIEW TABS ══════════ -->
-  <div class="view-tabs" id="view-tabs" role="tablist" aria-label="Sections" hidden>
+  <div class="view-tabs" id="view-tabs" role="tablist" aria-label="Sections">
     <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-flow">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1Z"></path><path d="m9 13 2.2 2.2L15.5 11"></path></svg>
       <span>Check-in</span>
@@ -1252,9 +1252,18 @@ textarea::placeholder{color:var(--ink3)}
   }
   function goToMonth(signal){ state.monthSignal = signal; showView('trends'); }
 
-  els.tabFlow.addEventListener('click', function(){ showView('flow'); });
-  els.tabDash.addEventListener('click', function(){ showView('dashboard'); });
-  els.tabTrends.addEventListener('click', function(){ showView('trends'); });
+  // The tab bar is visible even on the one-time phase screen — tapping a
+  // tab from there dismisses that screen (without forcing a phase choice)
+  // and jumps straight to the requested view.
+  function exitPeriodScreen(){
+    if(!els.periodScreen.hidden){
+      els.periodScreen.hidden = true;
+      els.appMain.hidden = false;
+    }
+  }
+  els.tabFlow.addEventListener('click', function(){ exitPeriodScreen(); showView('flow'); });
+  els.tabDash.addEventListener('click', function(){ exitPeriodScreen(); showView('dashboard'); });
+  els.tabTrends.addEventListener('click', function(){ exitPeriodScreen(); showView('trends'); });
 
   // ═══════════════════════════════════════════════════════════════
   // TRAINING PHASE PICKER — asked once on first use; re-openable from the
@@ -1273,7 +1282,6 @@ textarea::placeholder{color:var(--ink3)}
   }
   function openPhasePicker(){
     phaseReturnView = els.viewDash.hidden ? (els.viewTrends.hidden ? 'flow' : 'trends') : 'dashboard';
-    els.viewTabs.hidden = true;
     els.appMain.hidden = true;
     els.periodScreen.hidden = false;
     var h = document.getElementById('period-h');
@@ -1283,7 +1291,6 @@ textarea::placeholder{color:var(--ink3)}
     state.periodisation = v;
     persistPhase(v);
     els.periodScreen.hidden = true;
-    els.viewTabs.hidden = false;
     els.appMain.hidden = false;
     say('Training phase set to ' + PERIOD_LABEL[v] + '.');
     showView(phaseReturnView);
@@ -1316,7 +1323,6 @@ textarea::placeholder{color:var(--ink3)}
   buildPeriodChoices();
   render();
   if(state.periodisation){
-    els.viewTabs.hidden = false;
     els.appMain.hidden = false;
   } else {
     els.periodScreen.hidden = false;
