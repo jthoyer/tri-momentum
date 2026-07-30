@@ -182,17 +182,6 @@ textarea::placeholder{color:var(--ink3)}
 /* ── Data & about ── */
 .aside{margin-top:1.75rem}
 .divider-label{font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:0 0 .6rem}
-details.instr{margin-top:1rem;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--s1)}
-details.instr summary{padding:14px;font-family:var(--fd);font-weight:600;font-size:15px;cursor:pointer;color:var(--ink);min-height:52px}
-details.instr[open] summary{border-bottom:0.5px solid var(--bd)}
-details.instr .body{padding:4px 14px 14px;font-size:14px;color:var(--ink2);line-height:1.65}
-details.instr .body p{margin-top:.7rem}
-.data-actions{display:flex;flex-direction:column;gap:8px;margin-top:1rem}
-.data-btn{min-height:48px;padding:12px 14px;border-radius:var(--rmd);background:var(--s1);border:1px solid var(--bd2);font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
-.data-btn:hover{background:var(--s3)}
-.data-btn.danger{color:var(--run);border-color:var(--run)}
-.data-out{margin-top:10px;font-family:var(--fm);font-size:13px;width:100%;min-height:90px}
-.provenance-note{font-size:13px;color:var(--ink3);margin-top:1.4rem;line-height:1.55}
 
 .toggle{display:flex;align-items:center;gap:12px;min-height:52px;padding:11px 13px;margin-top:.9rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);font-size:14px;color:var(--ink);cursor:pointer}
 .toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue);cursor:pointer}
@@ -273,22 +262,6 @@ details.instr .body p{margin-top:.7rem}
   </div>
   <!-- /#app-main -->
 
-  <details class="instr">
-    <summary>Your data</summary>
-    <div class="body">
-      <p>Every session you log is stored in this browser, on this device — there is no account. Clearing your browser's site data, or switching phones, loses what's here unless you back it up first (the dashboards always read from this on-device copy).</p>
-      <p>Each save is also mirrored, best-effort, to a private Google Sheet you own — a second, human-readable copy of the same log. That sync happens quietly in the background and never blocks or fails the check-in if it can't reach the sheet.</p>
-      <p>Adding this page to your phone's home screen (Share → Add to Home Screen on iOS, ⋮ → Add to phone on Android/Chrome) gives you an app icon that opens straight to this log — the data lives with the browser either way, not the icon.</p>
-      <div class="data-actions">
-        <button type="button" class="data-btn" id="btn-export">Export backup (download .json)</button>
-        <button type="button" class="data-btn" id="btn-import">Import backup (paste .json)</button>
-        <button type="button" class="data-btn danger" id="btn-clear">Clear all data on this device</button>
-      </div>
-      <div id="data-io"></div>
-    </div>
-  </details>
-
-  <p class="provenance-note">TRI Momentum training log — v9. Design system and check-in vocabulary carried over from the earlier prototypes; this build replaces their in-memory demo data with real, persisted sessions so it can be used day to day.</p>
 
 </div>
 
@@ -413,8 +386,7 @@ details.instr .body p{margin-top:.7rem}
 
   // ═══════════════════════════════════════════════════════════════
   // STORAGE — everything lives in this browser's localStorage. No account,
-  // no server. See the "Your data" panel at the bottom of the page for
-  // export/import/clear.
+  // no server.
   // ═══════════════════════════════════════════════════════════════
   var LOG_KEY = 'triMomentumLog_v1';
   var PHASE_KEY = 'triMomentumPhase_v1';
@@ -1336,80 +1308,6 @@ details.instr .body p{margin-top:.7rem}
     persistAutoAdvance(state.autoAdvance);
     cancelAdvance();
     say(state.autoAdvance ? 'Auto-advance on. Picking an answer moves to the next question.' : 'Auto-advance off. Use Next to move between questions.');
-  });
-
-  // ── Data & about ──────────────────────────────────────────────
-  var dataIo = document.getElementById('data-io');
-  function dataMsg(text){
-    clear(dataIo);
-    dataIo.appendChild(el('p', 'hint', text));
-  }
-  document.getElementById('btn-export').addEventListener('click', function(){
-    var payload = {app:'tri-momentum', version:1, exportedAt:new Date().toISOString(), phase: state.periodisation, sessions: log};
-    var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'tri-momentum-log-' + todayISO() + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    dataMsg('Backup downloaded — ' + log.length + ' session' + (log.length===1?'':'s') + '.');
-  });
-  document.getElementById('btn-import').addEventListener('click', function(){
-    clear(dataIo);
-    var p = el('p', 'hint', 'Paste a previously exported backup below, then tap Load.');
-    dataIo.appendChild(p);
-    var ta = document.createElement('textarea');
-    ta.className = 'data-out';
-    ta.placeholder = '{ "sessions": [...] }';
-    dataIo.appendChild(ta);
-    var loadBtn = el('button', 'data-btn', 'Load backup');
-    loadBtn.type = 'button';
-    loadBtn.style.marginTop = '8px';
-    loadBtn.addEventListener('click', function(){
-      var parsed;
-      try{ parsed = JSON.parse(ta.value); }
-      catch(e){ dataMsg('That wasn’t valid JSON — nothing was changed.'); return; }
-      var sessions = Array.isArray(parsed) ? parsed : parsed.sessions;
-      if(!Array.isArray(sessions)){ dataMsg('Couldn’t find a sessions list in that file — nothing was changed.'); return; }
-      // Merge by (date, loggedAt) so re-importing the same backup twice doesn't duplicate rows.
-      var seen = {};
-      log.forEach(function(e){ seen[e.date + '|' + e.loggedAt] = true; });
-      var added = 0;
-      sessions.forEach(function(e){
-        if(!e || !e.date){ return; }
-        var key = e.date + '|' + e.loggedAt;
-        if(seen[key]){ return; }
-        seen[key] = true;
-        log.push(e);
-        added++;
-      });
-      log.sort(function(a,b){ return (a.date < b.date) ? -1 : (a.date > b.date ? 1 : 0); });
-      persistLog();
-      if(parsed && parsed.phase && !state.periodisation){ choosePeriod(parsed.phase); }
-      dataMsg('Imported ' + added + ' new session' + (added===1?'':'s') + ' (' + log.length + ' total on this device now).');
-      if(!els.viewDash.hidden){ renderDashboard(); }
-      if(!els.viewTrends.hidden){ renderTrends(); }
-    });
-    dataIo.appendChild(loadBtn);
-  });
-  document.getElementById('btn-clear').addEventListener('click', function(){
-    clear(dataIo);
-    var warn = el('p', 'hint', 'This deletes every logged session on this device. Export a backup first if you want to keep them. Tap again to confirm.');
-    dataIo.appendChild(warn);
-    var confirmBtn = el('button', 'data-btn danger', 'Yes, delete everything');
-    confirmBtn.type = 'button';
-    confirmBtn.style.marginTop = '8px';
-    confirmBtn.addEventListener('click', function(){
-      log = [];
-      persistLog();
-      dataMsg('All sessions cleared from this device.');
-      if(!els.viewDash.hidden){ renderDashboard(); }
-      if(!els.viewTrends.hidden){ renderTrends(); }
-    });
-    dataIo.appendChild(confirmBtn);
   });
 
   // ── Init ──────────────────────────────────────────────────────
