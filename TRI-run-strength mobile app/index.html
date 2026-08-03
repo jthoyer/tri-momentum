@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>TRI-run-strength</title>
+<meta name="description" content="18-minute single-leg strength circuit for runners and cyclists, with progress tracking." />
+<meta name="theme-color" content="#182542" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Run Strength" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="shell">
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="TRI-run-strength home">
+      <b>TRI-run-strength</b>
+    </a>
+    <button class="text-button" id="resetButton" type="button">Reset session</button>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <p class="eyebrow">DRYLAND STRENGTH &middot; RUNNER &amp; CYCLIST</p>
+      <h1>Single-leg <em>strength</em> circuit</h1>
+      <p>Build the posterior-chain strength and hip stability that keeps your form together late in a run or a hard ride.</p>
+
+      <div class="session-meta">
+        <div class="session-meta-item"><span class="meta-label">Structure</span><span>4 rounds of 5 exercises (~18 min) &mdash; minimal rest within a round, 60&ndash;90s between rounds</span></div>
+        <div class="session-meta-item"><span class="meta-label">Equipment</span><span>One dumbbell (or a pair) and a bench or step for the Copenhagen plank</span></div>
+      </div>
+
+      <div class="progress-block">
+        <div class="progress-top">
+          <span class="progress-count"><span id="progressDone">0</span> / <span id="progressTotal">0</span> exercises logged</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="sessions-completed"><span id="sessionsCompleted">0</span> sessions completed all-time</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="phase-card" id="phaseMain" aria-labelledby="phaseMainTitle">
+    <div class="card-header">
+      <div><p class="eyebrow phase-eyebrow">CIRCUIT &middot; ~18 MIN</p><h2 id="phaseMainTitle">Single-leg strength circuit</h2></div>
+      <span class="phase-progress" id="phaseMainProgress">0/20</span>
+    </div>
+    <p class="card-intro">One continuous circuit, four rounds. Move straight through the five exercises with minimal rest; rest 60&ndash;90 seconds between rounds.</p>
+    <div class="round-key">
+      <span class="round-chip">Round 1</span>
+      <span class="round-chip">Round 2</span>
+      <span class="round-chip">Round 3</span>
+      <span class="round-chip">Round 4</span>
+    </div>
+    <div class="exercise-list" id="phaseMainList"></div>
+  </section>
+
+  <section class="info-card" aria-labelledby="remindersTitle">
+    <h2 id="remindersTitle">Key technique reminders</h2>
+    <ol class="reminder-list">
+      <li><strong>Balance:</strong> Single-leg RDL and reverse lunge both load one leg at a time &mdash; keep your hips square to the front, don't let them rotate open.</li>
+      <li><strong>Load:</strong> Pick a dumbbell weight where reps 7&ndash;8 of the RDL are hard but controlled, not shaky.</li>
+      <li><strong>Copenhagen:</strong> Hips high, no sagging &mdash; this drives the adductor strength that protects the knee under running and pedalling load.</li>
+      <li><strong>Pace:</strong> The jump squat closes every round &mdash; land soft and reset your breathing before starting the next round.</li>
+    </ol>
+  </section>
+
+  <section class="complete-band" aria-live="polite">
+    <p class="complete-copy">Total session time: about 18 minutes.</p>
+    <button class="primary-button" id="completeButton" type="button">Mark session complete <span>&#10003;</span></button>
+  </section>
+
+  <div class="toast hidden" id="toast" role="status"></div>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

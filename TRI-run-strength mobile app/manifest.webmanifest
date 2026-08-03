@@ -1,0 +1,13 @@
+{
+  "name": "TRI-run-strength",
+  "short_name": "Run Strength",
+  "description": "18-minute single-leg strength circuit for runners and cyclists, with progress tracking.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#182542",
+  "theme_color": "#182542",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

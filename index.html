@@ -201,6 +201,10 @@ textarea::placeholder{color:var(--ink3)}
 
   <!-- ══════════ VIEW TABS ══════════ -->
   <div class="view-tabs" id="view-tabs" role="tablist" aria-label="Sections">
+    <button type="button" class="view-tab" id="tab-strength" role="tab" aria-selected="false" aria-controls="view-strength">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
+      <span>Strength</span>
+    </button>
     <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-flow">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C6.06294 1.25 1.25 6.06294 1.25 12C1.25 17.9371 6.06294 22.75 12 22.75C17.9371 22.75 22.75 17.9371 22.75 12C22.75 6.06294 17.9371 1.25 12 1.25ZM2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12Z" fill="currentColor"></path></svg>
       <span>Check-in</span>
@@ -212,10 +216,6 @@ textarea::placeholder{color:var(--ink3)}
     <button type="button" class="view-tab" id="tab-trends" role="tab" aria-selected="false" aria-controls="view-trends">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
       <span>Month</span>
-    </button>
-    <button type="button" class="view-tab" id="tab-strength" role="tab" aria-selected="false" aria-controls="view-strength">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
-      <span>Strength</span>
     </button>
   </div>
 
@@ -251,6 +251,10 @@ textarea::placeholder{color:var(--ink3)}
   <!-- ══════════ STRENGTH ══════════ -->
   <div class="dash" id="view-strength" role="tabpanel" aria-labelledby="tab-strength" hidden>
     <h1 class="dash-eyebrow" id="strength-h" tabindex="-1">Strength</h1>
+    <div class="signal-subtabs" id="strength-subtabs" role="tablist" aria-label="Strength discipline">
+      <button type="button" class="signal-subtab" id="tab-strength-swim" role="tab" aria-selected="true">Swim</button>
+      <button type="button" class="signal-subtab" id="tab-strength-run" role="tab" aria-selected="false">Ride / Run</button>
+    </div>
     <iframe class="strength-frame" id="strength-frame" src="TRI-swim-strength mobile app/index.html" title="Swim strength session" loading="lazy"></iframe>
   </div>
 
@@ -975,6 +979,8 @@ if(window.caches && caches.keys){
     viewTrends: document.getElementById('view-trends'),
     viewStrength: document.getElementById('view-strength'),
     strengthFrame: document.getElementById('strength-frame'),
+    tabStrengthSwim: document.getElementById('tab-strength-swim'),
+    tabStrengthRun: document.getElementById('tab-strength-run'),
     viewTabs: document.getElementById('view-tabs'),
     appMain: document.getElementById('app-main'),
     periodScreen: document.getElementById('view-period'),
@@ -1284,7 +1290,11 @@ if(window.caches && caches.keys){
     if(!f) return;
     try{
       var doc = f.contentDocument;
-      if(doc && doc.documentElement){ f.style.height = doc.documentElement.scrollHeight + 'px'; }
+      // documentElement.scrollHeight collapses to 0 while the iframe's own
+      // box is still 0-tall (e.g. first load behind [hidden]); body.scrollHeight
+      // reflects the real laid-out content height regardless, so prefer it.
+      var h = doc && doc.body ? Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight) : 0;
+      if(h > 0){ f.style.height = h + 'px'; }
     } catch(e){ /* cross-origin fallback: leave last-known height */ }
   }
 
@@ -1303,6 +1313,25 @@ if(window.caches && caches.keys){
   els.tabStrength.addEventListener('click', function(){ exitPeriodScreen(); showView('strength'); });
   els.strengthFrame.addEventListener('load', sizeStrengthFrame);
   window.addEventListener('resize', function(){ if(!els.viewStrength.hidden){ sizeStrengthFrame(); } });
+
+  // Strength tab holds two same-origin mini-apps (swim dryland vs. ride/run
+  // circuit) in one iframe; switching disciplines just swaps the src rather
+  // than juggling two iframes, since only one is ever visible at a time.
+  var STRENGTH_APPS = {
+    swim: { src: 'TRI-swim-strength mobile app/index.html', title: 'Swim strength session' },
+    run:  { src: 'TRI-run-strength mobile app/index.html', title: 'Ride and run strength session' }
+  };
+  function setStrengthDiscipline(disc){
+    var cfg = STRENGTH_APPS[disc];
+    if(els.strengthFrame.getAttribute('src') !== cfg.src){
+      els.strengthFrame.src = cfg.src;
+      els.strengthFrame.title = cfg.title;
+    }
+    els.tabStrengthSwim.setAttribute('aria-selected', String(disc === 'swim'));
+    els.tabStrengthRun.setAttribute('aria-selected', String(disc === 'run'));
+  }
+  els.tabStrengthSwim.addEventListener('click', function(){ setStrengthDiscipline('swim'); });
+  els.tabStrengthRun.addEventListener('click', function(){ setStrengthDiscipline('run'); });
 
   // ═══════════════════════════════════════════════════════════════
   // TRAINING PHASE PICKER — asked once on first use; re-openable from the
