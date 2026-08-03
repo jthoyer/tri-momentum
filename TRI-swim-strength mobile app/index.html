@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>TRI-swim-strength</title>
+<meta name="description" content="45-minute resistance band dryland session for swimmers, with progress tracking." />
+<meta name="theme-color" content="#182542" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Swim Strength" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="shell">
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="TRI-swim-strength home">
+      <b>TRI-swim-strength</b>
+    </a>
+    <button class="text-button" id="resetButton" type="button">Reset session</button>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <p class="eyebrow">DRYLAND STRENGTH &middot; INTERMEDIATE SWIMMER</p>
+      <h1>45-minute <em>resistance band</em> session</h1>
+      <p>Improve swimming-specific power, core stability, and muscular endurance.</p>
+
+      <div class="session-meta">
+        <div class="session-meta-item"><span class="meta-label">Structure</span><span>Warm-up (10) &rarr; Main set (30) &rarr; Cool-down (5)</span></div>
+        <div class="session-meta-item"><span class="meta-label">Equipment</span><span>Long resistance band with handles or loop band; anchor point</span></div>
+      </div>
+
+      <div class="progress-block">
+        <div class="progress-top">
+          <span class="progress-count"><span id="progressDone">0</span> / <span id="progressTotal">0</span> exercises logged</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="sessions-completed"><span id="sessionsCompleted">0</span> sessions completed all-time</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="phase-card" id="phase1" aria-labelledby="phase1Title">
+    <div class="card-header">
+      <div><p class="eyebrow phase-eyebrow">PHASE 1 &middot; 10 MIN</p><h2 id="phase1Title">Dynamic warm-up</h2></div>
+      <span class="phase-progress" id="phase1Progress">0/4</span>
+    </div>
+    <p class="card-intro">Prepare joints and muscles for pulling and kicking actions.</p>
+    <div class="exercise-list" id="phase1List"></div>
+  </section>
+
+  <section class="phase-card" id="phase2" aria-labelledby="phase2Title">
+    <div class="card-header">
+      <div><p class="eyebrow phase-eyebrow">PHASE 2 &middot; 30 MIN</p><h2 id="phase2Title">Main strength circuit</h2></div>
+      <span class="phase-progress" id="phase2Progress">0/45</span>
+    </div>
+    <p class="card-intro">Perform exercises in sequence. Rest 1 minute between rounds.</p>
+    <div class="round-key">
+      <span class="round-chip">R1 &middot; Form</span>
+      <span class="round-chip">R2 &middot; Power</span>
+      <span class="round-chip">R3 &middot; Endurance &amp; speed</span>
+    </div>
+    <div class="exercise-list" id="phase2List"></div>
+  </section>
+
+  <section class="phase-card" id="phase3" aria-labelledby="phase3Title">
+    <div class="card-header">
+      <div><p class="eyebrow phase-eyebrow">PHASE 3 &middot; 5 MIN</p><h2 id="phase3Title">Core finisher &amp; cool-down</h2></div>
+      <span class="phase-progress" id="phase3Progress">0/4</span>
+    </div>
+    <p class="card-intro">Mini-circuit: 30 seconds on, 15 seconds rest between exercises.</p>
+    <div class="exercise-list" id="phase3List"></div>
+  </section>
+
+  <section class="info-card" aria-labelledby="remindersTitle">
+    <h2 id="remindersTitle">Key technique reminders</h2>
+    <ol class="reminder-list">
+      <li><strong>Tension:</strong> Keep constant tension on the band throughout every repetition. Never let it go slack.</li>
+      <li><strong>Core:</strong> Brace your core in every standing exercise to protect your lower back.</li>
+      <li><strong>Breath:</strong> Exhale on the effort phase; inhale on the return.</li>
+      <li><strong>Quality:</strong> Prioritise perfect form over band tension.</li>
+    </ol>
+  </section>
+
+  <section class="complete-band" aria-live="polite">
+    <p class="complete-copy">Total session time: 45 minutes.</p>
+    <button class="primary-button" id="completeButton" type="button">Mark session complete <span>&#10003;</span></button>
+  </section>
+
+  <div class="toast hidden" id="toast" role="status"></div>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

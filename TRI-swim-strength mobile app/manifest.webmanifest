@@ -1,0 +1,13 @@
+{
+  "name": "TRI-swim-strength",
+  "short_name": "Swim Strength",
+  "description": "45-minute resistance band dryland session for swimmers, with progress tracking.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#182542",
+  "theme_color": "#182542",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
