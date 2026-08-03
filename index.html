@@ -124,7 +124,7 @@ textarea::placeholder{color:var(--ink3)}
 
 /* ── Bottom tabs ── */
 .view-tabs[hidden]{display:none}
-.view-tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:0;max-width:430px;margin:0 auto;padding:0;background:#002DFF;border-top:none}
+.view-tabs{position:fixed;left:10px;right:10px;bottom:0;z-index:5;display:flex;gap:0;max-width:410px;margin:0 auto;padding:0;background:#002DFF;border-top:none;border-radius:var(--rlg) var(--rlg) 0 0;overflow:hidden}
 .view-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:var(--tabbar-h);padding:8px 4px calc(8px + env(safe-area-inset-bottom));background:none;border:none;border-radius:0;font-family:var(--fd);font-size:11.5px;font-weight:600;color:rgba(255,255,255,.6);cursor:pointer}
 .view-tab svg{flex:none}
 .view-tab[aria-selected="true"]{color:#37C6FC;background:rgba(255,255,255,.16)}
@@ -145,7 +145,7 @@ textarea::placeholder{color:var(--ink3)}
 .dash-insight-strip + .dash-stat-hd{margin-top:1.1rem}
 .signal-subtabs{display:flex;gap:4px;padding:3px;background:var(--s3);border-radius:999px;margin-top:1.4rem;margin-bottom:1.5rem}
 .signal-subtab{flex:1;min-height:38px;padding:8px 4px;border:none;border-radius:999px;background:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
-.signal-subtab[aria-selected="true"]{background:var(--s1);color:var(--blue)}
+.signal-subtab[aria-selected="true"]{background:var(--blue);color:#fff}
 .month-week-block{margin-top:1.4rem;padding:1rem 1.05rem 1.2rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
 .month-week-block:first-child{margin-top:0}
 .month-week-block .dash-matrix-hd{margin-top:.9rem}
@@ -174,11 +174,9 @@ textarea::placeholder{color:var(--ink3)}
 .dash-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:1.6rem;padding-top:1rem;border-top:0.5px solid var(--bd)}
 .dash-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)}
 .dash-legend-sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;box-sizing:border-box}
-.dash-phase-track{display:flex;gap:7px}
-.dash-phase-card{flex:1;display:flex;align-items:center;justify-content:center;min-height:52px;padding:10px 6px;border-radius:var(--rmd);background:var(--s1);border:0.5px solid var(--bd2)}
-.dash-phase-card.is-current{border-color:var(--blue);background:var(--blue-l)}
-.dash-phase-ph{font-family:var(--fd);font-size:12.5px;font-weight:600;color:var(--ink);text-align:center;line-height:1.25}
-.dash-phase-card.is-current .dash-phase-ph{color:var(--blue)}
+.dash-phase-pills{display:flex;gap:3px;padding:3px;background:var(--s3);border-radius:999px}
+.dash-phase-pill{flex:1;min-height:38px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border-radius:999px;font-family:var(--fd);font-size:12.5px;font-weight:600;color:var(--ink2);text-align:center;line-height:1.25}
+.dash-phase-pill.is-current{background:var(--blue);color:#fff}
 .dash-phase-note{font-size:12.5px;color:var(--ink3);margin-top:.8rem;line-height:1.5}
 .dash-phase-change{display:block;margin-top:.6rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
@@ -693,13 +691,11 @@ if(window.caches && caches.keys){
   function dashPhaseSection(){
     var wrap = el('div', 'dash-section dash-phase');
     wrap.setAttribute('data-label', 'Training phase');
-    var track = el('div', 'dash-phase-track');
+    var pills = el('div', 'dash-phase-pills');
     PERIOD.forEach(function(p){
-      var card = el('div', 'dash-phase-card' + (state.periodisation === p.v ? ' is-current' : ''));
-      card.appendChild(el('div', 'dash-phase-ph', p.label));
-      track.appendChild(card);
+      pills.appendChild(el('div', 'dash-phase-pill' + (state.periodisation === p.v ? ' is-current' : ''), p.label));
     });
-    wrap.appendChild(track);
+    wrap.appendChild(pills);
     var change = document.createElement('button');
     change.type = 'button';
     change.className = 'dash-phase-change';
