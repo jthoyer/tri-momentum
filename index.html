@@ -161,6 +161,7 @@ textarea::placeholder{color:var(--ink3)}
 .dash-counts{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--fm);font-size:12px;color:var(--ink2);margin-top:8px}
 .dash-counts b{font-weight:600}
 .dash-matrix-hd{display:flex;align-items:baseline;gap:12px;margin-top:1.6rem}
+.dash-matrix-week{font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--ink2);white-space:nowrap}
 .dash-matrix-rule{flex:1;height:1px;background:var(--bd)}
 .dash-matrix-sub{font-family:var(--fm);font-size:11.5px;color:var(--ink3)}
 .dash-grid{display:grid;grid-template-columns:52px repeat(7,1fr);gap:5px;margin-top:.7rem;align-items:center}
@@ -599,12 +600,16 @@ if(window.caches && caches.keys){
     var c = catFn(dayEntry.session);
     return c ? ('dash-cell ' + c) : 'dash-cell na';
   }
-  function dashMatrix(sub, catFn, days){
-    var frag = document.createDocumentFragment();
+  function dashMatrixHeader(sub, weekLabel){
     var hd = el('div', 'dash-matrix-hd');
-    hd.appendChild(el('div', 'dash-matrix-rule'));
-    hd.appendChild(el('div', 'dash-matrix-sub', sub));
-    frag.appendChild(hd);
+    if(weekLabel){ hd.appendChild(el('div', 'dash-matrix-week', weekLabel)); }
+    if(sub){
+      hd.appendChild(el('div', 'dash-matrix-rule'));
+      hd.appendChild(el('div', 'dash-matrix-sub', sub));
+    }
+    return hd;
+  }
+  function dashMatrixGrid(catFn, days){
     var grid = el('div', 'dash-grid');
     grid.appendChild(el('div'));
     days.forEach(function(d){ grid.appendChild(el('div', 'dash-grid-day', d.day.charAt(0))); });
@@ -612,7 +617,12 @@ if(window.caches && caches.keys){
       grid.appendChild(el('div', 'dash-grid-disc', DISC_LABEL[disc]));
       days.forEach(function(d){ grid.appendChild(el('div', dashCellClass(d, disc, catFn))); });
     });
-    frag.appendChild(grid);
+    return grid;
+  }
+  function dashMatrix(sub, catFn, days, weekLabel){
+    var frag = document.createDocumentFragment();
+    frag.appendChild(dashMatrixHeader(sub, weekLabel));
+    frag.appendChild(dashMatrixGrid(catFn, days));
     return frag;
   }
   function renderStatBar(t, bigDesc){
@@ -636,6 +646,11 @@ if(window.caches && caches.keys){
     return frag;
   }
   function renderSignalBody(wrap, t, catFn, insight, opts, days){
+    // The week-number row sits right under the section eyebrow (data-label,
+    // rendered via ::before) and above everything else, "this week" only —
+    // month blocks already carry their own per-week heading, so they keep
+    // the matrix in its usual spot right before the grid.
+    if(opts.weekLabel){ wrap.appendChild(dashMatrixHeader(null, opts.weekLabel)); }
     var strip = el('div', 'dash-insight-strip');
     strip.style.borderLeftColor = 'var(--dash-' + insight.severity + ')';
     strip.style.background = 'color-mix(in srgb, var(--dash-' + insight.severity + ') 12%, var(--s1))';
@@ -659,7 +674,12 @@ if(window.caches && caches.keys){
     counts.appendChild(countEl(t.mid, opts.midLabel, 'var(--dash-mid)'));
     counts.appendChild(countEl(t.bad, opts.badLabel, 'var(--dash-bad)'));
     wrap.appendChild(counts);
-    wrap.appendChild(dashMatrix(opts.matrixSub, catFn, days));
+    if(opts.weekLabel){
+      wrap.appendChild(dashMatrixHeader(opts.matrixSub, null));
+      wrap.appendChild(dashMatrixGrid(catFn, days));
+    } else {
+      wrap.appendChild(dashMatrix(opts.matrixSub, catFn, days));
+    }
   }
   function dashSignalSection(label, t, catFn, insight, opts, days){
     var wrap = el('div', 'dash-section dash-signal');
@@ -938,13 +958,14 @@ if(window.caches && caches.keys){
     root.appendChild(dashPhaseSection());
     root.appendChild(renderSignalSubtabs(state.weekSignal, function(v){ state.weekSignal = v; renderDashboard(); }));
     var days = currentWeekDays();
+    var weekLabel = 'Week ' + isoWeekNumber(mondayOf(new Date()));
     if(state.weekSignal === 'fuelling'){
       var fuelT = tallyDays(days, fuelCat);
       var fuelFacts = computeSignalFacts([{wk:'This week', days:days}], fuelCat);
       var fuelRule = resolveFuelInsight(fuelFacts);
       root.appendChild(dashSignalSection('Fuelling', fuelT, fuelCat, {severity: fuelRule.severity, headline: fuelRule.headline(fuelFacts)}, {
         nText: fuelT.total + ' over 45 min', bigDesc: 'at race concentration',
-        goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none', matrixSub: 'over 45 min only', signal: 'fuelling'
+        goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none', matrixSub: 'over 45 min only', signal: 'fuelling', weekLabel: weekLabel
       }, days));
     } else {
       var driftT = tallyDays(days, driftCat);
@@ -952,7 +973,7 @@ if(window.caches && caches.keys){
       var driftRule = resolveDriftInsight(driftFacts);
       root.appendChild(dashSignalSection('Intensity drift', driftT, driftCat, {severity: driftRule.severity, headline: driftRule.headline(driftFacts)}, {
         nText: driftT.total + ' session' + (driftT.total === 1 ? '' : 's'), bigDesc: 'finished at intent',
-        goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over', matrixSub: 'by session', signal: 'intensity'
+        goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over', matrixSub: 'by session', signal: 'intensity', weekLabel: weekLabel
       }, days));
     }
     root.appendChild(dashLegend());
