@@ -9,8 +9,10 @@
     { id: 'e1', name: 'Glute Bridge', dose: '12 reps', cue: 'Feet hip-width, drive through heels, squeeze glutes hard at the top — don’t just lift with the lower back.' },
     { id: 'e2', name: 'Single-Leg RDL', dose: '8 reps each leg', cue: 'Dumbbell in the hand opposite the standing leg; hinge at the hip with a soft knee and flat back, reach the free leg straight behind you.' },
     { id: 'e3', name: 'Reverse Lunge', dose: '10 reps each leg', cue: 'Dumbbells at your sides; step back and drop the back knee toward the floor, drive up through the front heel.' },
-    { id: 'e4', name: 'Copenhagen Plank', dose: '20 sec each side', cue: 'Top foot on a bench, forearm on the floor, hips lifted into a straight line — this is adductor strength, not a hip-flexor stretch.' },
-    { id: 'e5', name: 'Jump Squat', dose: '20 sec', cue: 'Squat down and explode up; land soft through the mid-foot and reset before the next rep.' }
+    { id: 'e4', name: 'Single-Leg Squat + Jump', dose: '6 reps each leg', cue: 'Squat down on one leg with a forward lean like your running posture, then hop straight up and stick the landing soft on the same leg — builds the ankle stability and pelvic control that keeps your hips level late in a run.' },
+    { id: 'e5', name: 'Copenhagen Plank', dose: '20 sec each side', cue: 'Top foot on a bench, forearm on the floor, hips lifted into a straight line — this is adductor strength, not a hip-flexor stretch.' },
+    { id: 'e6', name: 'Jump Squat', dose: '20 sec', cue: 'Squat down and explode up; land soft through the mid-foot and reset before the next rep.' },
+    { id: 'e7', name: 'Weighted Tiptoe Walk', dose: '20 steps', cue: 'Dumbbell in each hand, rise onto your toes and walk forward keeping a soft bend in the knees — the bent knee shifts the load onto the soleus, the muscle that fatigues late in a run or long ride.' }
   ];
 
   var totalItems = mainCircuit.length * ROUNDS;
