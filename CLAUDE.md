@@ -5,11 +5,22 @@
 
 ---
 
-## What this product is
+## ⚠️ Two codebases: current app vs. target architecture
 
-**TRI Momentum** is a mobile-first progressive web app (PWA) for intermediate age-group triathletes training for Olympic distance and 70.3 Ironman events. It is not a training log. It is a decision-support tool — it helps athletes make better choices about load, recovery, and race preparation across a repeating 13-week block cycle (base → build → peak → recovery).
+This repo contains **two things at once**, and it matters which one a session is touching:
 
-The core value loop is:
+- **Current app (`index.html`, repo root)** — a single static HTML/CSS/JS file, no build step, no framework, no accounts. This is **what's actually live** at `https://jthoyer.github.io/tri-momentum/` (GitHub Pages serves the repo root directly) and what recent commits have been iterating on (bottom nav, Strength sub-tabs, week numbering, etc.). Treat this as the real product.
+- **Target architecture (`frontend/`, `backend/`, `supabase/`)** — a React + Vite + Hono + Supabase + Stripe scaffold representing where the product is intended to go: accounts, cross-device sync, a phase-aware tip/content system, and a paywall. It has a single "initial commit" and is **not wired up or in active use** — no `supabase-js` installed, no backend server, `Auth.jsx` isn't reachable from the app, nothing persists past `localStorage`.
+
+Both are intentional. Most of this document (Freemium model, Database schema, Auth flow, Stripe, `tips.js` content system) describes the **target**, not what's running today. Sections are labelled accordingly. When in doubt: if it's not described under "Current implementation" below, assume it doesn't exist yet in the shipped app.
+
+---
+
+## What this product is (north star — target)
+
+**TRI Momentum** is a mobile-first progressive web app (PWA) for intermediate age-group triathletes training for Olympic distance and 70.3 Ironman events. It is not a training log. It is a decision-support tool — it helps athletes make better choices about load, recovery, and race preparation across a repeating training block cycle (base → build → peak → recovery).
+
+The target core value loop is:
 1. Athlete sets their training start date and race date
 2. App resolves their current phase, block week, and emphasis pillar from those dates
 3. App surfaces the right thinking prompt for their current position in the training cycle
@@ -17,22 +28,67 @@ The core value loop is:
 5. App tracks readiness, grey-zone training %, and vulnerable sessions over time
 6. Trend data surfaces patterns the athlete can't see week-to-week
 
-The product is built for **one primary user type**: a time-pressured age-grouper with 10–15 hours/week of training, strong self-knowledge, and no interest in being hand-held. The tone of the app — including all tip copy — reflects this.
+The product is built for **one primary user type**: a time-pressured age-grouper with 10–15 hours/week of training, strong self-knowledge, and no interest in being hand-held. The tone of the app — including all copy — reflects this.
+
+**Today's shipped app is a narrower, working subset of this vision** — a reactive check-in log with rule-based pattern detection, no accounts and no coaching-prompt content system (see below). It's the direction, not yet the destination.
 
 ---
 
-## Tech stack
+## Current implementation (`index.html`) — what's actually live
+
+Single self-contained HTML file at the repo root, deployed via GitHub Pages with no build step. No framework, no bundler, no npm dependencies.
+
+### Storage & sync
+- **The Google Sheet is the source of truth**, so the log reads the same on the phone and the laptop (no accounts, no login). A personal Sheet, written to and read from via a Google Apps Script Web App (`apps-script/Code.gs`).
+  - **Write:** every saved session fires a `no-cors` POST — fire-and-forget, opaque response, a failed write never blocks the check-in (the entry still shows locally this session via the optimistic `log.push` in `save()`).
+  - **Read:** the app fetches the full log from the Sheet (`GET .../exec?list=1`, normal `cors` mode since the JSON body needs parsing) on load, and again whenever the This week or Month tab is opened, replacing the in-memory log with whatever the Sheet returns.
+  - **`localStorage` is a same-device cache only** — it paints the last-known state instantly on load and is what's used if a Sheet fetch fails (offline, blocked request, extension interference, etc). It is not authoritative and is never the reason two devices would disagree.
+- No Supabase, no Postgres, no RLS, no server-side persistence of our own.
+
+### Navigation — 4 tabs
+| Tab | What it does |
+|---|---|
+| **Strength** | Not a content tab — embeds two separate sibling PWAs via `<iframe>`: `TRI-swim-strength mobile app/` and `TRI-run-strength mobile app/` (each its own `index.html`/`app.js`/`manifest.webmanifest`/service worker, maintained independently of the main app). Sub-tabs: Swim / Ride-Run. |
+| **Check-in** | The primary interaction — a stepped, after-session logging wizard ("Just finished", step counter). Not a pre-scheduled calendar; purely reactive logging. |
+| **This week** | Weekly dashboard: discipline breakdown grid, phase pills, signal sections (see below), week number. |
+| **Month** | Same signal/dashboard machinery as "This week," rolled up by week blocks across the month. |
+
+### Training phase
+Asked **once, ever** (not resolved from dates) via a simple picker: `Base / Taper`, `Build 1`, `Build 2`, `Peak`. Changeable later from the dashboard. There is no `training_start_date`, no `race_date`, no `block_config`, and no per-day content resolution — the target's `resolvePosition()`/`phasePosition` system does not exist in this app.
+
+### Check-in data model
+Each logged session (`log` array in `localStorage`) captures: `date`, `disc` (`swim`|`bike`|`run`|`brick`|`strength`), `duration`, `intensity`, `rpe`, three execution/intent questions (`a1`, `a2`, `a3`), two fuelling-related fields (`b2`, `b3`), a free-text `note`, and the currently-set `phase`. There is no `tips`/`prompt`/`mechanism`/contrast-pair content shown alongside a session — nothing from `tips.js` is used.
+
+### Signals (replaces "weekly reflection")
+Instead of a self-reported readiness score + grey-zone %, the app derives **rule-based signals** from logged sessions:
+- **Fuelling** and **Intensity drift** categories, each with a severity (`good`/`mid`/`bad`)
+- **Compound-pair detection** — e.g. two consecutive over-intent sessions — flagged as a distinct, higher-priority pattern than an isolated one
+- Auto-generated plain-language headlines per signal (e.g. "X times this week, a session that ran well over intent was followed by another one running well over intent…")
+
+This is a different mechanism from the target's `readiness`/`grey_zone_pct`/`vuln_session` self-report fields — it's inferred from logged data, not asked directly.
+
+### Design system
+Shares the same CSS custom properties as documented below (discipline colours, DM Sans/DM Mono, card/radius conventions) — **this part of the doc is accurate for both current and target.**
+
+### PWA
+Manifest is inlined as a `data:` URI in the `<head>` (not a separate `public/manifest.json` + `sw.js` pair as the target architecture specifies).
+
+---
+
+## Target tech stack (not yet implemented)
 
 | Layer | Choice | Reason |
 |---|---|---|
 | Frontend | React + Vite | Fast dev server, clean component model, easy PWA setup |
-| Styling | CSS custom properties (no Tailwind) | Design system already established in v5 — preserve it exactly |
+| Styling | CSS custom properties (no Tailwind) | Design system already established — preserve it exactly |
 | Backend | Hono on Node.js | Lightweight, edge-compatible, minimal boilerplate |
 | Database | Supabase (Postgres) | Auth + database + row-level security in one. Free tier sufficient for launch. |
 | Auth | Supabase Auth | Magic link + Google OAuth. No passwords to manage. |
 | Payments | Stripe | Checkout + webhooks. Subscription status written to Supabase. |
 | Hosting | Vercel (frontend) + Fly.io (backend) | Both have generous free tiers. Vercel handles PWA edge cases well. |
 | Garmin | Unofficial garminconnect Python wrapper OR official OAuth API (future) | Backend-only — never expose credentials client-side |
+
+`frontend/` is scaffolded (components exist: `Today.jsx`, `Week.jsx`, `Tips.jsx`, `Calendar.jsx`, `Onboarding.jsx`, `Auth.jsx`, `Upgrade.jsx`) but not wired: no `supabase-js` dependency, no `frontend/src/lib/supabase.js`, no `frontend/src/hooks/`, `Auth.jsx`'s magic-link form doesn't call any API, and `App.jsx`'s screen state machine never actually routes to it. `backend/` contains only `.env.example`, `.gitignore`, and an unrelated standalone script — no Hono server exists yet.
 
 ---
 
@@ -41,6 +97,15 @@ The product is built for **one primary user type**: a time-pressured age-grouper
 ```
 tri-momentum/
 ├── CLAUDE.md                  ← this file
+├── index.html                 ← ★ CURRENT LIVE APP — static, self-contained, deployed as-is via GH Pages
+├── apps-script/
+│   └── Code.gs                ← Google Apps Script Web App — receives session POSTs, writes to the athlete's Sheet
+├── TRI-swim-strength mobile app/   ← separate sibling PWA, embedded via iframe in index.html's Strength tab
+│   ├── index.html / app.js / styles.css / manifest.webmanifest / sw.js
+├── TRI-run-strength mobile app/    ← same pattern, Ride/Run strength
+│
+│  ─── target architecture (scaffolded, not yet wired up) ───
+│
 ├── .env.example               ← all required env vars documented here
 ├── .env.local                 ← never committed
 ├── frontend/
@@ -51,50 +116,32 @@ tri-momentum/
 │   │   │   ├── Tips.jsx
 │   │   │   ├── Calendar.jsx
 │   │   │   ├── Onboarding.jsx
-│   │   │   ├── Auth.jsx           ← sign in / sign up / magic link
-│   │   │   ├── Upgrade.jsx        ← paywall prompt component
+│   │   │   ├── Auth.jsx           ← sign in / sign up / magic link (currently disconnected)
+│   │   │   ├── Upgrade.jsx        ← paywall prompt component (currently no-op)
 │   │   │   └── shared/
 │   │   │       ├── BottomNav.jsx
 │   │   │       ├── SessionCard.jsx
-│   │   │       └── Phasepill.jsx
+│   │   │       └── PhasePill.jsx
 │   │   ├── data/
-│   │   │   ├── tips.js            ← block-relative tip content (static, see schema below)
-│   │   │   ├── raceProximity.js   ← race-proximity overlay content (23 cards, 5 zones)
+│   │   │   ├── tips.js            ← block-relative tip content (static, see schema below) — unused by current app
+│   │   │   ├── raceProximity.js   ← race-proximity overlay content (23 cards, 5 zones) — unused by current app
 │   │   │   ├── phases.js          ← PHASES_39 and PILLAR_CYCLE constants
 │   │   │   └── insights.js        ← CADENCE_INSIGHTS constant
-│   │   ├── hooks/
-│   │   │   ├── useAuth.js         ← Supabase auth state
-│   │   │   ├── useProfile.js      ← user profile + subscription tier
-│   │   │   └── useReflections.js  ← reflection CRUD
+│   │   ├── hooks/                 ← does not exist yet (useAuth.js, useProfile.js, useReflections.js planned)
 │   │   ├── lib/
-│   │   │   ├── supabase.js        ← Supabase client init
-│   │   │   ├── stripe.js          ← Stripe client init
-│   │   │   └── tipResolver.js     ← resolvePosition(), resolveTip(), resolveProximityZone() etc.
-│   │   ├── App.jsx
+│   │   │   └── tipResolver.js     ← resolvePosition(), resolveTip(), resolveProximityZone(), canAccessPhase() — written but not called anywhere
+│   │   ├── App.jsx                ← localStorage only; auth screen unreachable
 │   │   └── main.jsx
-│   ├── public/
-│   │   ├── manifest.json          ← PWA manifest
-│   │   └── sw.js                  ← service worker
 │   └── vite.config.js
-├── backend/
-│   ├── src/
-│   │   ├── index.js               ← Hono server entry
-│   │   ├── routes/
-│   │   │   ├── stripe.js          ← webhook handler + checkout session
-│   │   │   └── garmin.js          ← Garmin OAuth + activity fetch (future)
-│   │   └── lib/
-│   │       └── supabase-admin.js  ← Supabase admin client (service role key)
-│   └── package.json
-└── supabase/
-    └── migrations/
-        └── 001_initial_schema.sql
+├── backend/                    ← empty scaffold: .env.example + .gitignore only, no server code
+└── supabase/                   ← does not exist yet (no migrations applied, no project schema)
 ```
 
 ---
 
 ## Design system — do not deviate
 
-The visual language is established and must be preserved exactly across all new components. Never introduce Tailwind, Bootstrap, or component libraries that override these tokens.
+The visual language is established and must be preserved exactly across all new components — **this applies to both the current app and any target-architecture work.** Never introduce Tailwind, Bootstrap, or component libraries that override these tokens.
 
 ### Colour tokens (CSS custom properties)
 
@@ -158,22 +205,26 @@ The visual language is established and must be preserved exactly across all new 
 
 ---
 
-## Freemium model — the single most important product decision
+## 🔮 Freemium model — target, future phase, not implemented today
+
+The current app is entirely free, local-only, and has no accounts. Everything below describes the intended monetisation model once the target architecture (Supabase + Stripe) is built — treat it as the plan, not a spec for the live app.
+
+> **Note:** the data-persistence side of this plan now assumes the adopted `session_checkins` model (see Database schema), so "reflection"/"readiness"/"grey zone" below refer to that model's equivalents (check-in history, computed signals), not the original self-report fields. The **content side** — gating Build/Peak/Recovery tip cards — still assumes the `tips.js` phase-content system gets built, which is a separate, still-unresolved question (see Content system). If that system is never built, this whole gate needs rethinking — Option B (below) becomes the more natural fit, now as a check-in/signal-history gate rather than a reflection gate.
 
 ### Free tier
 - Onboarding (mode selection, training start date, race date, calendar setup)
 - Tips: **Base phase only** — all 4 block weeks, all 6 pillars (full first training block)
 - Race-proximity overlay: **not included** — taper, race week, and post-race cards are paid
-- Session status logging (done / modified / skipped) — **in-session only, no persistence**
+- Check-in logging (the `session_checkins` flow) — **in-session only, no persistence**
 - Today tab: phase pill, cadence selector, session cards
 - Calendar tab: full access (they need this to use the app at all)
 
 ### Paid tier — "TRI Momentum Pro" ($9.99 AUD/month or $79 AUD/year)
 - All phases: Build, Peak, Recovery (in addition to Base)
 - Race-proximity overlay — all 5 zones (awareness, taper, race week, race day, post-race)
-- Full reflection persistence (readiness, grey zone, session notes, week reflections)
+- Full check-in history persistence (`session_checkins` rows saved and synced across devices, not just held in-session)
 - Cross-device sync
-- Trend analytics (training trend chart, avg readiness, avg grey zone %)
+- Trend analytics (fuelling / intensity-drift signal trends over time, compound-pair pattern history)
 - Garmin integration (when built)
 - Future: club features
 
@@ -184,12 +235,12 @@ The Base phase covers 4 block weeks — a complete training block with all 6 pil
 
 ### Paywall behaviour
 - **Never** show blurred/locked content. Free users see only Base phase cards — the Tips tab ends cleanly with an upgrade prompt at phase boundary.
-- Phase gate is enforced via `canAccessPhase(phase, subscriptionTier)` in `tipResolver.js`.
+- Phase gate is enforced via `canAccessPhase(phase, subscriptionTier)` in `tipResolver.js` — **this function is already written but not called from anywhere yet.**
 - **Upgrade prompt triggers:**
   1. Attempting to view a Build, Peak, or Recovery tip card
-  2. Attempting to save a week reflection (Week tab → save button)
+  2. Attempting to persist a check-in past the current session (Check-in flow → save)
   3. Attempting to view the trend chart (Tips tab)
-- Upgrade prompt is a bottom sheet component (`<Upgrade />`) — not a page redirect
+- Upgrade prompt is a bottom sheet component (`<Upgrade />`) — not a page redirect. **Currently presentational only; its buttons have no handlers.**
 - After successful Stripe checkout, Supabase `subscription_tier` updates via webhook and the UI responds immediately on next auth check
 
 ### Checking subscription tier
@@ -207,9 +258,9 @@ const isPro = profile.subscription_tier === 'paid'
 
 ---
 
-## Database schema
+## 🔮 Database schema — target, not yet applied
 
-All tables use Supabase row-level security (RLS). Users can only read and write their own rows.
+No `supabase/migrations/` exist yet and no Supabase project schema has been created. This is the plan for when Phase 2/3 of the multi-user build begins. All tables use Supabase row-level security (RLS). Users can only read and write their own rows.
 
 ```sql
 -- 001_initial_schema.sql
@@ -228,48 +279,34 @@ create table public.user_profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.calendar_sessions (
+-- Superseded the original session_logs + week_reflections tables below — the
+-- current index.html app's check-in model won out (see "Key product
+-- decisions"). Mirrors the shape of the localStorage `log` array in
+-- index.html directly, so the eventual Supabase migration is a straight
+-- copy of existing data, not a remodel.
+create table public.session_checkins (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  day_of_week text not null, -- 'Mon'|'Tue'|'Wed'|'Thu'|'Fri'|'Sat'|'Sun'
-  position integer not null, -- 0-3
-  session_type text not null, -- 'swim'|'bike'|'run'|'brick'|'strength'|'rest'
-  created_at timestamptz not null default now(),
-  unique(user_id, day_of_week, position)
-);
-
-create table public.week_cadences (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  week_num integer not null,
-  cadence text not null, -- 'base'|'build'|'peak'|'taper'
-  created_at timestamptz not null default now(),
-  unique(user_id, week_num)
-);
-
-create table public.session_logs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  week_num integer not null,
-  day text not null,
-  session_index integer not null,
-  status text, -- 'done'|'modified'|'skipped'
+  session_date date not null,
+  disc text not null, -- 'swim'|'bike'|'run'|'brick'|'strength'
+  duration integer, -- minutes
+  intensity text,
+  rpe integer,
+  a1 text, -- execution/intent question — drives the intensity-drift signal
+  a2 text,
+  a3 text,
+  b2 text, -- fuelling question — drives the fuelling signal
+  b3 text,
   note text,
-  logged_at timestamptz not null default now(),
-  unique(user_id, week_num, day, session_index)
+  phase text, -- 'base'|'build1'|'build2'|'peak' — whatever was current when logged, not resolved from dates
+  logged_at timestamptz not null default now()
 );
 
-create table public.week_reflections (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  week_num integer not null,
-  readiness integer, -- 1-10
-  grey_zone_pct integer, -- 10|30|50|70
-  vuln_session text,
-  notes text,
-  saved_at timestamptz,
-  unique(user_id, week_num)
-);
+-- Signals (fuelling, intensity drift, compound-pair detection, severity,
+-- auto-generated headlines) are computed at read time from
+-- session_checkins, exactly as index.html does today — not stored.
+-- Don't add a signals/reflections table unless a caching or
+-- historical-snapshot need is actually proven out first.
 
 -- Future table — add in a later migration
 -- create table public.garmin_activities ( ... );
@@ -281,12 +318,16 @@ create policy "Users can read own profile"
 create policy "Users can update own profile"
   on public.user_profiles for update using (auth.uid() = id);
 
--- (repeat for calendar_sessions, week_cadences, session_logs, week_reflections)
+-- (repeat for session_checkins)
 ```
+
+**Resolved:** the target schema adopts the current app's check-in + computed-signals model (`session_checkins`), not the original `session_logs`/`week_reflections` self-report design. `calendar_sessions` and `week_cadences` are dropped entirely — they described proactive day-of-week planning that neither the current app nor the adopted model implements. If calendar-based planning is ever wanted, design it fresh against actual need rather than reviving these.
 
 ---
 
-## Authentication flow
+## 🔮 Authentication flow — target, not implemented today
+
+The current app has no accounts (see Current implementation). This is the plan for the target architecture.
 
 - **Sign up:** magic link (email only — no password friction at sign-up)
 - **Sign in:** magic link or Google OAuth
@@ -304,7 +345,7 @@ const isAuthenticated = !!user
 
 ---
 
-## Stripe integration
+## 🔮 Stripe integration — target, not implemented today
 
 ### Products to create in Stripe dashboard
 - **TRI Momentum Pro Monthly** — $9.99 AUD / month, recurring
@@ -338,22 +379,18 @@ if (event.type === 'customer.subscription.deleted') {
 
 ## PWA requirements
 
-- `manifest.json`: name "TRI Momentum", short_name "TRI", theme colour `#1650C8`, background `#F7F8FC`, display `standalone`, orientation `portrait`
-- Service worker: cache-first for static assets, network-first for API calls
-- Offline: Today and Week tabs should render from cached data when offline. Tips tab static content is always cached. Saves queue when offline and sync on reconnect.
-- Install prompt: trigger after second session, not on first visit
+- **Current app:** manifest is inlined as a `data:` URI in `index.html`'s `<head>`; no separate service worker for the main app (the two Strength sub-apps each have their own `manifest.webmanifest` + `sw.js`).
+- **Target (not yet built):** `manifest.json`: name "TRI Momentum", short_name "TRI", theme colour `#1650C8`, background `#F7F8FC`, display `standalone`, orientation `portrait`. Service worker: cache-first for static assets, network-first for API calls. Offline: Today and Week tabs render from cached data when offline; Tips tab static content always cached; saves queue when offline and sync on reconnect. Install prompt triggers after second session, not on first visit.
 
 ---
 
-## Content — do not modify without instruction
+## 🔮 Content system (`tips.js` / `raceProximity.js`) — target, unused by current app
 
-The tip system is the product's primary intellectual property. Content lives in two static JS files bundled with the app. It is **never fetched from the database** — the database only stores which weeks a user has reflected on.
+**None of this is used by the shipped app today.** The current app has no phase-aware prompt content at all — it's a check-in + signal-detection tool (see Current implementation). This section describes the content system as planned for the target `frontend/` architecture, written but not wired up (`tipResolver.js` exists; nothing calls it).
 
-The freemium gate is enforced in the component layer (`Tips.jsx`) via `canAccessPhase()` from `tipResolver.js`, not in the data layer. The full content object is always in the bundle.
+The tip system is intended to be the product's primary intellectual property, once built. Content would live in two static JS files bundled with the app, never fetched from a database.
 
-This is intentional: it keeps tips fast (no API call), and the locked content is not sensitive enough to warrant server-side enforcement.
-
-### Content files
+### Content files (target)
 
 | File | Purpose |
 |---|---|
@@ -363,7 +400,7 @@ This is intentional: it keeps tips fast (no API call), and the locked content is
 
 ### Updating tip content
 
-**Do not embed tip copy in CLAUDE.md.** All content lives exclusively in the two data files above. When updating content:
+**Do not embed tip copy in CLAUDE.md.** If/when this system is activated, all content lives exclusively in the two data files above:
 
 1. Claude Code reads the relevant data file at the start of the content session
 2. Edits are made directly to that file
@@ -478,21 +515,21 @@ if (!canAccessPhase(pos.phase, user.subscriptionTier)) {
 - **No hand-holding.** The target user has strong self-knowledge and finds generic coaching advice patronising. Write for someone who will push back if the reasoning is weak.
 - **Specificity over generality.** "Drop 10 BPM and observe how Monday feels" beats "train in Zone 2". Name the number, the session, the observation.
 - **The contrast pair is not good vs bad.** It is sharp vs mediocre. The mediocre response is defensible — it's what a reasonable athlete does when they haven't thought carefully. That's what makes it useful.
-- **Sunday prompts drive the weekly reflection.** The Sunday card is the anchor — it should connect the week's theme to a concrete retrospective question that feeds the readiness and grey-zone inputs.
+- **Sunday prompts drive the weekly reflection.** *(Stale pending reconciliation — the "readiness"/"grey-zone" inputs this originally fed no longer exist; the adopted model computes signals from `session_checkins` instead. If this content system is ever built, decide what the Sunday card should feed into under the adopted model before writing to this principle again.)*
 - **Content is phase-aware, not week-number-aware.** "Base Wk1 Foundations" is always about establishing the floor under fresh legs — regardless of what month of the year it is. Never write content that assumes a specific calendar date.
 
 ---
 
-## Session build order
+## Session build order (target architecture)
 
-Work through these in order. Do not skip ahead.
+This is the plan for building out `frontend/`/`backend/` toward the target. It does **not** describe work on the current `index.html` app, which is developed directly and iteratively without this sequence.
 
 | Session | Scope | Done? |
 |---|---|---|
-| 1 | Scaffold Vite + React, migrate v5 HTML into components, establish file structure | ☐ |
+| 1 | Scaffold Vite + React, establish file structure | ☐ (scaffold exists) — data model resolved (adopt current app's check-in/signals model, see Database schema); **UI/tab reconciliation still open**: whether `frontend/` rebuilds the current Strength/Check-in/This week/Month tabs, the original Today/Week/Tips/Calendar tabs, or some merge |
 | 2 | Supabase integration — auth (magic link + Google), user_profiles table, useAuth hook | ☐ |
-| 3 | Migrate all state from window.storage to Supabase — calendar, cadences, reflections, session logs | ☐ |
-| 4 | Freemium gating — week 4 tip wall, reflection save wall, trend chart wall, Upgrade bottom sheet | ☐ |
+| 3 | Migrate all state from localStorage to Supabase — `session_checkins` | ☐ |
+| 4 | Freemium gating — phase content wall (if `tips.js` is built) or check-in/signal-history wall (Option B), Upgrade bottom sheet | ☐ |
 | 5 | Stripe integration — checkout, webhooks, subscription status, monthly + annual pricing | ☐ |
 | 6 | PWA — manifest, service worker, offline support, install prompt | ☐ |
 | 7 | Garmin integration — backend OAuth or unofficial wrapper, activity import, session auto-population | ☐ |
@@ -504,13 +541,15 @@ Work through these in order. Do not skip ahead.
 
 - No native iOS/Android app — PWA is the target. Do not introduce React Native.
 - No Tailwind — the design system uses CSS custom properties. Tailwind would fight it.
-- No server-side rendering — this is a client-side React SPA with a thin Hono API backend.
-- No admin dashboard for now — manage via Supabase dashboard directly.
-- No in-app training plan generation — the 4-week plan lives in a separate HTML file (`703_four_week_intervals_tuesday.html`) and is not integrated into this app yet.
+- No server-side rendering — the target is a client-side React SPA with a thin Hono API backend; the current app is static HTML with no server at all.
+- No admin dashboard for now — manage via Supabase dashboard directly (once it exists).
+- No in-app training plan generation — the 4-week interval plan lives in a separate HTML file and is not integrated into this app.
 
 ---
 
-## Environment variables
+## Environment variables (target — the current app needs none of this)
+
+The current `index.html` app has no env vars; its only external dependency is the hardcoded Google Apps Script Web App URL for Sheet sync. Everything below is for the target architecture, once built.
 
 ```bash
 # frontend/.env.local
@@ -530,32 +569,22 @@ PORT=3001
 
 ---
 
-## Source of truth for v5 HTML
-
-The original single-file prototype is at `triathlon_momentum_v5.html`. When migrating:
-
-- All CSS custom properties and the full design system move to `frontend/src/index.css`
-- JavaScript constants (`DAYS`, `SESSION_ICONS`, `PILLAR_CYCLE`, `PHASES_39`, `CADENCE_INSIGHTS`, `CARD_CONTENT`, `RACE_PROXIMITY_CONTENT`) move to the appropriate files in `frontend/src/data/`; `resolvePosition()` and related functions move to `frontend/src/lib/tipResolver.js`
-- The `window.storage` API calls are replaced entirely with Supabase queries via the hooks in `frontend/src/hooks/`
-- The four tab screens become four React components
-- The two onboarding screens become `<Onboarding />`
-- Do not attempt to preserve the single-file structure — it has served its purpose
-
----
-
 ## Key product decisions already made
 
-1. **Freemium gate: Base phase only.** Free users get all 4 Base block weeks, all 6 pillars. Build, Peak, Recovery, and the race-proximity overlay require Pro. Paywall hits at the natural phase boundary — the highest-intent upgrade moment. Never show locked/blurred content; the Tips tab ends cleanly at the phase boundary with an upgrade prompt.
-2. **Auth:** Supabase magic link + Google OAuth. No passwords.
-3. **Pricing:** $9.99 AUD/month, $79 AUD/year.
-4. **Stack:** React + Vite + Hono + Supabase + Stripe + Vercel/Fly.io.
-5. **Tips are static content bundled client-side** — not served from the database.
-6. **Garmin integration is backend-only** — credentials never touch the frontend.
-7. **Club features are in scope but out of sequence** — design auth and database with multi-user in mind from session 1, but do not build club UI until session 8.
-8. **PWA, not native app.**
-9. **Content is block-relative with variable block length.** The primary key for tip content is `CARD_CONTENT[phase][phasePosition][pillar][day]`. Phase and position are resolved at runtime from `training_start_date` + `block_config` via `resolvePosition()` in `tipResolver.js`. Athletes set `block_config` during onboarding (base 1–8w, build 1–4w, peak 1–4w, recovery always 1w). Phase position is `early` | `mid` | `late` | `only` — normalises any phase length to the same content slots.
-10. **Race-proximity overlay is a distinct content layer.** `raceProximity.js` is independent of `tips.js`. It activates via `resolveProximityZone()` when the user is within 21 days of their race date, and again for 7 days post-race. Zones: awareness (supplements), taper (equal weight), raceweek/raceday/post (full replacement). Zero changes to tips.js required to ship it.
+1. **The current app (`index.html`) is the live product**; `frontend/`/`backend/`/`supabase/` are the intended future direction, not yet active. Don't confuse "documented in this file" with "shipped."
+2. **Freemium gate (target): Base phase only.** Free users get all 4 Base block weeks, all 6 pillars. Build, Peak, Recovery, and the race-proximity overlay require Pro. Paywall hits at the natural phase boundary — the highest-intent upgrade moment. Never show locked/blurred content. **Not implemented today — current app has no accounts or paywall.**
+3. **Auth (target):** Supabase magic link + Google OAuth. No passwords. **Not implemented today.**
+4. **Pricing (target):** $9.99 AUD/month, $79 AUD/year.
+5. **Target stack:** React + Vite + Hono + Supabase + Stripe + Vercel/Fly.io. **Current app is a static HTML file with no backend, deployed via GitHub Pages.**
+6. **Tips are intended to be static content bundled client-side** — not served from the database. Currently unused; the current app has no tip/prompt content system at all.
+7. **Garmin integration is backend-only** (target) — credentials never touch the frontend.
+8. **Club features are in scope but out of sequence** (target) — design auth and database with multi-user in mind, but do not build club UI until the last session.
+9. **PWA, not native app** — true for both current and target.
+10. **Target content is block-relative with variable block length.** The primary key would be `CARD_CONTENT[phase][phasePosition][pillar][day]`, resolved at runtime via `resolvePosition()`. This is unbuilt and unused; the current app instead asks phase once, manually, with no date-based resolution.
+11. **Race-proximity overlay (target) is a distinct content layer**, independent of `tips.js`, keyed off days-to-race. Unbuilt — the current app never captures a race date.
+12. **Sync strategy today is Google Sheets, not Supabase — and the Sheet is the source of truth, not `localStorage`.** `apps-script/Code.gs` handles both directions: `doPost` appends a row per logged session (fire-and-forget write), `doGet(?list=1)` returns the full log as JSON. `index.html` fetches from `doGet` on load and whenever This week/Month is opened, so a session logged on the phone shows up on the laptop; `localStorage` is only a same-device cache used when a fetch fails. This is a deliberate current-state choice, separate from the target's Supabase sync plan — revisit when/if the target architecture is activated.
+13. **The target Supabase schema adopts the current app's check-in + computed-signals model, not the original reflection model.** `session_checkins` (mirroring `index.html`'s `log` array: `disc`, `duration`, `intensity`, `rpe`, `a1-a3`, `b2-b3`, `note`, `phase`) replaces the old `session_logs` + `week_reflections` tables. Signals (fuelling, intensity drift, compound-pair detection) stay computed at read time, not stored — matching how the current app already works. Freemium copy referencing "reflection persistence" or "readiness/grey zone" now means this model's equivalents. `calendar_sessions`/`week_cadences` are **dropped** — proactive day-of-week planning that neither the current app nor the adopted model implements; design fresh if it's ever actually wanted. **Still open:** whether the target UI adopts the current app's tabs (Strength/Check-in/This week/Month) or the original ones (Today/Week/Tips/Calendar) — see Session build order.
 
 ---
 
-*Last updated: April 2026. Variable block length migration (tips.js v3, tipResolver.js v3 — phasePosition replaces blockWeek). Owner: Justin. Update this file whenever a decision in the "Key product decisions" section changes.*
+*Last updated: 2026-08-06. Flipped the current app's sync model: the Google Sheet is now the cross-device source of truth (read on load + on This week/Month open via a new `doGet(?list=1)` in `apps-script/Code.gs`), with `localStorage` demoted to a same-device cache used only when a fetch fails — was the reverse before, which is why sessions logged on one device (phone) didn't show up on another (laptop). Also fixed a display bug where "This week" showed a false-positive "every session finished at the effort you intended" headline on weeks with zero logged sessions. See Storage & sync and decision 12. Owner: Justin. Update this file whenever a decision changes, or when the target architecture moves from scaffold to active development.*

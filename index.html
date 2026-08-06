@@ -405,8 +405,12 @@ if(window.caches && caches.keys){
   var WEEK_FLOOR = Math.ceil(WEEK_FLOOR_FRACTION * PLANNED_SESSIONS_PER_WEEK);
 
   // ═══════════════════════════════════════════════════════════════
-  // STORAGE — everything lives in this browser's localStorage. No account,
-  // no server.
+  // STORAGE — the Google Sheet (see GOOGLE SHEET SYNC below) is the source
+  // of truth for logged sessions, so the same log reads the same on the
+  // phone and the laptop. localStorage is only a same-device cache: it
+  // paints the last-known state instantly on load and is what's used if a
+  // fetch from the Sheet fails (offline, blocked request, etc). No account,
+  // no server of our own.
   // ═══════════════════════════════════════════════════════════════
   var LOG_KEY = 'triMomentumLog_v1';
   var PHASE_KEY = 'triMomentumPhase_v1';
@@ -436,20 +440,24 @@ if(window.caches && caches.keys){
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // GOOGLE SHEET SYNC — best-effort write only. localStorage above is the
-  // source of truth this app reads from; this just mirrors every saved
-  // session to the athlete's own Sheet as a second, human-readable copy
-  // (and a path to pull the log into anything else later). Fire-and-forget:
-  // a failed or blocked write never blocks or fails the check-in itself.
+  // GOOGLE SHEET SYNC — the Sheet is the cross-device source of truth (see
+  // STORAGE above). Every saved session is written here, and the log is
+  // read back from here on load and whenever the This week / Month tabs
+  // are opened, so a session logged on the phone shows up on the laptop.
   //
   // Endpoint is a Google Apps Script Web App bound to
   // https://docs.google.com/spreadsheets/d/15I6fMqoJjlakSrmbqgPkgz44eZ955LOUUrlvUh3IRy0/edit
-  // — see apps-script/Code.gs for the script and column schema. mode:'no-cors'
-  // avoids a CORS preflight the endpoint can't answer, at the cost of an
-  // opaque response (can't tell success from failure client-side) — the
-  // next time the Sheet is opened is the real confirmation a write landed.
+  // — see apps-script/Code.gs for the script and column schema.
+  //
+  // Writes stay fire-and-forget (mode:'no-cors', opaque response) — a
+  // failed or blocked write never blocks the check-in itself, and the
+  // entry still shows locally this session via the optimistic log.push in
+  // save(). Reads use the default 'cors' mode since the response body
+  // actually needs to be parsed; the endpoint answers cross-origin GETs
+  // fine (Apps Script Web Apps set permissive CORS headers by default).
   // ═══════════════════════════════════════════════════════════════
   var TRAINING_LOG_WRITE_URL = 'https://script.google.com/macros/s/AKfycbxqgAW5vtM3OonTIFQk_634WJLlk2f5YujJ5D65Nw76l8shoj4R1pf2zgrmHmKzY7_e_g/exec';
+  var TRAINING_LOG_READ_URL = TRAINING_LOG_WRITE_URL + '?list=1';
   function submitSessionToSheet(entry){
     if(!TRAINING_LOG_WRITE_URL){ return; }
     var payload = {
@@ -466,7 +474,42 @@ if(window.caches && caches.keys){
     } catch(err){ /* best-effort — never let a sync failure disrupt the check-in flow */ }
   }
 
-  var log = loadLog(); // array of {date, disc, intensity, duration, a1, a2, a3, rpe, b2, b3, note, phase, loggedAt}
+  // Inverse of the payload built in submitSessionToSheet — same field
+  // names, so a session round-trips through the Sheet unchanged. Sheet
+  // rows have no loggedAt (that's local-only bookkeeping and nothing
+  // reads it back), so it comes back null; entries are already in
+  // chronological order because appendRow only ever adds to the bottom.
+  function parseSheetSession(row){
+    return {
+      date: row.when || '', disc: row.disc || '', intensity: row.intensity || '',
+      duration: row.duration === '' || row.duration == null ? null : row.duration,
+      a1: row.a1 || null, a2: row.a2 || null, a3: row.a3 || null,
+      rpe: row.rpe === '' || row.rpe == null ? null : parseInt(row.rpe, 10),
+      b2: row.b2 || null, b3: row.b3 || null,
+      note: row.note || '', phase: row.phase || null, loggedAt: null
+    };
+  }
+  var sheetFetchInFlight = null;
+  // Fetches the full log from the Sheet and replaces the in-memory/cached
+  // copy with it. Returns a promise so callers can re-render once fresh
+  // data lands; failures (offline, blocked request) just keep whatever was
+  // already loaded — never throws past this function.
+  function refreshLogFromSheet(){
+    if(sheetFetchInFlight){ return sheetFetchInFlight; }
+    sheetFetchInFlight = fetch(TRAINING_LOG_READ_URL)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(!data || !data.ok || !Array.isArray(data.sessions)){ throw new Error('bad response'); }
+        log = data.sessions.map(parseSheetSession);
+        persistLog();
+        return true;
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ sheetFetchInFlight = null; return ok; });
+    return sheetFetchInFlight;
+  }
+
+  var log = loadLog(); // cached copy; replaced by refreshLogFromSheet() as soon as the Sheet responds — see STORAGE above
 
   // ── Dates ─────────────────────────────────────────────────────
   var MONTH_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -778,7 +821,7 @@ if(window.caches && caches.keys){
       match:function(f){ return f.total === 0; }, severity:'mid',
       headline:function(){ return 'No sessions logged yet this week.'; }},
     {id:'clean_week', priority:40, severity:'good',
-      match:function(f){ return f.badCount === 0; },
+      match:function(f){ return f.total > 0 && f.badCount === 0; },
       headline:function(f){
         if(f.goodStreak >= 5){ return 'Every session this week finished at the effort you intended — ' + numWord(f.goodStreak) + ' in a row, pacing held from first session to last.'; }
         return 'Every session this week finished at the effort you intended.';
@@ -1299,6 +1342,17 @@ if(window.caches && caches.keys){
     var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : 'step-h')));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
+    // This week / Month reflect logged sessions from any device, so pull
+    // the current source of truth every time either tab is opened, then
+    // silently redraw in place if it changed anything (no scroll/focus
+    // jump — the user is already looking at this view).
+    if(isDash || isTrends){
+      refreshLogFromSheet().then(function(changed){
+        if(!changed){ return; }
+        if(isDash && !els.viewDash.hidden){ renderDashboard(); }
+        if(isTrends && !els.viewTrends.hidden){ renderTrends(); }
+      });
+    }
   }
   function goToMonth(signal){ state.monthSignal = signal; showView('trends'); }
 
@@ -1408,6 +1462,10 @@ if(window.caches && caches.keys){
   } else {
     els.periodScreen.hidden = false;
   }
+  // Warm the cache from the Sheet right away so This week/Month have fresh
+  // data as soon as they're opened, even though the check-in flow (the
+  // default view) doesn't need it itself.
+  refreshLogFromSheet();
 })();
 </script>
 </body>
