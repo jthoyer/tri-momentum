@@ -181,6 +181,38 @@ textarea::placeholder{color:var(--ink3)}
 .dash-phase-note{font-size:12.5px;color:var(--ink3);margin-top:.8rem;line-height:1.5}
 .dash-phase-change{display:block;margin-top:.6rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
+/* ── Warm up ── */
+.warmup-hero{margin-top:1.4rem;padding:1.5rem 1.3rem 1.4rem;border-radius:var(--rxl);background:#182542;color:#fff}
+.warmup-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#F8C44F}
+.warmup-hero h2{margin-top:9px;font-family:var(--fd);font-size:25px;font-weight:600;line-height:1.22;letter-spacing:-.3px;color:#fff}
+.warmup-hero h2 em{color:#F8C44F;font-style:normal}
+.warmup-hero-desc{margin-top:11px;font-size:14px;line-height:1.6;color:#EDF0F7}
+.warmup-hero-meta{display:grid;gap:11px;margin-top:18px;padding:13px 15px;border-radius:var(--rmd);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
+.warmup-hero-meta-item{display:grid;gap:2px;font-size:13px;color:#EDF0F7}
+.warmup-hero-meta-label{display:block;font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.warmup-hero-progress{margin-top:18px}
+.warmup-hero-progress-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-family:var(--fd);font-size:13.5px;font-weight:600;color:#fff}
+.warmup-hero-progress-pct{color:#F8C44F}
+.warmup-hero-bar{margin-top:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
+.warmup-hero-bar-fill{height:100%;width:0%;border-radius:999px;background:#F8C44F;transition:width .2s ease}
+.warmup-video-link{display:inline-flex;align-items:center;gap:6px;margin-top:1.1rem;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-decoration:none}
+.warmup-video-link:hover{color:var(--blue-m)}
+.warmup-list{display:flex;flex-direction:column;gap:10px;margin-top:1.2rem}
+.warmup-row{display:flex;gap:12px;padding:13px 14px;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
+.warmup-row.checked{background:var(--done-l);border-color:var(--done)}
+.warmup-check{flex:none;width:30px;height:30px;margin-top:1px;border-radius:999px;border:1.5px solid var(--bd3);background:var(--s1);color:transparent;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.warmup-check:hover{border-color:var(--done)}
+.warmup-check.checked{border-color:var(--done);background:var(--done);color:#fff}
+.warmup-body{min-width:0;flex:1}
+.warmup-top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:5px 12px}
+.warmup-name{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink);line-height:1.35}
+.warmup-row.checked .warmup-name{color:var(--ink2);text-decoration:line-through;text-decoration-color:var(--ink3)}
+.warmup-dose{flex:none;font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--blue);white-space:nowrap}
+.warmup-cue{margin-top:4px;font-size:13.5px;color:var(--ink2);line-height:1.5}
+.warmup-ts{display:inline-flex;align-items:center;gap:4px;margin-top:9px;font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--ink3);text-decoration:none}
+.warmup-ts:hover{color:var(--blue)}
+.warmup-reset{display:block;margin-top:1.4rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+
 .date-input{width:200px;max-width:100%;min-height:56px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:16px;color:var(--ink);background:var(--s1)}
 
 @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;scroll-behavior:auto!important} }
@@ -202,9 +234,9 @@ textarea::placeholder{color:var(--ink3)}
 
   <!-- ══════════ VIEW TABS ══════════ -->
   <div class="view-tabs" id="view-tabs" role="tablist" aria-label="Sections">
-    <button type="button" class="view-tab" id="tab-strength" role="tab" aria-selected="false" aria-controls="view-strength">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
-      <span>Strength</span>
+    <button type="button" class="view-tab" id="tab-warmup" role="tab" aria-selected="false" aria-controls="view-warmup">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 3v2M12 19v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+      <span>Warm up</span>
     </button>
     <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-flow">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C6.06294 1.25 1.25 6.06294 1.25 12C1.25 17.9371 6.06294 22.75 12 22.75C17.9371 22.75 22.75 17.9371 22.75 12C22.75 6.06294 17.9371 1.25 12 1.25ZM2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12Z" fill="currentColor"></path></svg>
@@ -214,9 +246,9 @@ textarea::placeholder{color:var(--ink3)}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
       <span>This week</span>
     </button>
-    <button type="button" class="view-tab" id="tab-trends" role="tab" aria-selected="false" aria-controls="view-trends">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
-      <span>Month</span>
+    <button type="button" class="view-tab" id="tab-strength" role="tab" aria-selected="false" aria-controls="view-strength">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
+      <span>Strength</span>
     </button>
   </div>
 
@@ -247,7 +279,12 @@ textarea::placeholder{color:var(--ink3)}
   <div class="dash" id="view-dashboard" role="tabpanel" aria-labelledby="tab-dash" hidden></div>
 
   <!-- ══════════ MONTH ══════════ -->
-  <div class="dash" id="view-trends" role="tabpanel" aria-labelledby="tab-trends" hidden></div>
+  <!-- No longer on the bottom nav (replaced by Warm up, below) — still reachable
+       via the "See this month →" links in the This week dashboard's signal sections. -->
+  <div class="dash" id="view-trends" role="tabpanel" aria-labelledby="tab-dash" hidden></div>
+
+  <!-- ══════════ WARM UP ══════════ -->
+  <div class="dash" id="view-warmup" role="tabpanel" aria-labelledby="tab-warmup" hidden></div>
 
   <!-- ══════════ STRENGTH ══════════ -->
   <div class="dash" id="view-strength" role="tabpanel" aria-labelledby="tab-strength" hidden>
@@ -399,6 +436,73 @@ if(window.caches && caches.keys){
   ];
   var PERIOD_LABEL = {};
   PERIOD.forEach(function(p){ PERIOD_LABEL[p.v] = p.label; });
+
+  // ═══════════════════════════════════════════════════════════════
+  // WARM UP — dryland mobility routines, one per discipline. Content
+  // transcribed from the source videos linked per exercise below (t=
+  // params are the timestamps quoted in each breakdown).
+  // ═══════════════════════════════════════════════════════════════
+  var WARMUP_DATA = {
+    swim: {
+      label: 'Swim', video: 'n_H_YMPlEkY',
+      titlePre: 'Shoulder & spine ', titleEm: 'mobility', titlePost: ' warm-up',
+      desc: 'Loosen the shoulders, thoracic spine and hips before you get in the water — dynamic movement, not static holds, to keep the muscles explosive-ready.',
+      structure: '6 exercises · about 8 minutes',
+      equipment: 'A resistance band for pull-aparts — bodyweight for the rest',
+      exercises: [
+        {name:'Arm Swings', dose:'~20 reps', ts:21, cue:'Move your arms up, down, and across your body, adding slight spinal rotations to open the chest, shoulders and lats. Dynamic movement is prioritised over static holds (like holding a stretch in a doorway) to keep the muscles explosive-ready.'},
+        {name:'Walk Out with a Twist', dose:'5 reps', ts:73, cue:'Hinge at the hips, walk your hands out into a plank position, and step your right foot outside your right hand. Reach your right arm to the ceiling, then repeat the lunge and twist on the left. Walk your hands back to your feet and stand.'},
+        {name:'Band Pull-Aparts', dose:'20 reps', ts:161, cue:'Hold a resistance band with palms facing up. Lock your shoulder blades down and pull the band apart at chest height — don’t let your shoulders shrug toward your ears, to properly activate the smaller stabilising muscles.'},
+        {name:'Scapula Push-Ups', dose:'', ts:253, cue:'Kneel in a modified plank with hands directly under your shoulders. Keeping your arms straight, drop your chest toward the floor, then press your mid-back toward the ceiling.'},
+        {name:'Dead Bugs', dose:'', ts:341, cue:'On your back, knees raised to a 90° tabletop, arms pointing straight up. Slowly extend your right arm and left leg, return to centre, and alternate sides. Keep your lower back flat and glued to the floor throughout.'},
+        {name:'Hip Bridges', dose:'~15 reps', ts:436, cue:'On your back, knees bent, feet planted. Tuck your pelvis, engage your core, and squeeze your glutes to lift your hips. Pause briefly at the top without over-arching your back, then lower slowly.'}
+      ]
+    },
+    bike: {
+      label: 'Bike', video: 'zp_-SNNvph8',
+      titlePre: 'Hips, ankles & ', titleEm: 'lower back', titlePost: ' warm-up',
+      desc: 'Open up the hips, spine and ankles before you clip in — mobility, not a stretch session.',
+      structure: '8 exercises · about 6 minutes',
+      equipment: 'None — bodyweight only',
+      exercises: [
+        {name:'4-Way Wrist Circles', dose:'', ts:6, cue:'Switch your hand position with every repetition to mobilise the wrists.'},
+        {name:'Cat-Cow', dose:'', ts:55, cue:'Alternate between rounding your upper back and opening up your chest.'},
+        {name:'Knee & Ankle Circles', dose:'', ts:105, cue:'Stand on one leg and move your opposite lower leg in a circular, pendulum motion.'},
+        {name:'Knee & Ankle Circles — opposite leg', dose:'', ts:155, cue:'Switch legs and repeat the circular motion on the other side.'},
+        {name:'Good Mornings', dose:'', ts:205, cue:'Push your hips back into a hinge position while maintaining a slight bend in your knees.'},
+        {name:'Inchworm to Walk the Dog', dose:'', ts:255, cue:'Roll down to the floor, walk your hands out to a high plank, and press back into a downward dog.'},
+        {name:'Alternating Quad Stretch', dose:'', ts:305, cue:'From a seated position, extend your hips to stretch the quad, alternating sides.'},
+        {name:'Alternating Pendulum', dose:'', ts:355, cue:'On your back, both knees bent, rotate your legs side to side to loosen the lower back.'}
+      ]
+    },
+    run: {
+      label: 'Run', video: '3WUtJxLv-wI',
+      titlePre: 'Ankles, hips & ', titleEm: 'shoulders', titlePost: ' warm-up',
+      desc: 'Wake up the ankles and hips and prime the arm drive before you head out the door.',
+      structure: '10 exercises · about 7 minutes',
+      equipment: 'A wall for balance on a few moves',
+      exercises: [
+        {name:'Ankle Inversion / Eversion', dose:'', ts:10, cue:'Standing, roll one ankle inward and outward through its full range of motion, then switch sides.'},
+        {name:'Ankle Rocks', dose:'', ts:44, cue:'Rock back and forth from your heels to your toes — use a wall for balance if needed. Targets dorsiflexion and plantar flexion while strengthening the anterior tibialis and calves.'},
+        {name:'Hip Flexion Pulls', dose:'', ts:80, cue:'Bring your knee toward your chest, rotate your thigh outward, and grab the outside of your foot. Alternate legs, adding a forward and backward stepping motion, as if walking.'},
+        {name:'Standing Twists', dose:'', ts:116, cue:'Knuckles to your temples, thumbs pointing down. Bring one knee up and twist your torso so the opposite elbow meets the knee. Alternate sides.'},
+        {name:'Forward / Back Leg Swings', dose:'10 reps/side', ts:148, cue:'Support yourself against a wall and swing one leg forward and backward like a pendulum. Keep your core engaged — isolate the movement to the hip socket rather than arching your lower back.'},
+        {name:'Side-to-Side Leg Swings', dose:'10 reps/side', ts:203, cue:'Face the wall and swing one leg laterally from side to side.'},
+        {name:'Wall Calf Stretch & Heel Raises', dose:'', ts:237, cue:'Both hands on the wall, feet stepped back. Lift your heels up and press them down to stretch the ankles and calves — lift both feet at once or alternate one heel at a time.'},
+        {name:'Arm Circles', dose:'10 + 10 reps', ts:279, cue:'Thumbs pointing backward, fingers curled — 10 circles. Then thumbs pointing down (internal rotation) — 10 more. Keep your ribcage tucked down to isolate the shoulders.'},
+        {name:'Squat to Forward Fold', dose:'5 reps', ts:319, cue:'Feet hip-width apart, grab your shins or big toes. Lower your hips into a deep squat while lifting your chest on the inhale. Exhale to lift your hips back up into a forward fold.'},
+        {name:'Spinal Rolls', dose:'2 reps', ts:362, cue:'From the forward fold, slowly roll your spine up to standing, open your chest, then tuck your chin and slowly roll back down.'}
+      ]
+    }
+  };
+  function warmupVideoUrl(disc, ts){
+    var v = WARMUP_DATA[disc].video;
+    return 'https://www.youtube.com/watch?v=' + v + (ts ? ('&t=' + ts + 's') : '');
+  }
+  function warmupTsLabel(ts){
+    var m = Math.floor(ts/60), s = ts % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
 
   var PLANNED_SESSIONS_PER_WEEK = 8;
   var WEEK_FLOOR_FRACTION = 0.6;
@@ -600,7 +704,9 @@ if(window.caches && caches.keys){
     note: '',
     periodisation: loadPhase(),
     monthSignal: 'intensity',
-    weekSignal: 'intensity'
+    weekSignal: 'intensity',
+    warmupDisc: 'swim',
+    warmupChecked: {}
   };
   var phaseReturnView = 'flow';
 
@@ -1023,6 +1129,163 @@ if(window.caches && caches.keys){
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // WARM UP
+  // ═══════════════════════════════════════════════════════════════
+  function warmupCheckKey(disc, i){ return disc + '-' + i; }
+  function renderWarmupSubtabs(current, onSelect){
+    var tabs = el('div', 'signal-subtabs');
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', 'Warm up discipline');
+    [['swim','Swim'], ['bike','Bike'], ['run','Run']].forEach(function(pair){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'signal-subtab';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', String(current === pair[0]));
+      btn.textContent = pair[1];
+      btn.addEventListener('click', function(){ onSelect(pair[0]); });
+      tabs.appendChild(btn);
+    });
+    return tabs;
+  }
+  // Box-with-outward-arrow "opens elsewhere" glyph, drawn inline to match
+  // this app's other icons (stroke-based, currentColor) rather than
+  // embedding a third-party icon-pack asset.
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function externalLinkIcon(){
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', '13');
+    svg.setAttribute('height', '13');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2.25');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    var box = document.createElementNS(SVG_NS, 'path');
+    box.setAttribute('d', 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6');
+    var arrowHead = document.createElementNS(SVG_NS, 'polyline');
+    arrowHead.setAttribute('points', '15 3 21 3 21 9');
+    var arrowShaft = document.createElementNS(SVG_NS, 'line');
+    arrowShaft.setAttribute('x1', '10'); arrowShaft.setAttribute('y1', '14');
+    arrowShaft.setAttribute('x2', '21'); arrowShaft.setAttribute('y2', '3');
+    svg.appendChild(box);
+    svg.appendChild(arrowHead);
+    svg.appendChild(arrowShaft);
+    return svg;
+  }
+  function warmupCheckedCount(disc, data){
+    var n = 0;
+    data.exercises.forEach(function(ex, i){ if(state.warmupChecked[warmupCheckKey(disc, i)]){ n++; } });
+    return n;
+  }
+  function renderWarmupHero(disc, data){
+    var total = data.exercises.length;
+    var done = warmupCheckedCount(disc, data);
+    var pct = total ? Math.round(done / total * 100) : 0;
+    var hero = el('div', 'warmup-hero');
+    hero.appendChild(el('p', 'warmup-hero-eyebrow', 'Dryland warm-up · ' + data.label.toUpperCase()));
+    var h2 = document.createElement('h2');
+    h2.appendChild(document.createTextNode(data.titlePre));
+    var em = document.createElement('em');
+    em.textContent = data.titleEm;
+    h2.appendChild(em);
+    h2.appendChild(document.createTextNode(data.titlePost));
+    hero.appendChild(h2);
+    hero.appendChild(el('p', 'warmup-hero-desc', data.desc));
+    var meta = el('div', 'warmup-hero-meta');
+    function metaItem(label, text){
+      var item = el('div', 'warmup-hero-meta-item');
+      item.appendChild(el('span', 'warmup-hero-meta-label', label));
+      item.appendChild(document.createTextNode(text));
+      return item;
+    }
+    meta.appendChild(metaItem('Structure', data.structure));
+    meta.appendChild(metaItem('Equipment', data.equipment));
+    hero.appendChild(meta);
+    var progress = el('div', 'warmup-hero-progress');
+    var top = el('div', 'warmup-hero-progress-top');
+    top.appendChild(document.createTextNode(done + ' / ' + total + ' exercises logged'));
+    top.appendChild(el('span', 'warmup-hero-progress-pct', pct + '%'));
+    progress.appendChild(top);
+    var bar = el('div', 'warmup-hero-bar');
+    var fill = el('div', 'warmup-hero-bar-fill');
+    fill.style.width = pct + '%';
+    bar.appendChild(fill);
+    progress.appendChild(bar);
+    hero.appendChild(progress);
+    return hero;
+  }
+  function renderWarmup(){
+    var root = els.viewWarmup;
+    clear(root);
+    var h = el('h1', 'dash-eyebrow', 'Warm up');
+    h.id = 'warmup-h'; h.tabIndex = -1;
+    root.appendChild(h);
+    root.appendChild(renderWarmupSubtabs(state.warmupDisc, function(v){ state.warmupDisc = v; renderWarmup(); }));
+    var disc = state.warmupDisc;
+    var data = WARMUP_DATA[disc];
+    root.appendChild(renderWarmupHero(disc, data));
+    var link = document.createElement('a');
+    link.className = 'warmup-video-link';
+    link.href = warmupVideoUrl(disc, null);
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.appendChild(document.createTextNode('Watch full ' + data.label.toLowerCase() + ' warm-up video'));
+    link.appendChild(externalLinkIcon());
+    root.appendChild(link);
+    var list = el('div', 'warmup-list');
+    var anyChecked = false;
+    data.exercises.forEach(function(ex, i){
+      var key = warmupCheckKey(disc, i);
+      var checked = !!state.warmupChecked[key];
+      if(checked){ anyChecked = true; }
+      var row = el('div', 'warmup-row' + (checked ? ' checked' : ''));
+      var check = document.createElement('button');
+      check.type = 'button';
+      check.className = 'warmup-check' + (checked ? ' checked' : '');
+      check.setAttribute('aria-pressed', String(checked));
+      check.setAttribute('aria-label', ex.name + (checked ? ' — done, tap to unmark' : ' — mark done'));
+      check.textContent = '✓';
+      check.addEventListener('click', function(){
+        state.warmupChecked[key] = !state.warmupChecked[key];
+        renderWarmup();
+      });
+      row.appendChild(check);
+      var body = el('div', 'warmup-body');
+      var top = el('div', 'warmup-top');
+      top.appendChild(el('p', 'warmup-name', ex.name));
+      if(ex.dose){ top.appendChild(el('span', 'warmup-dose', ex.dose)); }
+      body.appendChild(top);
+      body.appendChild(el('p', 'warmup-cue', ex.cue));
+      var ts = document.createElement('a');
+      ts.className = 'warmup-ts';
+      ts.href = warmupVideoUrl(disc, ex.ts);
+      ts.target = '_blank';
+      ts.rel = 'noopener';
+      ts.textContent = '▶ ' + warmupTsLabel(ex.ts) + ' in video';
+      body.appendChild(ts);
+      row.appendChild(body);
+      list.appendChild(row);
+    });
+    root.appendChild(list);
+    if(anyChecked){
+      var reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'warmup-reset';
+      reset.textContent = 'Reset checklist';
+      reset.addEventListener('click', function(){
+        Object.keys(state.warmupChecked).forEach(function(k){
+          if(k.indexOf(disc + '-') === 0){ delete state.warmupChecked[k]; }
+        });
+        renderWarmup();
+      });
+      root.appendChild(reset);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // CHROME / UTIL
   // ═══════════════════════════════════════════════════════════════
   var els = {
@@ -1036,12 +1299,13 @@ if(window.caches && caches.keys){
     live:    document.getElementById('live'),
     tabFlow: document.getElementById('tab-flow'),
     tabDash: document.getElementById('tab-dash'),
-    tabTrends: document.getElementById('tab-trends'),
     tabStrength: document.getElementById('tab-strength'),
+    tabWarmup: document.getElementById('tab-warmup'),
     viewFlow: document.getElementById('view-flow'),
     viewDash: document.getElementById('view-dashboard'),
     viewTrends: document.getElementById('view-trends'),
     viewStrength: document.getElementById('view-strength'),
+    viewWarmup: document.getElementById('view-warmup'),
     strengthFrame: document.getElementById('strength-frame'),
     tabStrengthSwim: document.getElementById('tab-strength-swim'),
     tabStrengthRun: document.getElementById('tab-strength-run'),
@@ -1327,19 +1591,22 @@ if(window.caches && caches.keys){
     var isDash = view === 'dashboard';
     var isTrends = view === 'trends';
     var isStrength = view === 'strength';
-    els.viewFlow.hidden = isDash || isTrends || isStrength;
+    var isWarmup = view === 'warmup';
+    els.viewFlow.hidden = isDash || isTrends || isStrength || isWarmup;
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
     els.viewStrength.hidden = !isStrength;
-    els.tabFlow.setAttribute('aria-selected', String(!isDash && !isTrends && !isStrength));
+    els.viewWarmup.hidden = !isWarmup;
+    els.tabFlow.setAttribute('aria-selected', String(!isDash && !isTrends && !isStrength && !isWarmup));
     els.tabDash.setAttribute('aria-selected', String(isDash));
-    els.tabTrends.setAttribute('aria-selected', String(isTrends));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
+    els.tabWarmup.setAttribute('aria-selected', String(isWarmup));
     if(isDash){ renderDashboard(); }
     if(isTrends){ renderTrends(); }
     if(isStrength){ sizeStrengthFrame(); }
+    if(isWarmup){ renderWarmup(); }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : 'step-h')));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : 'step-h'))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
     // This week / Month reflect logged sessions from any device, so pull
@@ -1384,8 +1651,8 @@ if(window.caches && caches.keys){
   }
   els.tabFlow.addEventListener('click', function(){ exitPeriodScreen(); showView('flow'); });
   els.tabDash.addEventListener('click', function(){ exitPeriodScreen(); showView('dashboard'); });
-  els.tabTrends.addEventListener('click', function(){ exitPeriodScreen(); showView('trends'); });
   els.tabStrength.addEventListener('click', function(){ exitPeriodScreen(); showView('strength'); });
+  els.tabWarmup.addEventListener('click', function(){ exitPeriodScreen(); showView('warmup'); });
   els.strengthFrame.addEventListener('load', sizeStrengthFrame);
   window.addEventListener('resize', function(){ if(!els.viewStrength.hidden){ sizeStrengthFrame(); } });
 
