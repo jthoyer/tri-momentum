@@ -197,9 +197,10 @@ textarea::placeholder{color:var(--ink3)}
 .warmup-hero-bar-fill{height:100%;width:0%;border-radius:999px;background:#F8C44F;transition:width .2s ease}
 .warmup-video-link{display:inline-flex;align-items:center;gap:6px;margin-top:1.1rem;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-decoration:none}
 .warmup-video-link:hover{color:var(--blue-m)}
-.warmup-list{display:flex;flex-direction:column;gap:10px;margin-top:1.2rem}
-.warmup-row{display:flex;gap:12px;padding:13px 14px;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
-.warmup-row.checked{background:var(--done-l);border-color:var(--done)}
+.warmup-list{display:flex;flex-direction:column;gap:26px;margin-top:1.4rem}
+.warmup-row{display:flex;gap:14px;padding:24px 22px;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);transition:background .2s ease,box-shadow .2s ease}
+.warmup-row.active{box-shadow:0 0 0 2px rgba(22,80,200,.35),0 10px 24px -10px rgba(14,16,32,.16)}
+.warmup-row.checked{background:var(--done-l);box-shadow:0 1px 2px rgba(15,110,86,.05),0 10px 24px -10px rgba(15,110,86,.18)}
 .warmup-check{flex:none;width:30px;height:30px;margin-top:1px;border-radius:999px;border:1.5px solid var(--bd3);background:var(--s1);color:transparent;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .warmup-check:hover{border-color:var(--done)}
 .warmup-check.checked{border-color:var(--done);background:var(--done);color:#fff}
@@ -208,8 +209,8 @@ textarea::placeholder{color:var(--ink3)}
 .warmup-name{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink);line-height:1.35}
 .warmup-row.checked .warmup-name{color:var(--ink2);text-decoration:line-through;text-decoration-color:var(--ink3)}
 .warmup-dose{flex:none;font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--blue);white-space:nowrap}
-.warmup-cue{margin-top:4px;font-size:13.5px;color:var(--ink2);line-height:1.5}
-.warmup-ts{display:inline-flex;align-items:center;gap:4px;margin-top:9px;font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--ink3);text-decoration:none}
+.warmup-cue{margin-top:8px;font-size:13.5px;color:var(--ink2);line-height:1.55}
+.warmup-ts{display:inline-flex;align-items:center;gap:4px;margin-top:14px;font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--ink3);text-decoration:none}
 .warmup-ts:hover{color:var(--blue)}
 .warmup-reset{display:block;margin-top:1.4rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
@@ -1132,6 +1133,8 @@ if(window.caches && caches.keys){
   // WARM UP
   // ═══════════════════════════════════════════════════════════════
   function warmupCheckKey(disc, i){ return disc + '-' + i; }
+  var warmupActive = { disc: null, index: null };
+  function prefersReducedMotion(){ return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
   function renderWarmupSubtabs(current, onSelect){
     var tabs = el('div', 'signal-subtabs');
     tabs.setAttribute('role', 'tablist');
@@ -1223,7 +1226,7 @@ if(window.caches && caches.keys){
     var h = el('h1', 'dash-eyebrow', 'Warm up');
     h.id = 'warmup-h'; h.tabIndex = -1;
     root.appendChild(h);
-    root.appendChild(renderWarmupSubtabs(state.warmupDisc, function(v){ state.warmupDisc = v; renderWarmup(); }));
+    root.appendChild(renderWarmupSubtabs(state.warmupDisc, function(v){ warmupActive = { disc: null, index: null }; state.warmupDisc = v; renderWarmup(); }));
     var disc = state.warmupDisc;
     var data = WARMUP_DATA[disc];
     root.appendChild(renderWarmupHero(disc, data));
@@ -1237,11 +1240,13 @@ if(window.caches && caches.keys){
     root.appendChild(link);
     var list = el('div', 'warmup-list');
     var anyChecked = false;
+    var rowEls = [];
     data.exercises.forEach(function(ex, i){
       var key = warmupCheckKey(disc, i);
       var checked = !!state.warmupChecked[key];
       if(checked){ anyChecked = true; }
       var row = el('div', 'warmup-row' + (checked ? ' checked' : ''));
+      rowEls[i] = row;
       var check = document.createElement('button');
       check.type = 'button';
       check.className = 'warmup-check' + (checked ? ' checked' : '');
@@ -1249,7 +1254,9 @@ if(window.caches && caches.keys){
       check.setAttribute('aria-label', ex.name + (checked ? ' — done, tap to unmark' : ' — mark done'));
       check.textContent = '✓';
       check.addEventListener('click', function(){
-        state.warmupChecked[key] = !state.warmupChecked[key];
+        var justChecked = !state.warmupChecked[key];
+        state.warmupChecked[key] = justChecked;
+        warmupActive = justChecked ? { disc: disc, index: (i + 1) % data.exercises.length } : { disc: null, index: null };
         renderWarmup();
       });
       row.appendChild(check);
@@ -1270,6 +1277,11 @@ if(window.caches && caches.keys){
       list.appendChild(row);
     });
     root.appendChild(list);
+    if(warmupActive.disc === disc && warmupActive.index !== null && rowEls[warmupActive.index]){
+      var activeRow = rowEls[warmupActive.index];
+      activeRow.classList.add('active');
+      activeRow.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    }
     if(anyChecked){
       var reset = document.createElement('button');
       reset.type = 'button';
@@ -1279,6 +1291,7 @@ if(window.caches && caches.keys){
         Object.keys(state.warmupChecked).forEach(function(k){
           if(k.indexOf(disc + '-') === 0){ delete state.warmupChecked[k]; }
         });
+        warmupActive = { disc: null, index: null };
         renderWarmup();
       });
       root.appendChild(reset);

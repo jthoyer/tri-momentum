@@ -37,6 +37,8 @@
   ];
 
   var totalItems = phase1.length + phase2.length * 3 + phase3.length;
+  var ROUND_LABELS = ['R1 · Form', 'R2 · Power', 'R3 · Endurance & speed'];
+  var phase2RowsById = {};
 
   var state = loadState();
 
@@ -109,10 +111,12 @@
 
   function renderRoundsPhase(listEl, exercises) {
     listEl.innerHTML = '';
-    exercises.forEach(function (ex) {
+    phase2RowsById = {};
+    exercises.forEach(function (ex, exIndex) {
       var row = document.createElement('div');
       row.className = 'exercise-row';
       row.dataset.id = ex.id;
+      phase2RowsById[ex.id] = row;
 
       var body = document.createElement('div');
       body.className = 'exercise-body';
@@ -128,16 +132,21 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'round-btn';
-        btn.textContent = 'R' + r;
+        btn.textContent = ROUND_LABELS[r - 1];
         btn.setAttribute('aria-pressed', 'false');
-        btn.setAttribute('aria-label', ex.name + ' round ' + r);
+        btn.setAttribute('aria-label', ex.name + ' ' + ROUND_LABELS[r - 1]);
         btn.addEventListener('click', function () {
-          state[key] = !state[key];
+          var justChecked = !state[key];
+          state[key] = justChecked;
           saveState();
           btn.classList.toggle('checked', !!state[key]);
           btn.setAttribute('aria-pressed', state[key] ? 'true' : 'false');
           row.classList.toggle('checked', [1, 2, 3].every(function (n) { return state[ex.id + '-r' + n]; }));
           refreshProgress();
+
+          if (justChecked) {
+            advanceToNextPhase2Exercise(exIndex);
+          }
         });
         rounds.appendChild(btn);
         return { btn: btn, key: key };
@@ -154,6 +163,16 @@
       });
       row.classList.toggle('checked', [1, 2, 3].every(function (n) { return state[ex.id + '-r' + n]; }));
     });
+  }
+
+  function advanceToNextPhase2Exercise(currentIndex) {
+    var nextIndex = (currentIndex + 1) % phase2.length;
+    var nextRow = phase2RowsById[phase2[nextIndex].id];
+    Object.keys(phase2RowsById).forEach(function (id) { phase2RowsById[id].classList.remove('active'); });
+    if (nextRow) {
+      nextRow.classList.add('active');
+      nextRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   function countDone(exercises, rounds) {

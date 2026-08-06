@@ -16,6 +16,8 @@
   ];
 
   var totalItems = mainCircuit.length * ROUNDS;
+  var rowsById = {};
+  var sessionLogged = false;
 
   var state = loadState();
 
@@ -54,10 +56,12 @@
 
   function renderRoundsPhase(listEl, exercises) {
     listEl.innerHTML = '';
-    exercises.forEach(function (ex) {
+    rowsById = {};
+    exercises.forEach(function (ex, exIndex) {
       var row = document.createElement('div');
       row.className = 'exercise-row';
       row.dataset.id = ex.id;
+      rowsById[ex.id] = row;
 
       var body = document.createElement('div');
       body.className = 'exercise-body';
@@ -77,12 +81,21 @@
         btn.setAttribute('aria-pressed', 'false');
         btn.setAttribute('aria-label', ex.name + ' round ' + r);
         btn.addEventListener('click', function () {
-          state[key] = !state[key];
+          var justChecked = !state[key];
+          state[key] = justChecked;
           saveState();
           btn.classList.toggle('checked', !!state[key]);
           btn.setAttribute('aria-pressed', state[key] ? 'true' : 'false');
           row.classList.toggle('checked', roundRange().every(function (n) { return state[ex.id + '-r' + n]; }));
           refreshProgress();
+
+          if (justChecked) {
+            if (countDone(mainCircuit) === totalItems) {
+              handleAllComplete();
+            } else {
+              advanceToExercise(exIndex);
+            }
+          }
         });
         rounds.appendChild(btn);
         return { btn: btn, key: key };
@@ -143,9 +156,38 @@
     document.getElementById('sessionsCompleted').textContent = getSessionsCompleted();
   }
 
+  function clearActiveRows() {
+    Object.keys(rowsById).forEach(function (id) { rowsById[id].classList.remove('active'); });
+  }
+
+  function advanceToExercise(currentIndex) {
+    var nextIndex = (currentIndex + 1) % mainCircuit.length;
+    var nextRow = rowsById[mainCircuit[nextIndex].id];
+    clearActiveRows();
+    if (nextRow) {
+      nextRow.classList.add('active');
+      nextRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function handleAllComplete() {
+    clearActiveRows();
+    if (!sessionLogged) {
+      sessionLogged = true;
+      var next = getSessionsCompleted() + 1;
+      setSessionsCompleted(next);
+      renderSessionsCompleted();
+      document.getElementById('completionCount').textContent = next;
+    }
+    document.getElementById('completionBanner').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
   function resetChecklist() {
     state = {};
+    sessionLogged = false;
     saveState();
+    document.getElementById('completionBanner').classList.add('hidden');
     renderAll();
   }
 
@@ -161,12 +203,20 @@
     }
   });
 
+  document.getElementById('completionResetButton').addEventListener('click', function () {
+    resetChecklist();
+  });
+
   document.getElementById('completeButton').addEventListener('click', function () {
     var done = countDone(mainCircuit);
     if (done === 0) return;
+    var fullyDone = done === totalItems;
+    if (fullyDone && sessionLogged) {
+      resetChecklist();
+      return;
+    }
     var next = getSessionsCompleted() + 1;
     setSessionsCompleted(next);
-    var fullyDone = done === totalItems;
     showToast(fullyDone ? 'Session complete! That’s number ' + next + '. 🎉' : 'Session logged (' + done + '/' + totalItems + ' done). That’s number ' + next + '.');
     resetChecklist();
   });

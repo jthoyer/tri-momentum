@@ -11,6 +11,12 @@ body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/1.5 "DM Sa
 .text-button{min-width:44px;min-height:44px;padding:0 10px;border:0;background:transparent;color:var(--muted);font:700 14px "DM Sans";cursor:pointer}
 .text-button:hover{color:var(--ink)}
 
+.completion-banner{margin-top:18px;padding:20px 22px;border-radius:9px;background:var(--green-bg);border:1px solid #bfe3cf;text-align:center}
+.completion-banner.hidden{display:none}
+.completion-title{margin:0;font:700 19px Outfit;color:var(--green)}
+.completion-sub{margin:6px 0 0;color:var(--ink);font-size:13.5px}
+.completion-banner .primary-button{margin-top:14px}
+
 .hero{border-radius:9px;overflow:hidden;background:var(--ink);color:#fff}
 .hero-copy{padding:36px 32px 32px}
 .eyebrow{margin:0 0 9px;color:#f6cf69;font-size:12px;font-weight:700;letter-spacing:1.2px}
@@ -38,12 +44,10 @@ body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/1.5 "DM Sa
 .phase-progress.all-done{background:var(--green-bg);color:var(--green)}
 .card-intro{margin:6px 20px 14px;color:var(--muted);font-size:13.5px}
 
-.round-key{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 14px}
-.round-chip{padding:4px 10px;border-radius:999px;background:var(--navy-bg);color:var(--ink);font-size:11.5px;font-weight:700}
-
-.exercise-list{display:flex;flex-direction:column}
-.exercise-row{display:flex;gap:12px;padding:14px 20px;border-top:1px solid var(--line)}
-.exercise-row.checked{background:var(--green-bg)}
+.exercise-list{display:flex;flex-direction:column;gap:26px;padding:6px 20px 24px}
+.exercise-row{display:flex;gap:14px;padding:24px 22px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(24,37,66,.04),0 10px 24px -10px rgba(24,37,66,.16);transition:background .2s ease,box-shadow .2s ease}
+.exercise-row.active{box-shadow:0 0 0 2px rgba(0,163,224,.35),0 10px 24px -10px rgba(24,37,66,.16)}
+.exercise-row.checked{background:var(--green-bg);box-shadow:0 1px 2px rgba(17,107,67,.05),0 10px 24px -10px rgba(17,107,67,.18)}
 
 .check-btn{flex-shrink:0;width:32px;height:32px;margin-top:2px;border-radius:999px;border:2px solid #aab5c6;background:#fff;color:transparent;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .check-btn:hover{border-color:var(--green)}
@@ -55,9 +59,9 @@ body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/1.5 "DM Sa
 .exercise-name{margin:0;font:600 15.5px Outfit;letter-spacing:-.1px}
 .exercise-row.checked .exercise-name{color:var(--muted);text-decoration:line-through;text-decoration-color:#a9b6c9}
 .exercise-dose{flex-shrink:0;color:var(--brand-blue);font-size:12.5px;font-weight:700;white-space:nowrap}
-.exercise-cue{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.exercise-cue{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
 
-.round-checks{display:flex;gap:8px;margin-top:10px}
+.round-checks{display:flex;gap:10px;margin-top:16px}
 .round-btn{min-width:44px;min-height:32px;padding:0 4px;border-radius:8px;border:2px solid #aab5c6;background:#fff;color:var(--muted);font:700 12px "DM Sans";cursor:pointer}
 .round-btn:hover{border-color:var(--green)}
 .round-btn.checked{border-color:var(--green);background:var(--green);color:#fff}
@@ -85,8 +89,9 @@ body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/1.5 "DM Sa
   .session-meta{padding:14px 15px}
   .card-header{padding:16px 16px 4px}
   .card-intro{margin:6px 16px 12px}
-  .round-key{margin:0 16px 12px}
-  .exercise-row{padding:13px 16px}
+  .exercise-list{padding:4px 16px 18px;gap:18px}
+  .exercise-row{padding:18px 16px}
   .round-checks{flex-wrap:wrap}
   .info-card{padding:20px 18px}
+  .completion-banner{padding:18px}
 }

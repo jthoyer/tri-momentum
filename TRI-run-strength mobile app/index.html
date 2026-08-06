@@ -27,6 +27,12 @@
     <button class="text-button" id="resetButton" type="button">Reset session</button>
   </header>
 
+  <div class="completion-banner hidden" id="completionBanner" role="status">
+    <p class="completion-title">Well done! Session complete &#127881;</p>
+    <p class="completion-sub">All 4 rounds logged &mdash; that&rsquo;s session #<span id="completionCount">0</span>.</p>
+    <button class="primary-button" id="completionResetButton" type="button">Reset &amp; go again</button>
+  </div>
+
   <section class="hero" id="top">
     <div class="hero-copy">
       <p class="eyebrow">DRYLAND STRENGTH &middot; RUNNER &amp; CYCLIST</p>
@@ -55,12 +61,6 @@
       <span class="phase-progress" id="phaseMainProgress">0/28</span>
     </div>
     <p class="card-intro">One continuous circuit, four rounds. Move straight through the seven exercises with minimal rest; rest 60&ndash;90 seconds between rounds.</p>
-    <div class="round-key">
-      <span class="round-chip">Round 1</span>
-      <span class="round-chip">Round 2</span>
-      <span class="round-chip">Round 3</span>
-      <span class="round-chip">Round 4</span>
-    </div>
     <div class="exercise-list" id="phaseMainList"></div>
   </section>
 
