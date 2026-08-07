@@ -12,21 +12,19 @@
   ];
 
   var phase2 = [
-    { id: 'm1', name: 'Standing Band Row', dose: '3 x 12 reps', cue: 'Pull: Squeeze scapulae; slow, controlled return.' },
+    { id: 'm1', name: 'Standing Band Row', dose: '3 x 15 reps', cue: 'Pull: Squeeze scapulae; slow, controlled return.' },
     { id: 'm2', name: 'Band Pull-Apart', dose: '3 x 15 reps', cue: 'Shoulder Health: Keep arms straight; pull band to chest.' },
-    { id: 'm3', name: 'Overhead Band Press', dose: '3 x 10 reps', cue: 'Catch: Controlled descent; full extension overhead.' },
-    { id: 'm4', name: 'Single-Arm Band Row', dose: '3 x 10 each arm', cue: 'Balance: Stabilise core; twist slightly to engage lat.' },
+    { id: 'm3', name: 'Overhead Band Press', dose: '3 x 15 reps', cue: 'Catch: Controlled descent; full extension overhead.' },
+    { id: 'm4', name: 'Single-Arm Band Row', dose: '3 x 15 each arm', cue: 'Balance: Stabilise core; twist slightly to engage lat.' },
     { id: 'm5', name: 'Band Triceps Pushdown', dose: '3 x 15 reps', cue: 'Finish: Squeeze triceps at full extension.' },
-    { id: 'm6', name: 'Band Bicep Curl', dose: '3 x 12 reps', cue: 'Pull Start: Isolate elbow flexion.' },
-    { id: 'm7', name: 'Band Rotator Cuff (Ext.)', dose: '3 x 10 each arm', cue: 'Stabilise: Keep elbows pinned to sides.' },
-    { id: 'm8', name: 'Standing Band Chest Press', dose: '3 x 12 reps', cue: 'Power: Drive forward from chest.' },
-    { id: 'm9', name: 'Band Lateral Raise', dose: '3 x 10 reps', cue: 'Stability: Control the movement, avoid swinging.' },
-    { id: 'm10', name: 'Band Woodchop (Diag. Down)', dose: '3 x 10 each side', cue: 'Core Rotation: Engage obliques and hips.' },
-    { id: 'm11', name: 'Band Woodchop (Diag. Up)', dose: '3 x 10 each side', cue: 'Core Rotation: Engage obliques and hips.' },
-    { id: 'm12', name: 'Band Pallof Press', dose: '3 x 10 each side', cue: 'Anti-Rotation: Resist the band’s pull; hold for 2 sec.' },
-    { id: 'm13', name: 'Band Deadlift', dose: '3 x 12 reps', cue: 'Hinge: Stand on band; drive hips forward.' },
-    { id: 'm14', name: 'Band Squat to Press', dose: '3 x 10 reps', cue: 'Full Body: Combine squat with overhead press.' },
-    { id: 'm15', name: 'Band Bent-Over Row', dose: '3 x 12 reps', cue: 'Posture: Hinge at hips; pull band to lower ribs.' }
+    { id: 'm7', name: 'Band Rotator Cuff (Ext.)', dose: '3 x 15 each arm', cue: 'Stabilise: Keep elbows pinned to sides.' },
+    { id: 'm8', name: 'Standing Band Chest Press', dose: '3 x 15 reps', cue: 'Power: Drive forward from chest.' },
+    { id: 'm9', name: 'Band Lateral Raise', dose: '3 x 15 reps', cue: 'Stability: Control the movement, avoid swinging.' },
+    { id: 'm10', name: 'Band Woodchop (Diag. Down)', dose: '3 x 15 each side', cue: 'Core Rotation: Engage obliques and hips.' },
+    { id: 'm11', name: 'Band Woodchop (Diag. Up)', dose: '3 x 15 each side', cue: 'Core Rotation: Engage obliques and hips.' },
+    { id: 'm12', name: 'Band Pallof Press', dose: '3 x 15 each side', cue: 'Anti-Rotation: Resist the band’s pull; hold for 2 sec.' },
+    { id: 'm13', name: 'Band Deadlift', dose: '3 x 15 reps', cue: 'Hinge: Stand on band; drive hips forward.' },
+    { id: 'm15', name: 'Band Bent-Over Row', dose: '3 x 15 reps', cue: 'Posture: Hinge at hips; pull band to lower ribs.' }
   ];
 
   var phase3 = [
@@ -37,7 +35,7 @@
   ];
 
   var totalItems = phase1.length + phase2.length * 3 + phase3.length;
-  var ROUND_LABELS = ['R1 · Form', 'R2 · Power', 'R3 · Endurance & speed'];
+  var ROUND_LABELS = ['R1', 'R2', 'R3'];
   var phase2RowsById = {};
   var sessionLogged = false;
 
