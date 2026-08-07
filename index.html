@@ -16,8 +16,8 @@
   --bg:#F7F8FC;--s1:#FFFFFF;--s3:#F0F2F8;--s4:#E8EBF5;
   --ink:#0E1020;--ink2:#4B5278;--ink3:#8B93B8;
   --bd:rgba(14,16,32,0.08);--bd2:rgba(14,16,32,0.14);--bd3:rgba(14,16,32,0.25);
-  --blue:#1650C8;--blue-l:#E8EFFE;--blue-m:#4F7BE8;
-  --swim:#1650C8;--swim-l:#E8EFFE;
+  --blue:#0022FF;--blue-l:#E8EFFE;--blue-m:#4F7BE8;
+  --swim:#0022FF;--swim-l:#E8EFFE;
   --bike:#0F6E56;--bike-l:#E1F5EE;
   --run:#993C1D;--run-l:#FAECE7;
   --brick:#534AB7;--brick-l:#EEEDFE;
@@ -118,6 +118,14 @@ textarea::placeholder{color:var(--ink3)}
 .flow-foot .btn-primary:hover{background:#0022CC}
 .flow-foot .btn-primary::after{content:"\2192";margin-left:8px;font-weight:600;display:inline-block}
 
+/* ── Splash — shown on load until a nav tap dismisses it; no auto-advance ── */
+.splash{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--blue)}
+.splash[hidden]{display:none}
+.splash-logo{width:192px;height:192px;border-radius:var(--rxl)}
+.splash-sub{margin-top:10px;font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.splash-headline{margin-top:36px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
+.splash-headline:focus,.splash-headline:focus-visible{outline:none}
+
 /* ── One-time training phase screen ── */
 .period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;justify-content:center}
 .period[hidden]{display:none}
@@ -195,11 +203,17 @@ textarea::placeholder{color:var(--ink3)}
 .warmup-hero-progress-pct{color:#F8C44F}
 .warmup-hero-bar{margin-top:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
 .warmup-hero-bar-fill{height:100%;width:0%;border-radius:999px;background:#F8C44F;transition:width .2s ease}
+.warmup-hero-sessions{margin-top:10px;font-size:12.5px;color:rgba(255,255,255,.7)}
+.warmup-completion-banner{margin-top:1.4rem;padding:20px 22px;border-radius:var(--rmd);background:var(--done-l);border:1px solid rgba(15,110,86,.25);text-align:center}
+.warmup-completion-title{font-family:var(--fd);font-size:19px;font-weight:600;color:var(--done)}
+.warmup-completion-sub{margin-top:6px;font-size:13.5px;color:var(--ink)}
+.warmup-completion-btn{margin-top:14px;min-height:48px;padding:12px 26px;border-radius:999px;border:1px solid transparent;background:var(--blue);color:#fff;font-family:var(--fd);font-size:15px;font-weight:600;cursor:pointer}
+.warmup-completion-btn:hover{background:#001DD9}
 .warmup-video-link{display:inline-flex;align-items:center;gap:6px;margin-top:1.1rem;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-decoration:none}
 .warmup-video-link:hover{color:var(--blue-m)}
 .warmup-list{display:flex;flex-direction:column;gap:26px;margin-top:1.4rem}
 .warmup-row{display:flex;gap:14px;padding:24px 22px;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);transition:background .2s ease,box-shadow .2s ease}
-.warmup-row.active{box-shadow:0 0 0 2px rgba(22,80,200,.35),0 10px 24px -10px rgba(14,16,32,.16)}
+.warmup-row.active{box-shadow:0 0 0 2px rgba(0,34,255,.35),0 10px 24px -10px rgba(14,16,32,.16)}
 .warmup-row.checked{background:var(--done-l);box-shadow:0 1px 2px rgba(15,110,86,.05),0 10px 24px -10px rgba(15,110,86,.18)}
 .warmup-check{flex:none;width:30px;height:30px;margin-top:1px;border-radius:999px;border:1.5px solid var(--bd3);background:var(--s1);color:transparent;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .warmup-check:hover{border-color:var(--done)}
@@ -212,7 +226,8 @@ textarea::placeholder{color:var(--ink3)}
 .warmup-cue{margin-top:8px;font-size:13.5px;color:var(--ink2);line-height:1.55}
 .warmup-ts{display:inline-flex;align-items:center;gap:4px;margin-top:14px;font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--ink3);text-decoration:none}
 .warmup-ts:hover{color:var(--blue)}
-.warmup-reset{display:block;margin-top:1.4rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+.warmup-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.warmup-reset{flex:none;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
 .date-input{width:200px;max-width:100%;min-height:56px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:16px;color:var(--ink);background:var(--s1)}
 
@@ -222,6 +237,13 @@ textarea::placeholder{color:var(--ink3)}
 </head>
 <body>
 <div id="app">
+
+  <!-- ══════════ SPLASH — dismissed by tapping any nav tab, never auto-advances ══════════ -->
+  <section class="splash" id="view-splash" aria-labelledby="splash-h">
+    <img class="splash-logo" src="favicon.png" alt="TRI Momentum" width="192" height="192">
+    <p class="splash-sub">Helping triathletes progress</p>
+    <h1 class="splash-headline" id="splash-h" tabindex="-1">Mobility, intensity, fuelling, strength</h1>
+  </section>
 
   <!-- ══════════ TRAINING PHASE — asked once, ever ══════════ -->
   <section class="period" id="view-period" hidden aria-labelledby="period-h">
@@ -299,7 +321,6 @@ textarea::placeholder{color:var(--ink3)}
 
   </div>
   <!-- /#app-main -->
-
 
 </div>
 
@@ -519,6 +540,7 @@ if(window.caches && caches.keys){
   // ═══════════════════════════════════════════════════════════════
   var LOG_KEY = 'triMomentumLog_v1';
   var PHASE_KEY = 'triMomentumPhase_v1';
+  var WARMUP_SESSIONS_KEY = 'triMomentumWarmupSessions_v1';
   var storageOk = true;
   try{ window.localStorage.setItem('__tri_test__','1'); window.localStorage.removeItem('__tri_test__'); }
   catch(e){ storageOk = false; }
@@ -542,6 +564,21 @@ if(window.caches && caches.keys){
   function persistPhase(v){
     if(!storageOk){ return; }
     try{ window.localStorage.setItem(PHASE_KEY, v); } catch(e){}
+  }
+  // All-time "mark complete" counts per warm-up discipline — same idea as
+  // the Strength mini-apps' sessionsCompleted counter, kept device-local
+  // (it's a personal streak count, not something that needs Sheet sync).
+  function loadWarmupSessions(){
+    if(!storageOk){ return {swim:0,bike:0,run:0}; }
+    try{
+      var raw = window.localStorage.getItem(WARMUP_SESSIONS_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      return {swim: obj.swim|0, bike: obj.bike|0, run: obj.run|0};
+    } catch(e){ return {swim:0,bike:0,run:0}; }
+  }
+  function persistWarmupSessions(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(WARMUP_SESSIONS_KEY, JSON.stringify(state.warmupSessions)); } catch(e){}
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -707,7 +744,9 @@ if(window.caches && caches.keys){
     monthSignal: 'intensity',
     weekSignal: 'intensity',
     warmupDisc: 'swim',
-    warmupChecked: {}
+    warmupChecked: {},
+    warmupSessions: loadWarmupSessions(),
+    warmupLogged: {}
   };
   var phaseReturnView = 'flow';
 
@@ -1218,17 +1257,67 @@ if(window.caches && caches.keys){
     bar.appendChild(fill);
     progress.appendChild(bar);
     hero.appendChild(progress);
+    var sessionsCount = state.warmupSessions[disc] || 0;
+    hero.appendChild(el('p', 'warmup-hero-sessions', sessionsCount + ' ' + data.label.toLowerCase() + ' warm-up' + (sessionsCount === 1 ? '' : 's') + ' completed all-time'));
     return hero;
+  }
+  function clearWarmupChecklist(disc){
+    Object.keys(state.warmupChecked).forEach(function(k){
+      if(k.indexOf(disc + '-') === 0){ delete state.warmupChecked[k]; }
+    });
+    state.warmupLogged[disc] = false;
+    warmupActive = { disc: null, index: null };
+  }
+  // Fires the instant every exercise gets checked off naturally — mirrors
+  // TRI-run-strength's handleAllComplete(): logs the count and shows the
+  // "Well done" banner immediately, but (unlike the manual complete button
+  // below) leaves the checklist checked rather than clearing it, so the
+  // athlete sees everything ticked. Only fires once per completion; the
+  // banner and checklist both clear together via "Reset & go again".
+  function handleWarmupAllComplete(disc){
+    var next = (state.warmupSessions[disc] || 0) + 1;
+    state.warmupSessions[disc] = next;
+    persistWarmupSessions();
+    state.warmupLogged[disc] = true;
+    warmupActive = { disc: null, index: null };
+    renderWarmup();
+    window.scrollTo(0, 0);
   }
   function renderWarmup(){
     var root = els.viewWarmup;
     clear(root);
-    var h = el('h1', 'dash-eyebrow', 'Warm up');
-    h.id = 'warmup-h'; h.tabIndex = -1;
-    root.appendChild(h);
-    root.appendChild(renderWarmupSubtabs(state.warmupDisc, function(v){ warmupActive = { disc: null, index: null }; state.warmupDisc = v; renderWarmup(); }));
     var disc = state.warmupDisc;
     var data = WARMUP_DATA[disc];
+    var topbar = el('div', 'warmup-topbar');
+    var h = el('h1', 'dash-eyebrow', 'Warm up');
+    h.id = 'warmup-h'; h.tabIndex = -1;
+    topbar.appendChild(h);
+    var reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'warmup-reset';
+    reset.textContent = 'Reset warm-up';
+    reset.addEventListener('click', function(){
+      if(!window.confirm('Reset all checkmarks for this warm-up?')){ return; }
+      clearWarmupChecklist(disc);
+      renderWarmup();
+    });
+    topbar.appendChild(reset);
+    root.appendChild(topbar);
+    root.appendChild(renderWarmupSubtabs(state.warmupDisc, function(v){ warmupActive = { disc: null, index: null }; state.warmupDisc = v; renderWarmup(); }));
+    if(state.warmupLogged[disc]){
+      var banner = el('div', 'warmup-completion-banner');
+      banner.setAttribute('role', 'status');
+      banner.appendChild(el('p', 'warmup-completion-title', 'Well done! Warm-up complete 🎉'));
+      var n = state.warmupSessions[disc] || 0;
+      banner.appendChild(el('p', 'warmup-completion-sub', 'All ' + data.exercises.length + ' exercises logged — that’s ' + data.label.toLowerCase() + ' warm-up #' + n + '.'));
+      var again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'warmup-completion-btn';
+      again.textContent = 'Reset & go again';
+      again.addEventListener('click', function(){ clearWarmupChecklist(disc); renderWarmup(); });
+      banner.appendChild(again);
+      root.appendChild(banner);
+    }
     root.appendChild(renderWarmupHero(disc, data));
     var link = document.createElement('a');
     link.className = 'warmup-video-link';
@@ -1239,12 +1328,10 @@ if(window.caches && caches.keys){
     link.appendChild(externalLinkIcon());
     root.appendChild(link);
     var list = el('div', 'warmup-list');
-    var anyChecked = false;
     var rowEls = [];
     data.exercises.forEach(function(ex, i){
       var key = warmupCheckKey(disc, i);
       var checked = !!state.warmupChecked[key];
-      if(checked){ anyChecked = true; }
       var row = el('div', 'warmup-row' + (checked ? ' checked' : ''));
       rowEls[i] = row;
       var check = document.createElement('button');
@@ -1256,6 +1343,10 @@ if(window.caches && caches.keys){
       check.addEventListener('click', function(){
         var justChecked = !state.warmupChecked[key];
         state.warmupChecked[key] = justChecked;
+        if(justChecked && warmupCheckedCount(disc, data) === data.exercises.length){
+          handleWarmupAllComplete(disc);
+          return;
+        }
         warmupActive = justChecked ? { disc: disc, index: (i + 1) % data.exercises.length } : { disc: null, index: null };
         renderWarmup();
       });
@@ -1281,20 +1372,6 @@ if(window.caches && caches.keys){
       var activeRow = rowEls[warmupActive.index];
       activeRow.classList.add('active');
       activeRow.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
-    }
-    if(anyChecked){
-      var reset = document.createElement('button');
-      reset.type = 'button';
-      reset.className = 'warmup-reset';
-      reset.textContent = 'Reset checklist';
-      reset.addEventListener('click', function(){
-        Object.keys(state.warmupChecked).forEach(function(k){
-          if(k.indexOf(disc + '-') === 0){ delete state.warmupChecked[k]; }
-        });
-        warmupActive = { disc: null, index: null };
-        renderWarmup();
-      });
-      root.appendChild(reset);
     }
   }
 
@@ -1324,6 +1401,7 @@ if(window.caches && caches.keys){
     tabStrengthRun: document.getElementById('tab-strength-run'),
     viewTabs: document.getElementById('view-tabs'),
     appMain: document.getElementById('app-main'),
+    splashScreen: document.getElementById('view-splash'),
     periodScreen: document.getElementById('view-period'),
     periodChoices: document.getElementById('period-choices')
   };
@@ -1653,19 +1731,47 @@ if(window.caches && caches.keys){
     } catch(e){ /* cross-origin fallback: leave last-known height */ }
   }
 
-  // The tab bar is visible even on the one-time phase screen — tapping a
-  // tab from there dismisses that screen (without forcing a phase choice)
-  // and jumps straight to the requested view.
+  // The tab bar is visible even on the splash and the one-time phase screen —
+  // tapping a tab from either dismisses it (without forcing a phase choice)
+  // and jumps straight to the requested view. There's no timer on the splash;
+  // it only goes away once a tab is tapped.
+  function revealPostSplashScreen(){
+    if(state.periodisation){ els.appMain.hidden = false; }
+    else{ els.periodScreen.hidden = false; }
+  }
+  function exitSplash(){
+    if(!els.splashScreen.hidden){
+      els.splashScreen.hidden = true;
+      revealPostSplashScreen();
+    }
+  }
   function exitPeriodScreen(){
     if(!els.periodScreen.hidden){
       els.periodScreen.hidden = true;
       els.appMain.hidden = false;
     }
   }
-  els.tabFlow.addEventListener('click', function(){ exitPeriodScreen(); showView('flow'); });
-  els.tabDash.addEventListener('click', function(){ exitPeriodScreen(); showView('dashboard'); });
-  els.tabStrength.addEventListener('click', function(){ exitPeriodScreen(); showView('strength'); });
-  els.tabWarmup.addEventListener('click', function(){ exitPeriodScreen(); showView('warmup'); });
+  // Check-in is the one tab that needs a phase to make sense of what it logs,
+  // so — unlike the other three tabs — it doesn't bypass the phase question.
+  // If no phase is set yet, tapping Check-in (from the splash or anywhere
+  // else) lands on the phase question first; choosing one there returns
+  // straight to Check-in via phaseReturnView.
+  els.tabFlow.addEventListener('click', function(){
+    exitSplash();
+    if(!state.periodisation){
+      els.appMain.hidden = true;
+      els.periodScreen.hidden = false;
+      phaseReturnView = 'flow';
+      var h = document.getElementById('period-h');
+      if(h){ h.focus({preventScroll:true}); }
+      return;
+    }
+    exitPeriodScreen();
+    showView('flow');
+  });
+  els.tabDash.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('dashboard'); });
+  els.tabStrength.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('strength'); });
+  els.tabWarmup.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('warmup'); });
   els.strengthFrame.addEventListener('load', sizeStrengthFrame);
   window.addEventListener('resize', function(){ if(!els.viewStrength.hidden){ sizeStrengthFrame(); } });
 
@@ -1737,11 +1843,9 @@ if(window.caches && caches.keys){
   // ── Init ──────────────────────────────────────────────────────
   buildPeriodChoices();
   render();
-  if(state.periodisation){
-    els.appMain.hidden = false;
-  } else {
-    els.periodScreen.hidden = false;
-  }
+  // The splash (visible by default in markup) covers the period/app-main
+  // screens until a nav tap dismisses it — see exitSplash — so neither is
+  // revealed here.
   // Warm the cache from the Sheet right away so This week/Month have fresh
   // data as soon as they're opened, even though the check-in flow (the
   // default view) doesn't need it itself.

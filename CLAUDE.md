@@ -9,7 +9,7 @@
 
 This repo contains **two things at once**, and it matters which one a session is touching:
 
-- **Current app (`index.html`, repo root)** — a single static HTML/CSS/JS file, no build step, no framework, no accounts. This is **what's actually live** at `https://jthoyer.github.io/tri-momentum/` (GitHub Pages serves the repo root directly) and what recent commits have been iterating on (bottom nav, Strength sub-tabs, week numbering, etc.). Treat this as the real product.
+- **Current app (`index.html`, repo root, plus its two Strength sub-apps)** — `index.html` is a single static HTML/CSS/JS file, no build step, no framework, no accounts; the Strength tab is a core part of the same product, implemented as two co-deployed PWAs (`TRI-swim-strength mobile app/`, `TRI-run-strength mobile app/`) embedded via `<iframe>`. This is **what's actually live** at `https://jthoyer.github.io/tri-momentum/` (GitHub Pages serves the repo root directly) and what recent commits have been iterating on (bottom nav, Strength sub-tabs, week numbering, etc.). Treat all three as the real product — the Strength apps are not an optional add-on.
 - **Target architecture (`frontend/`, `backend/`, `supabase/`)** — a React + Vite + Hono + Supabase + Stripe scaffold representing where the product is intended to go: accounts, cross-device sync, a phase-aware tip/content system, and a paywall. It has a single "initial commit" and is **not wired up or in active use** — no `supabase-js` installed, no backend server, `Auth.jsx` isn't reachable from the app, nothing persists past `localStorage`.
 
 Both are intentional. Most of this document (Freemium model, Database schema, Auth flow, Stripe, `tips.js` content system) describes the **target**, not what's running today. Sections are labelled accordingly. When in doubt: if it's not described under "Current implementation" below, assume it doesn't exist yet in the shipped app.
@@ -45,16 +45,21 @@ Single self-contained HTML file at the repo root, deployed via GitHub Pages with
   - **`localStorage` is a same-device cache only** — it paints the last-known state instantly on load and is what's used if a Sheet fetch fails (offline, blocked request, extension interference, etc). It is not authoritative and is never the reason two devices would disagree.
 - No Supabase, no Postgres, no RLS, no server-side persistence of our own.
 
+### Splash
+First thing shown on every load — full-bleed `--blue` background, the `favicon.png` logo (no drop shadow), a sub head ("Helping triathletes progress"), and a headline ("Mobility, intensity, fuelling, strength") styled to the page-title spec. The base nav is visible underneath it, same as it is under the training-phase screen. No timer, no auto-advance — it's dismissed only by tapping a nav tab. Tapping **Check-in** from the splash routes to the training-phase picker first if no phase is set yet (see below); tapping any other tab bypasses straight to that view, same as tapping a tab from the phase screen always has.
+
 ### Navigation — 4 tabs
 | Tab | What it does |
 |---|---|
-| **Strength** | Not a content tab — embeds two separate sibling PWAs via `<iframe>`: `TRI-swim-strength mobile app/` and `TRI-run-strength mobile app/` (each its own `index.html`/`app.js`/`manifest.webmanifest`/service worker, maintained independently of the main app). Sub-tabs: Swim / Ride-Run. |
+| **Strength** | A core tab, not a content tab — renders two purpose-built strength PWAs via `<iframe>`: `TRI-swim-strength mobile app/` and `TRI-run-strength mobile app/` (each its own `index.html`/`app.js`/`manifest.webmanifest`/service worker). They're separate deployable units for build/versioning reasons, not a bolt-on — they ship in this repo, deploy under the same GitHub Pages site, and are part of the product's core navigation. Sub-tabs: Swim / Ride-Run. |
 | **Check-in** | The primary interaction — a stepped, after-session logging wizard ("Just finished", step counter). Not a pre-scheduled calendar; purely reactive logging. |
 | **This week** | Weekly dashboard: discipline breakdown grid, phase pills, signal sections (see below), week number. |
 | **Month** | Same signal/dashboard machinery as "This week," rolled up by week blocks across the month. |
 
 ### Training phase
 Asked **once, ever** (not resolved from dates) via a simple picker: `Base / Taper`, `Build 1`, `Build 2`, `Peak`. Changeable later from the dashboard. There is no `training_start_date`, no `race_date`, no `block_config`, and no per-day content resolution — the target's `resolvePosition()`/`phasePosition` system does not exist in this app.
+
+Every other tab (This week, Month, Strength, Warm up) can be reached without ever setting a phase — the bottom nav bypasses the phase screen for those. **Check-in is the exception**: since a logged session is stamped with whatever phase is current, tapping Check-in with no phase set routes to the phase picker first rather than bypassing it, then returns straight to Check-in once a phase is chosen.
 
 ### Check-in data model
 Each logged session (`log` array in `localStorage`) captures: `date`, `disc` (`swim`|`bike`|`run`|`brick`|`strength`), `duration`, `intensity`, `rpe`, three execution/intent questions (`a1`, `a2`, `a3`), two fuelling-related fields (`b2`, `b3`), a free-text `note`, and the currently-set `phase`. There is no `tips`/`prompt`/`mechanism`/contrast-pair content shown alongside a session — nothing from `tips.js` is used.
@@ -97,12 +102,12 @@ Manifest is inlined as a `data:` URI in the `<head>` (not a separate `public/man
 ```
 tri-momentum/
 ├── CLAUDE.md                  ← this file
-├── index.html                 ← ★ CURRENT LIVE APP — static, self-contained, deployed as-is via GH Pages
+├── index.html                 ← ★ CURRENT LIVE APP (shell) — static, self-contained, deployed as-is via GH Pages
 ├── apps-script/
 │   └── Code.gs                ← Google Apps Script Web App — receives session POSTs, writes to the athlete's Sheet
-├── TRI-swim-strength mobile app/   ← separate sibling PWA, embedded via iframe in index.html's Strength tab
+├── TRI-swim-strength mobile app/   ← ★ CORE — Strength tab's Swim sub-tab, rendered via iframe in index.html
 │   ├── index.html / app.js / styles.css / manifest.webmanifest / sw.js
-├── TRI-run-strength mobile app/    ← same pattern, Ride/Run strength
+├── TRI-run-strength mobile app/    ← ★ CORE — Strength tab's Ride/Run sub-tab, same pattern
 │
 │  ─── target architecture (scaffolded, not yet wired up) ───
 │
@@ -158,8 +163,10 @@ The visual language is established and must be preserved exactly across all new 
 --bd: rgba(14,16,32,0.08);
 --bd2: rgba(14,16,32,0.14);
 
+--blue: #0022FF;    --blue-l: #E8EFFE;   --blue-m: #4F7BE8;
+
 /* Discipline colours */
---swim: #1650C8;   --swim-l: #E8EFFE;
+--swim: #0022FF;   --swim-l: #E8EFFE;
 --bike: #0F6E56;   --bike-l: #E1F5EE;
 --run:  #993C1D;   --run-l:  #FAECE7;
 --brick: #534AB7;  --brick-l: #EEEDFE;
@@ -182,8 +189,8 @@ The visual language is established and must be preserved exactly across all new 
 
 - **Body / UI:** DM Sans (400, 500, 600)
 - **Monospace / labels / badges:** DM Mono (400, 500)
-- **Page titles:** 26px, weight 600, letter-spacing -0.3px
-- **Eyebrows / tags:** DM Mono, 9–10px, uppercase, letter-spacing 0.1em
+- **Page titles:** 23px, weight 600, letter-spacing -0.3px, line-height 1.25 (`h1` in `index.html`)
+- **Eyebrows / tags:** DM Mono, 14px, uppercase, letter-spacing 0.1em (`.eyebrow` in `index.html`)
 - **Body copy:** 13–15px, color `--ink2`, line-height 1.55–1.65
 
 ### Layout
@@ -380,7 +387,7 @@ if (event.type === 'customer.subscription.deleted') {
 ## PWA requirements
 
 - **Current app:** manifest is inlined as a `data:` URI in `index.html`'s `<head>`; no separate service worker for the main app (the two Strength sub-apps each have their own `manifest.webmanifest` + `sw.js`).
-- **Target (not yet built):** `manifest.json`: name "TRI Momentum", short_name "TRI", theme colour `#1650C8`, background `#F7F8FC`, display `standalone`, orientation `portrait`. Service worker: cache-first for static assets, network-first for API calls. Offline: Today and Week tabs render from cached data when offline; Tips tab static content always cached; saves queue when offline and sync on reconnect. Install prompt triggers after second session, not on first visit.
+- **Target (not yet built):** `manifest.json`: name "TRI Momentum", short_name "TRI", theme colour `#0022FF`, background `#F7F8FC`, display `standalone`, orientation `portrait`. Service worker: cache-first for static assets, network-first for API calls. Offline: Today and Week tabs render from cached data when offline; Tips tab static content always cached; saves queue when offline and sync on reconnect. Install prompt triggers after second session, not on first visit.
 
 ---
 
@@ -571,7 +578,7 @@ PORT=3001
 
 ## Key product decisions already made
 
-1. **The current app (`index.html`) is the live product**; `frontend/`/`backend/`/`supabase/` are the intended future direction, not yet active. Don't confuse "documented in this file" with "shipped."
+1. **The current app is the live product** — `index.html` plus its two Strength sub-apps (`TRI-swim-strength mobile app/`, `TRI-run-strength mobile app/`), all three co-deployed via GitHub Pages and reachable through the same 4-tab nav. The Strength apps are core architecture, not an optional add-on — treat changes to them with the same weight as changes to `index.html`. `frontend/`/`backend`/`supabase/` are the intended future direction, not yet active. Don't confuse "documented in this file" with "shipped."
 2. **Freemium gate (target): Base phase only.** Free users get all 4 Base block weeks, all 6 pillars. Build, Peak, Recovery, and the race-proximity overlay require Pro. Paywall hits at the natural phase boundary — the highest-intent upgrade moment. Never show locked/blurred content. **Not implemented today — current app has no accounts or paywall.**
 3. **Auth (target):** Supabase magic link + Google OAuth. No passwords. **Not implemented today.**
 4. **Pricing (target):** $9.99 AUD/month, $79 AUD/year.
@@ -584,7 +591,12 @@ PORT=3001
 11. **Race-proximity overlay (target) is a distinct content layer**, independent of `tips.js`, keyed off days-to-race. Unbuilt — the current app never captures a race date.
 12. **Sync strategy today is Google Sheets, not Supabase — and the Sheet is the source of truth, not `localStorage`.** `apps-script/Code.gs` handles both directions: `doPost` appends a row per logged session (fire-and-forget write), `doGet(?list=1)` returns the full log as JSON. `index.html` fetches from `doGet` on load and whenever This week/Month is opened, so a session logged on the phone shows up on the laptop; `localStorage` is only a same-device cache used when a fetch fails. This is a deliberate current-state choice, separate from the target's Supabase sync plan — revisit when/if the target architecture is activated.
 13. **The target Supabase schema adopts the current app's check-in + computed-signals model, not the original reflection model.** `session_checkins` (mirroring `index.html`'s `log` array: `disc`, `duration`, `intensity`, `rpe`, `a1-a3`, `b2-b3`, `note`, `phase`) replaces the old `session_logs` + `week_reflections` tables. Signals (fuelling, intensity drift, compound-pair detection) stay computed at read time, not stored — matching how the current app already works. Freemium copy referencing "reflection persistence" or "readiness/grey zone" now means this model's equivalents. `calendar_sessions`/`week_cadences` are **dropped** — proactive day-of-week planning that neither the current app nor the adopted model implements; design fresh if it's ever actually wanted. **Still open:** whether the target UI adopts the current app's tabs (Strength/Check-in/This week/Month) or the original ones (Today/Week/Tips/Calendar) — see Session build order.
+14. **`TRI-swim-strength mobile app/` and `TRI-run-strength mobile app/` are core architecture, not an add-on.** They implement the Strength tab's Swim and Ride/Run sub-tabs (via `<iframe>` in `index.html`), ship in this repo, and deploy under the same GitHub Pages site as the main app. They're separate deployable units (their own `index.html`/`app.js`/`manifest.webmanifest`/`sw.js`) for build-isolation reasons, not because they're peripheral — any session touching the Strength tab should treat these two directories with the same weight as `index.html` itself.
+15. **The app opens on a splash screen, not straight into a tab.** `--blue` background, `favicon.png` logo, sub head, page-title-styled headline, base nav visible beneath it. No auto-advance — dismissed only by a nav tap. Tapping Check-in with no phase set routes to the training-phase picker first (see Training phase); every other tab still bypasses it, as before.
+16. **`--blue` is now the favicon's blue, `#0022FF` — not `#1650C8`.** Rebranded so the brand blue and the app-icon artwork are the same colour everywhere it's defined: `index.html`, this file, and the design guide. `--swim` (which has always shared `--blue`'s value) moved with it. `--blue-l`/`--blue-m` (tints) were left as-is — close enough in hue not to need re-deriving. Not touched: the base nav's hardcoded `#002DFF` and the PWA manifest's inline `theme_color` (`#002DFF`) — both pre-existing, separately-flagged discrepancies from `--blue`, unrelated to this change.
+17. **Completion in Warm up and both Strength mini-apps is auto-detected only — there's no manual "mark complete" button anywhere anymore.** Checking the *last* exercise (or last round) off directly auto-fires a "Well done! [X] complete 🎉" banner immediately — mirroring TRI-run-strength's original `handleAllComplete()`, which TRI-swim-strength has now also gained (it previously had no auto-detect at all; its manual button was its only way to log a session, so the auto-detect logic was ported in *before* that button was removed, so it wasn't left with no way to complete). The banner increments an all-time completed-count (`localStorage`, device-local — not Sheet-synced), leaves the checklist checked rather than clearing it, logs exactly once per completion, and only its "Reset & go again" button or the always-visible header reset ("Reset warm-up" / "Reset session") clears it. Warm up's version is recoloured to the app's own `--done`/`--done-l` green and `--blue` button, matching the rest of `index.html`; both Strength apps keep their own existing yellow/green palette. **Consequence:** partial-completion logging (banking progress on a session you didn't finish) is no longer possible in any of the three — completion is all-or-nothing now.
+18. **The documented type scale was wrong and has been corrected to match the shipped CSS.** Page titles are **23px** (not 26px) and eyebrows are **14px** (not 9–10px) — both now read directly from `index.html`'s `h1`/`.eyebrow` rules rather than the unused `frontend/src/index.css` scaffold they'd drifted to match instead. The splash headline (decision 15) was built against the old, wrong 26px figure and has been corrected to 23px/line-height 1.25 along with it.
 
 ---
 
-*Last updated: 2026-08-06. Flipped the current app's sync model: the Google Sheet is now the cross-device source of truth (read on load + on This week/Month open via a new `doGet(?list=1)` in `apps-script/Code.gs`), with `localStorage` demoted to a same-device cache used only when a fetch fails — was the reverse before, which is why sessions logged on one device (phone) didn't show up on another (laptop). Also fixed a display bug where "This week" showed a false-positive "every session finished at the effort you intended" headline on weeks with zero logged sessions. See Storage & sync and decision 12. Owner: Justin. Update this file whenever a decision changes, or when the target architecture moves from scaffold to active development.*
+*Last updated: 2026-08-07. Removed the manual "mark complete" button from Warm up and both Strength mini-apps (`TRI-swim-strength mobile app/`, `TRI-run-strength mobile app/`) — completion is now auto-detected only, everywhere (decision 17). Ported TRI-run-strength's auto-fire "Well done!" completion banner into TRI-swim-strength first (it had no auto-detect logic before), so removing its button didn't leave it unable to log a session. Design guide's "Complete + toast" tile (documenting the now-removed pattern) was deleted; "Well-done banner" tile updated to note it's the sole completion path. Splash logo→sub head gap halved again (20px→10px). Splash spacing rebalanced: tighter logo→sub head gap (44px→20px), wider sub head→headline gap (24px→36px); logo drop shadow removed; headline changed to "Mobility, intensity, fuelling, strength" (decision 15). Corrected the documented type scale to match the shipped CSS — page titles 23px not 26px, eyebrows 14px not 9–10px (decision 18) — and fixed the splash headline, which had been built against the old wrong figure, to match. Full design-guide review: the guide is now light-only (`color-scheme: only light`, matching `index.html`) instead of switching to a dark theme under `prefers-color-scheme: dark`; its Base navigation and Layout tiles were rebuilt to show the real 4-tab/84px nav instead of a stale 3-tab/74px mockup. Rebranded `--blue`/`--swim` from `#1650C8` to the favicon's `#0022FF` (decision 16) across `index.html`, this file, and the design guide, so the app icon and brand blue match exactly. Prior update: reframed the two Strength sub-apps from "sibling PWAs"/"add-on" language to core architecture. See decision 14, "Two codebases" intro, and Repository structure. Owner: Justin. Update this file whenever a decision changes, or when the target architecture moves from scaffold to active development.*

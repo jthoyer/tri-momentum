@@ -39,6 +39,7 @@
   var totalItems = phase1.length + phase2.length * 3 + phase3.length;
   var ROUND_LABELS = ['R1 · Form', 'R2 · Power', 'R3 · Endurance & speed'];
   var phase2RowsById = {};
+  var sessionLogged = false;
 
   var state = loadState();
 
@@ -83,10 +84,14 @@
       btn.setAttribute('aria-label', 'Mark ' + ex.name + ' done');
       btn.innerHTML = '&#10003;';
       btn.addEventListener('click', function () {
-        state[ex.id] = !state[ex.id];
+        var justChecked = !state[ex.id];
+        state[ex.id] = justChecked;
         saveState();
         updateRow(row, btn, !!state[ex.id]);
         refreshProgress();
+        if (justChecked && countDone(phase1, false) + countDone(phase2, true) + countDone(phase3, false) === totalItems) {
+          handleAllComplete();
+        }
       });
 
       var body = document.createElement('div');
@@ -145,7 +150,11 @@
           refreshProgress();
 
           if (justChecked) {
-            advanceToNextPhase2Exercise(exIndex);
+            if (countDone(phase1, false) + countDone(phase2, true) + countDone(phase3, false) === totalItems) {
+              handleAllComplete();
+            } else {
+              advanceToNextPhase2Exercise(exIndex);
+            }
           }
         });
         rounds.appendChild(btn);
@@ -202,8 +211,6 @@
     var pct = totalItems ? Math.round((done / totalItems) * 100) : 0;
     document.getElementById('progressPct').textContent = pct + '%';
     document.getElementById('progressFill').style.width = pct + '%';
-
-    document.getElementById('completeButton').disabled = done === 0;
   }
 
   function setPhaseProgress(elId, done, total) {
@@ -212,23 +219,28 @@
     el.classList.toggle('all-done', done === total);
   }
 
-  function showToast(msg) {
-    var toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.remove('hidden');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(function () {
-      toast.classList.add('hidden');
-    }, 2600);
-  }
-
   function renderSessionsCompleted() {
     document.getElementById('sessionsCompleted').textContent = getSessionsCompleted();
   }
 
+  function handleAllComplete() {
+    Object.keys(phase2RowsById).forEach(function (id) { phase2RowsById[id].classList.remove('active'); });
+    if (!sessionLogged) {
+      sessionLogged = true;
+      var next = getSessionsCompleted() + 1;
+      setSessionsCompleted(next);
+      renderSessionsCompleted();
+      document.getElementById('completionCount').textContent = next;
+    }
+    document.getElementById('completionBanner').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
   function resetChecklist() {
     state = {};
+    sessionLogged = false;
     saveState();
+    document.getElementById('completionBanner').classList.add('hidden');
     renderAll();
   }
 
@@ -246,13 +258,7 @@
     }
   });
 
-  document.getElementById('completeButton').addEventListener('click', function () {
-    var done = countDone(phase1, false) + countDone(phase2, true) + countDone(phase3, false);
-    if (done === 0) return;
-    var next = getSessionsCompleted() + 1;
-    setSessionsCompleted(next);
-    var fullyDone = done === totalItems;
-    showToast(fullyDone ? 'Session complete! That’s number ' + next + '. 🎉' : 'Session logged (' + done + '/' + totalItems + ' done). That’s number ' + next + '.');
+  document.getElementById('completionResetButton').addEventListener('click', function () {
     resetChecklist();
   });
 

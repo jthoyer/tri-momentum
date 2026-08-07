@@ -27,6 +27,12 @@
     <button class="text-button" id="resetButton" type="button">Reset session</button>
   </header>
 
+  <div class="completion-banner hidden" id="completionBanner" role="status">
+    <p class="completion-title">Well done! Session complete &#127881;</p>
+    <p class="completion-sub">All 3 phases logged &mdash; that&rsquo;s session #<span id="completionCount">0</span>.</p>
+    <button class="primary-button" id="completionResetButton" type="button">Reset &amp; go again</button>
+  </div>
+
   <section class="hero" id="top">
     <div class="hero-copy">
       <p class="eyebrow">DRYLAND STRENGTH &middot; INTERMEDIATE SWIMMER</p>
@@ -86,12 +92,6 @@
     </ol>
   </section>
 
-  <section class="complete-band" aria-live="polite">
-    <p class="complete-copy">Total session time: 45 minutes.</p>
-    <button class="primary-button" id="completeButton" type="button">Mark session complete <span>&#10003;</span></button>
-  </section>
-
-  <div class="toast hidden" id="toast" role="status"></div>
 
 </main>
 

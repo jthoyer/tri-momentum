@@ -133,23 +133,12 @@
     document.getElementById('progressPct').textContent = pct + '%';
     document.getElementById('progressFill').style.width = pct + '%';
 
-    document.getElementById('completeButton').disabled = done === 0;
   }
 
   function setPhaseProgress(elId, done, total) {
     var el = document.getElementById(elId);
     el.textContent = done + '/' + total;
     el.classList.toggle('all-done', done === total);
-  }
-
-  function showToast(msg) {
-    var toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.remove('hidden');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(function () {
-      toast.classList.add('hidden');
-    }, 2600);
   }
 
   function renderSessionsCompleted() {
@@ -204,20 +193,6 @@
   });
 
   document.getElementById('completionResetButton').addEventListener('click', function () {
-    resetChecklist();
-  });
-
-  document.getElementById('completeButton').addEventListener('click', function () {
-    var done = countDone(mainCircuit);
-    if (done === 0) return;
-    var fullyDone = done === totalItems;
-    if (fullyDone && sessionLogged) {
-      resetChecklist();
-      return;
-    }
-    var next = getSessionsCompleted() + 1;
-    setSessionsCompleted(next);
-    showToast(fullyDone ? 'Session complete! That’s number ' + next + '. 🎉' : 'Session logged (' + done + '/' + totalItems + ' done). That’s number ' + next + '.');
     resetChecklist();
   });
 
