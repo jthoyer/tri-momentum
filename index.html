@@ -46,6 +46,10 @@ a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);ou
 .counter{font-family:var(--fm);font-size:14px;color:var(--ink2);line-height:1.2;white-space:nowrap;flex:none}
 .bar{height:4px;background:var(--s4);border-radius:2px;overflow:hidden}
 .bar > i{display:block;height:100%;width:0;background:var(--blue);border-radius:2px;transition:width .2s ease}
+.flow-phase-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.flow-phase-row[hidden]{display:none}
+#flow-phase-label{font-family:var(--fm);font-size:12px;color:var(--ink3)}
+.flow-phase-change{padding:0;background:none;border:none;font-family:var(--fd);font-size:12px;font-weight:600;color:var(--blue);cursor:pointer}
 .flow-body{flex:1;padding:1.5rem 1.25rem 1.25rem;min-height:0}
 .q-set{border:none;padding:0;margin:0;display:block;min-width:0}
 .q-set > legend{display:block;width:100%;padding:0;float:left}
@@ -287,6 +291,10 @@ textarea::placeholder{color:var(--ink3)}
         <p class="counter" id="counter">1 / 9</p>
       </div>
       <div class="bar" aria-hidden="true"><i id="bar-fill"></i></div>
+      <div class="flow-phase-row" id="flow-phase-row">
+        <span id="flow-phase-label"></span>
+        <button type="button" class="flow-phase-change" id="flow-phase-change">Change phase</button>
+      </div>
     </div>
     <div class="flow-body" id="flow-body"></div>
     <div class="flow-foot" id="flow-foot">
@@ -1382,6 +1390,9 @@ if(window.caches && caches.keys){
     eyebrow: document.getElementById('eyebrow'),
     counter: document.getElementById('counter'),
     barFill: document.getElementById('bar-fill'),
+    phaseRow: document.getElementById('flow-phase-row'),
+    phaseLabel: document.getElementById('flow-phase-label'),
+    phaseChange: document.getElementById('flow-phase-change'),
     body:    document.getElementById('flow-body'),
     foot:    document.getElementById('flow-foot'),
     back:    document.getElementById('btn-back'),
@@ -1452,15 +1463,20 @@ if(window.caches && caches.keys){
       els.eyebrow.textContent = (PERIOD_LABEL[state.periodisation] || 'Phase not set');
       els.counter.textContent = 'logged';
       els.barFill.style.width = '100%';
+      els.phaseRow.hidden = true;
     } else if(state.mode === 'review'){
       var gaps = missing().length;
       els.eyebrow.textContent = 'Just finished';
       els.counter.textContent = 'review · ' + (list.length - gaps) + '/' + list.length;
       els.barFill.style.width = '100%';
+      els.phaseRow.hidden = false;
+      els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
     } else {
       els.eyebrow.textContent = 'Just finished';
       els.counter.textContent = (idx + 1) + ' / ' + list.length;
       els.barFill.style.width = Math.round(idx / list.length * 100) + '%';
+      els.phaseRow.hidden = false;
+      els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
     }
     renderFoot(list, idx);
     return {list: list, idx: idx};
@@ -1696,6 +1712,10 @@ if(window.caches && caches.keys){
     if(isTrends){ renderTrends(); }
     if(isStrength){ sizeStrengthFrame(); }
     if(isWarmup){ renderWarmup(); }
+    // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
+    // which can change out from under it — e.g. via "Change phase" mid-flow
+    // — so refresh it whenever this view is (re)shown, not just on render().
+    if(!isDash && !isTrends && !isStrength && !isWarmup){ renderChrome(); }
     window.scrollTo(0, 0);
     var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : 'step-h'))));
     if(h){ h.focus({preventScroll:true}); }
@@ -1839,6 +1859,7 @@ if(window.caches && caches.keys){
     if(state.mode === 'review'){ save(); return; }
     go(state.step + 1, true);
   });
+  els.phaseChange.addEventListener('click', function(){ openPhasePicker(); });
 
   // ── Init ──────────────────────────────────────────────────────
   buildPeriodChoices();
