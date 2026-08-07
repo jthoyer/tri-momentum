@@ -52,9 +52,11 @@ a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);ou
 .flow-phase-change{padding:0;background:none;border:none;font-family:var(--fd);font-size:12px;font-weight:600;color:var(--blue);cursor:pointer}
 .flow-body{flex:1;padding:1.5rem 1.25rem 1.25rem;min-height:0}
 .q-set{border:none;padding:0;margin:0;display:block;min-width:0}
+.q-set + .q-set{margin-top:2.5rem}
 .q-set > legend{display:block;width:100%;padding:0;float:left}
 h1{font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:var(--ink)}
 h1:focus,h1:focus-visible{outline:none}
+.flow-body h2{font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:var(--ink)}
 .hint{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px;clear:both}
 .choices-wrap{margin-top:2.5rem;clear:both}
 .choices{display:flex;flex-direction:column;gap:10px}
@@ -455,6 +457,19 @@ if(window.caches && caches.keys){
       ]
     }
   ];
+  var QUESTIONS_BY_KEY = {};
+  QUESTIONS.forEach(function(q){ QUESTIONS_BY_KEY[q.k] = q; });
+
+  // Pages group multiple questions onto one screen while keeping each
+  // question's own heading/hint/choices unchanged — see steps() below.
+  // b3 (niggle) and a3 (fuelling, onlyLong) stay on their own pages.
+  var PAGE_GROUPS = [
+    ['date', 'disc'],
+    ['b3'],
+    ['duration', 'intensity', 'rpe', 'a1'],
+    ['a3'],
+    ['a2', 'b2']
+  ];
 
   var DISC_LABEL = {swim:'Swim',bike:'Bike',run:'Run',brick:'Brick',strength:'Strength'};
 
@@ -760,8 +775,25 @@ if(window.caches && caches.keys){
 
   function isLong(v){ return v !== null && v !== undefined && parseInt(v,10) > 45; }
   function asked(q){ return !q.onlyLong || isLong(state.ans.duration); }
-  function steps(){ return QUESTIONS.filter(asked); }
-  function missing(){ return steps().filter(function(q){ return !state.ans[q.k]; }); }
+  // Each "step" is a page — an array of one or more questions rendered
+  // together (see PAGE_GROUPS). A page whose questions are all filtered
+  // out by asked() (e.g. the fuelling-only page on a short session)
+  // disappears entirely rather than leaving a blank step.
+  function steps(){
+    return PAGE_GROUPS
+      .map(function(keys){ return keys.map(function(k){ return QUESTIONS_BY_KEY[k]; }).filter(asked); })
+      .filter(function(page){ return page.length > 0; });
+  }
+  function allQuestions(list){ return list.reduce(function(a, page){ return a.concat(page); }, []); }
+  function missing(){ return allQuestions(steps()).filter(function(q){ return !state.ans[q.k]; }); }
+  function pageIndexOfKey(list, key){
+    for(var i=0;i<list.length;i++){
+      for(var j=0;j<list[i].length;j++){
+        if(list[i][j].k === key){ return i; }
+      }
+    }
+    return 0;
+  }
   function optionFor(q, v){
     for(var i=0;i<q.opts.length;i++){ if(q.opts[i].v === v){ return q.opts[i]; } }
     return null;
@@ -1436,14 +1468,20 @@ if(window.caches && caches.keys){
       state.mode = 'review';
       render();
       focusHeading();
-      if(announce){ say('Review and save. ' + list.length + ' question' + (list.length===1?'':'s') + ' in this check-in.'); }
+      if(announce){
+        var totalQuestions = allQuestions(list).length;
+        say('Review and save. ' + totalQuestions + ' question' + (totalQuestions===1?'':'s') + ' in this check-in.');
+      }
       return;
     }
     state.step = target;
     state.mode = 'ask';
     render();
     focusHeading();
-    if(announce){ say('Question ' + (state.step + 1) + ' of ' + list.length + '. ' + list[state.step].legend); }
+    if(announce){
+      var legends = list[state.step].map(function(q){ return q.legend; }).join(' ');
+      say('Step ' + (state.step + 1) + ' of ' + list.length + '. ' + legends);
+    }
   }
   function focusHeading(){
     var h = document.getElementById('step-h');
@@ -1466,8 +1504,9 @@ if(window.caches && caches.keys){
       els.phaseRow.hidden = true;
     } else if(state.mode === 'review'){
       var gaps = missing().length;
+      var totalQuestions = allQuestions(list).length;
       els.eyebrow.textContent = 'Just finished';
-      els.counter.textContent = 'review · ' + (list.length - gaps) + '/' + list.length;
+      els.counter.textContent = 'review · ' + (totalQuestions - gaps) + '/' + totalQuestions;
       els.barFill.style.width = '100%';
       els.phaseRow.hidden = false;
       els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
@@ -1554,21 +1593,28 @@ if(window.caches && caches.keys){
     wrap.appendChild(input);
     return wrap;
   }
-  function renderAsk(q){
-    var fs = el('fieldset', 'q-set');
-    fs.setAttribute('aria-describedby', 'step-hint');
-    var lg = document.createElement('legend');
-    var h = el('h1', null, q.legend);
-    h.id = 'step-h'; h.tabIndex = -1;
-    lg.appendChild(h);
-    fs.appendChild(lg);
-    if(q.hint){
-      var hint = el('p', 'hint', q.hint);
-      hint.id = 'step-hint';
-      fs.appendChild(hint);
-    }
-    fs.appendChild(q.type === 'date' ? dateField(q) : choiceGroup(q, 'o'));
-    els.body.appendChild(fs);
+  // qList is a page — one or more questions rendered together. Each keeps
+  // its own heading/hint/choices exactly as when it was a lone step; only
+  // the first question's heading is the h1 (and the focus/aria-describedby
+  // target) so a multi-question page still has one page-level heading.
+  function renderAsk(qList){
+    qList.forEach(function(q, i){
+      var fs = el('fieldset', 'q-set');
+      var lg = document.createElement('legend');
+      var h = el(i === 0 ? 'h1' : 'h2', null, q.legend);
+      if(i === 0){ h.id = 'step-h'; h.tabIndex = -1; }
+      lg.appendChild(h);
+      fs.appendChild(lg);
+      if(q.hint){
+        var hintId = 'step-hint-' + q.k;
+        var hint = el('p', 'hint', q.hint);
+        hint.id = hintId;
+        fs.setAttribute('aria-describedby', hintId);
+        fs.appendChild(hint);
+      }
+      fs.appendChild(q.type === 'date' ? dateField(q) : choiceGroup(q, 'o'));
+      els.body.appendChild(fs);
+    });
   }
   function renderReview(list){
     var h = el('h1', null, 'Check and save');
@@ -1576,15 +1622,17 @@ if(window.caches && caches.keys){
     els.body.appendChild(h);
     els.body.appendChild(el('p', 'hint', 'Tap any line to change it. Nothing is saved until you save.'));
     var rows = el('div', 'choices-wrap');
-    list.forEach(function(q, i){
-      var btn = el('button', 'review-row');
-      btn.type = 'button';
-      btn.appendChild(el('span', 'review-q', q.legend.replace(/\?$/, '')));
-      var label = q.type === 'date' ? formatDateLabel(state.ans[q.k]) : (optionFor(q, state.ans[q.k]) || {}).label;
-      var a = el('span', 'review-a' + (label ? '' : ' none'), label || 'Not answered');
-      btn.appendChild(a);
-      btn.addEventListener('click', function(){ go(i, true); });
-      rows.appendChild(btn);
+    list.forEach(function(page, pageIdx){
+      page.forEach(function(q){
+        var btn = el('button', 'review-row');
+        btn.type = 'button';
+        btn.appendChild(el('span', 'review-q', q.legend.replace(/\?$/, '')));
+        var label = q.type === 'date' ? formatDateLabel(state.ans[q.k]) : (optionFor(q, state.ans[q.k]) || {}).label;
+        var a = el('span', 'review-a' + (label ? '' : ' none'), label || 'Not answered');
+        btn.appendChild(a);
+        btn.addEventListener('click', function(){ go(pageIdx, true); });
+        rows.appendChild(btn);
+      });
     });
     els.body.appendChild(rows);
     rows.appendChild(noteBlock());
@@ -1661,8 +1709,7 @@ if(window.caches && caches.keys){
     var gaps = missing();
     if(gaps.length){
       var list = steps();
-      var first = 0;
-      for(var i=0;i<list.length;i++){ if(list[i].k === gaps[0].k){ first = i; break; } }
+      var first = pageIndexOfKey(list, gaps[0].k);
       go(first, false);
       say('Cannot save yet — ' + gaps.length + ' question' + (gaps.length===1?'':'s') + ' unanswered. Taken to the first one.');
       return;
@@ -1688,7 +1735,7 @@ if(window.caches && caches.keys){
   function startNew(){
     state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
     render(); focusHeading();
-    say('New session started. Question 1 of ' + steps().length + '.');
+    say('New session started. Step 1 of ' + steps().length + '.');
   }
 
   // ═══════════════════════════════════════════════════════════════
