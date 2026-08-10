@@ -23,6 +23,9 @@
   --brick:#534AB7;--brick-l:#EEEDFE;
   --strength:#854F0B;--strength-l:#FAEEDA;
   --rest:#8B93B8;--rest-l:#F0F2F8;
+  --phase-base:#0F6E56;--phase-base-l:#E1F5EE;
+  --phase-build:#D9660B;--phase-build-l:#FFF1E0;
+  --phase-peak:#993C1D;--phase-peak-l:#FAECE7;
   --done:#0F6E56;--done-l:#E1F5EE;
   --skipped:#993C1D;--skipped-l:#FAECE7;
   --modified:#854F0B;--modified-l:#FAEEDA;
@@ -165,7 +168,13 @@ textarea::placeholder{color:var(--ink3)}
 .month-week-block{margin-top:1.4rem;padding:1rem 1.05rem 1.2rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
 .month-week-block:first-child{margin-top:0}
 .month-week-block .dash-matrix-hd{margin-top:.9rem}
+.month-week-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .month-week-label{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink)}
+.month-week-pill{font-family:var(--fd);font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--s3);color:var(--ink2)}
+.month-week-pill.phase-base{background:var(--phase-base);color:var(--phase-base-l)}
+.month-week-pill.phase-build{background:var(--phase-build);color:var(--phase-build-l)}
+.month-week-pill.phase-peak{background:var(--phase-peak);color:var(--phase-peak-l)}
+.month-week-current{font-family:var(--fm);font-size:11.5px;color:var(--ink3)}
 .dash-stat-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .dash-stat-n{font-family:var(--fm);font-size:11.5px;color:var(--ink3);white-space:nowrap}
 .dash-stat-big{display:flex;align-items:baseline;gap:9px;margin-top:10px}
@@ -484,6 +493,7 @@ if(window.caches && caches.keys){
   ];
   var PERIOD_LABEL = {};
   PERIOD.forEach(function(p){ PERIOD_LABEL[p.v] = p.label; });
+  var PERIOD_PILL_CLASS = {base:'phase-base', build1:'phase-build', build2:'phase-build', peak:'phase-peak'};
 
   // ═══════════════════════════════════════════════════════════════
   // WARM UP — dryland mobility routines, one per discipline. Content
@@ -756,7 +766,13 @@ if(window.caches && caches.keys){
       days.forEach(function(d){ d.entries.forEach(function(e){ if(e.phase){ phaseCounts[e.phase] = (phaseCounts[e.phase]||0)+1; } }); });
       var topPhase = null, topN = 0;
       Object.keys(phaseCounts).forEach(function(p){ if(phaseCounts[p] > topN){ topN = phaseCounts[p]; topPhase = p; } });
-      weeks.push({wk: monthWeekLabel(isoWeekNumber(monday), topPhase || state.periodisation, isCurrent), days: days});
+      var weekNum = isoWeekNumber(monday);
+      var phaseKey = topPhase || state.periodisation;
+      weeks.push({
+        wk: monthWeekLabel(weekNum, phaseKey, isCurrent),
+        weekNum: weekNum, phaseKey: phaseKey, isCurrent: isCurrent,
+        days: days
+      });
     }
     return weeks.reverse();
   }
@@ -1125,13 +1141,25 @@ if(window.caches && caches.keys){
     });
     return t;
   }
+  function monthWeekHeader(w){
+    var hd = el('div', 'month-week-hd');
+    hd.appendChild(el('span', 'month-week-label', 'Week ' + w.weekNum));
+    var pillClass = PERIOD_PILL_CLASS[w.phaseKey];
+    if(pillClass){
+      hd.appendChild(el('span', 'month-week-pill ' + pillClass, PERIOD_LABEL[w.phaseKey]));
+    } else {
+      hd.appendChild(el('span', 'month-week-pill', 'Unset phase'));
+    }
+    if(w.isCurrent){ hd.appendChild(el('span', 'month-week-current', 'this week')); }
+    return hd;
+  }
   function renderMonthSection(label, catFn, opts, resolveInsight){
     var wrap = el('div', 'dash-section');
     wrap.setAttribute('data-label', label);
     var weeks = monthWeeks();
     weeks.forEach(function(w){
       var block = el('div', 'month-week-block');
-      block.appendChild(el('p', 'month-week-label', w.wk));
+      block.appendChild(monthWeekHeader(w));
       var t = tallyDays(w.days, catFn);
       var facts = computeSignalFacts([{wk:w.wk, days:w.days}], catFn);
       var rule = resolveInsight(facts);
