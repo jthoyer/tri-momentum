@@ -50,15 +50,17 @@ a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);ou
 .flow-phase-row[hidden]{display:none}
 #flow-phase-label{font-family:var(--fm);font-size:12px;color:var(--ink3)}
 .flow-phase-change{padding:0;background:none;border:none;font-family:var(--fd);font-size:12px;font-weight:600;color:var(--blue);cursor:pointer}
-.flow-body{flex:1;padding:1.5rem 1.25rem 1.25rem;min-height:0}
+.flow-body{flex:1;padding:1.5rem 1.25rem 6rem;min-height:0}
 .q-set{border:none;padding:0;margin:0;display:block;min-width:0}
-.q-set + .q-set{margin-top:2.5rem}
+.q-set + .q-set{margin-top:5rem}
 .q-set > legend{display:block;width:100%;padding:0;float:left}
 h1{font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:var(--ink)}
 h1:focus,h1:focus-visible{outline:none}
 .flow-body h2{font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:var(--ink)}
 .hint{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px;clear:both}
 .choices-wrap{margin-top:2.5rem;clear:both}
+.q-set .choices-wrap{margin-top:1.25rem}
+.q-set.no-hint .choices-wrap{margin-top:2rem}
 .choices{display:flex;flex-direction:column;gap:10px}
 .opt{position:relative}
 .opt input{position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;margin:0;cursor:pointer}
@@ -400,6 +402,7 @@ if(window.caches && caches.keys){
       hint:'Drift is only measured on the sessions you intended to keep easy.',
       opts:[
         {v:'easy', label:'Easy / steady'},
+        {v:'moderate', label:'Moderate / tempo'},
         {v:'hard', label:'Hard / quality'}
       ]
     },
@@ -717,7 +720,8 @@ if(window.caches && caches.keys){
       var entries = log.filter(function(e){ return e.date === dISO; });
       var session = entries.length ? entries[entries.length-1] : null;
       var what = entries.map(function(e){
-        return (DISC_LABEL[e.disc]||'Session') + ' · ' + (e.intensity==='hard'?'hard':'easy') + ' · RPE ' + e.rpe;
+        var intensityLabel = e.intensity === 'hard' ? 'hard' : e.intensity === 'moderate' ? 'moderate' : 'easy';
+        return (DISC_LABEL[e.disc]||'Session') + ' · ' + intensityLabel + ' · RPE ' + e.rpe;
       }).join('; ');
       var state;
       if(entries.length){ state = 'logged'; }
@@ -1599,7 +1603,7 @@ if(window.caches && caches.keys){
   // target) so a multi-question page still has one page-level heading.
   function renderAsk(qList){
     qList.forEach(function(q, i){
-      var fs = el('fieldset', 'q-set');
+      var fs = el('fieldset', 'q-set' + (q.hint ? '' : ' no-hint'));
       var lg = document.createElement('legend');
       var h = el(i === 0 ? 'h1' : 'h2', null, q.legend);
       if(i === 0){ h.id = 'step-h'; h.tabIndex = -1; }
