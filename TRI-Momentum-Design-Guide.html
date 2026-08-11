@@ -16,7 +16,7 @@
   --code-bg:#0E1020; --code-ink:#E8EBF5;
   --nav-bg: rgba(247,248,252,.86);
 
-  /* ── TRI Momentum product tokens (from CLAUDE.md) ── */
+  /* ── TRI Momentum product tokens (from style-guide.md) ── */
   --bg:#F7F8FC; --s1:#FFFFFF; --s3:#F0F2F8; --s4:#E8EBF5;
   --ink:#0E1020; --ink2:#4B5278; --ink3:#8B93B8;
   --bd: rgba(14,16,32,0.08); --bd2: rgba(14,16,32,0.14);
@@ -27,6 +27,9 @@
   --brick:#534AB7; --brick-l:#EEEDFE;
   --strength:#854F0B; --strength-l:#FAEEDA;
   --rest:#8B93B8; --rest-l:#F0F2F8;
+  --phase-base:#0F6E56; --phase-base-l:#E1F5EE;
+  --phase-build:#D9660B; --phase-build-l:#FFF1E0;
+  --phase-peak:#993C1D; --phase-peak-l:#FAECE7;
   --done:#0F6E56; --done-l:#E1F5EE;
   --skipped:#993C1D; --skipped-l:#FAECE7;
   --modified:#854F0B; --modified-l:#FAEEDA;
@@ -200,6 +203,13 @@ section.doc:last-of-type{border-bottom:none}
 .pv-insight-strip.good{border-left-color:var(--dash-good); background:color-mix(in srgb, var(--dash-good) 12%, var(--s1))}
 .pv-insight-strip.mid{border-left-color:var(--dash-mid); background:color-mix(in srgb, var(--dash-mid) 12%, var(--s1))}
 .pv-insight-strip.bad{border-left-color:var(--dash-bad); background:color-mix(in srgb, var(--dash-bad) 12%, var(--s1))}
+.pv-month-hd{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.pv-month-label{font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; color:var(--ink)}
+.pv-month-pill{font-family:'DM Sans',sans-serif; font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:999px}
+.pv-month-pill.phase-base{background:var(--phase-base); color:var(--phase-base-l)}
+.pv-month-pill.phase-build{background:var(--phase-build); color:var(--phase-build-l)}
+.pv-month-pill.phase-peak{background:var(--phase-peak); color:var(--phase-peak-l)}
+.pv-month-current{font-family:'DM Mono',monospace; font-size:11.5px; color:var(--ink3)}
 
 .pv-splash{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; background:var(--blue); border-radius:14px; padding:40px 20px}
 .pv-splash-logo{width:192px; height:192px; border-radius:22px}
@@ -289,11 +299,12 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
   <header class="hero">
     <p class="eyebrow">Reference · v1</p>
     <h1>The design system, laid out.</h1>
-    <p class="lede">Every colour, type size, spacing rule and component pattern TRI Momentum ships with — compiled from the project's <span class="mono">CLAUDE.md</span> so there's one place to check before a screen gets built. Click any hex or token to copy it.</p>
+    <p class="lede">Every colour, type size, spacing rule and component pattern TRI Momentum ships with — compiled from <a href="style-guide.md" style="color:inherit; text-decoration-color:rgba(255,255,255,.4)">style-guide.md</a> so there's one place to check before a screen gets built. Click any hex or token to copy it.</p>
     <div class="hero-meta">
       <span><b>Product</b> Mobile-first PWA, 10&ndash;15hr/wk age-group triathletes</span>
       <span><b>Frame</b> max-width 430px, centred</span>
       <span><b>Type</b> DM Sans + DM Mono</span>
+      <span><b>Source</b> <a href="style-guide.md" style="color:inherit">style-guide.md</a></span>
     </div>
   </header>
 
@@ -320,8 +331,12 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
     </div>
 
     <p class="eyebrow" style="margin:32px 0 6px">Discipline</p>
-    <p class="doc-intro" style="margin:0 0 14px">Every discipline gets a saturated mark colour plus a pale tint for its background/chip form. Phase colours (below, in Layout) reuse these directly rather than defining a second palette.</p>
+    <p class="doc-intro" style="margin:0 0 14px">Every discipline gets a saturated mark colour plus a pale tint for its background/chip form.</p>
     <div class="grid g4" id="sw-discipline"></div>
+
+    <p class="eyebrow" style="margin:32px 0 6px">Phase</p>
+    <p class="doc-intro" style="margin:0 0 14px">Own palette, not reused from discipline colours — Build 1 and Build 2 share one colour, and Base/Taper is one combined phase (see Layout) so it shares Base's green with no separate Taper tint.</p>
+    <div class="grid g4" id="sw-phase"></div>
 
     <p class="eyebrow" style="margin:32px 0 14px">Status</p>
     <div class="grid g3" id="sw-status"></div>
@@ -409,18 +424,19 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
       </div>
     </div>
 
-    <p class="eyebrow" style="margin:36px 0 14px">Phase → discipline colour mapping</p>
+    <p class="eyebrow" style="margin:36px 0 14px">Phase colours</p>
     <div class="wrap-x">
     <table class="tbl">
-      <thead><tr><th>Phase</th><th>Maps to</th><th>Colour</th></tr></thead>
+      <thead><tr><th>Phase</th><th>Token</th><th>Colour</th></tr></thead>
       <tbody>
-        <tr><td>Base</td><td class="tbl-key">--swim</td><td><span class="tbl-sw" style="background:var(--swim)"></span></td></tr>
-        <tr><td>Build</td><td class="tbl-key">--bike</td><td><span class="tbl-sw" style="background:var(--bike)"></span></td></tr>
-        <tr><td>Peak</td><td class="tbl-key">--run</td><td><span class="tbl-sw" style="background:var(--run)"></span></td></tr>
-        <tr><td>Taper</td><td class="tbl-key">--brick</td><td><span class="tbl-sw" style="background:var(--brick)"></span></td></tr>
+        <tr><td>Base / Taper</td><td class="tbl-key">--phase-base</td><td><span class="tbl-sw" style="background:var(--phase-base)"></span></td></tr>
+        <tr><td>Build 1</td><td class="tbl-key">--phase-build</td><td><span class="tbl-sw" style="background:var(--phase-build)"></span></td></tr>
+        <tr><td>Build 2</td><td class="tbl-key">--phase-build</td><td><span class="tbl-sw" style="background:var(--phase-build)"></span></td></tr>
+        <tr><td>Peak</td><td class="tbl-key">--phase-peak</td><td><span class="tbl-sw" style="background:var(--phase-peak)"></span></td></tr>
       </tbody>
     </table>
     </div>
+    <p style="font-size:12px; color:var(--page-ink3); line-height:1.6; margin-top:10px">Own tokens, not aliases of the discipline colours — <span class="mono">--phase-peak</span> happens to share <span class="mono">--run</span>'s hex, but that's coincidence, not a reuse. Rendered as a reversed pill (solid fill, light text) on Month-view week cards — see Components.</p>
   </section>
 
   <!-- ══════════ COMPONENTS ══════════ -->
@@ -453,6 +469,25 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
             <p>Every long session this week was fuelled at race concentration — five in a row, the habit is holding.</p>
           </div>
         </div>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">Month week phase pill</span><span class="spec mono">reversed fill · --phase-base/build/peak</span></div>
+        <div class="comp-stage">
+          <div class="pv-month-hd">
+            <span class="pv-month-label">Week 31</span>
+            <span class="pv-month-pill phase-peak">Peak</span>
+          </div>
+          <div class="pv-month-hd" style="margin-top:10px">
+            <span class="pv-month-label">Week 32</span>
+            <span class="pv-month-pill phase-build">Build 1</span>
+          </div>
+          <div class="pv-month-hd" style="margin-top:10px">
+            <span class="pv-month-label">Week 33</span>
+            <span class="pv-month-pill phase-base">Base / Taper</span>
+            <span class="pv-month-current">this week</span>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Sits inline next to the "Week N" label at the top of each Month-view week card, replacing what used to be one plain-text string ("Week 31 · Peak"). Pill shape, 999px radius, 3px/10px padding, DM Sans 11.5px weight 600, reversed out of the solid phase colour. The current week additionally gets a "this week" tag in DM Mono, matching the app's own <span class="mono">.month-week-pill</span> in <span class="mono">index.html</span>.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Well-done banner</span><span class="spec mono">--done-l fill · auto-fires on last check</span></div>
@@ -488,7 +523,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
           </nav>
         </div>
         <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Fixed to the viewport bottom in the shipped app, visible beneath every screen including the splash and the training-phase picker. Active tab in <span class="mono">#37C6FC</span> on a <span class="mono">rgba(255,255,255,.16)</span> fill. Tabs: Warm up, Check-in (default), This week, Strength — Month is reachable only via a link from This week's signal sections, not from the nav itself.</p>
-        <div class="flag"><span class="dot"></span>CLAUDE.md specifies a 64px, 4-column bottom nav — the shipped app ships 84px (<span class="mono">--tabbar-h</span>) and fills with a hardcoded #002DFF rather than the --blue token. Documented here as built.</div>
+        <div class="flag"><span class="dot"></span>style-guide.md specifies a 64px, 4-column bottom nav — the shipped app ships 84px (<span class="mono">--tabbar-h</span>) and fills with a hardcoded #002DFF rather than the --blue token. Documented here as built.</div>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Table</span><span class="spec mono">DM Mono headers · 1px row dividers</span></div>
@@ -536,7 +571,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
 
   <footer>
     <p class="eyebrow" style="margin-bottom:10px">Source of truth</p>
-    <p>Compiled directly from the project's <span class="mono">CLAUDE.md</span> — colour tokens, type scale, layout rules and component patterns are copied verbatim, not reinterpreted. If a value here and the CSS disagree, the CSS in <span class="mono">frontend/src/index.css</span> wins; update this guide to match, not the other way round.</p>
+    <p>Compiled directly from <a href="style-guide.md" class="mono">style-guide.md</a> — colour tokens, type scale, layout rules and component patterns are copied verbatim, not reinterpreted. If a value here and the shipped app disagree, <span class="mono">index.html</span>'s actual CSS wins; update <span class="mono">style-guide.md</span> (and then this guide) to match, not the other way round. The unused <span class="mono">frontend/src/index.css</span> scaffold is never the source of truth — it's what caused the type-scale documentation to drift wrong in the first place.</p>
     <div class="flag"><span class="dot"></span>Tri-momentum-log-v9.html's tab bar and primary button use a hardcoded #002DFF, not the --blue token above — flagged in the code review, not reproduced here as canonical.</div>
   </footer>
 
@@ -623,6 +658,14 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
   ];
   var discWrap = document.getElementById('sw-discipline');
   DISCIPLINES.forEach(function(d){ discWrap.appendChild(swatch(d[0], 'Mark colour', d[1], d[2], '#fff')); });
+
+  var PHASES = [
+    ['Base / Taper','--phase-base','#0F6E56'],
+    ['Build','--phase-build','#D9660B'],
+    ['Peak','--phase-peak','#993C1D']
+  ];
+  var phaseWrap = document.getElementById('sw-phase');
+  PHASES.forEach(function(p){ phaseWrap.appendChild(swatch(p[0], 'Week card pill', p[1], p[2], '#fff')); });
 
   var STATUS = [
     ['Done','--done','#0F6E56'],

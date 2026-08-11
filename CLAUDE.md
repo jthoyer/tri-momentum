@@ -73,7 +73,7 @@ Instead of a self-reported readiness score + grey-zone %, the app derives **rule
 This is a different mechanism from the target's `readiness`/`grey_zone_pct`/`vuln_session` self-report fields — it's inferred from logged data, not asked directly.
 
 ### Design system
-Shares the same CSS custom properties as documented below (discipline colours, DM Sans/DM Mono, card/radius conventions) — **this part of the doc is accurate for both current and target.**
+Shares the same CSS custom properties as documented in [style-guide.md](style-guide.md) (discipline colours, DM Sans/DM Mono, card/radius conventions) — **that file is accurate for both current and target.**
 
 ### PWA
 Manifest is inlined as a `data:` URI in the `<head>` (not a separate `public/manifest.json` + `sw.js` pair as the target architecture specifies).
@@ -102,6 +102,8 @@ Manifest is inlined as a `data:` URI in the `<head>` (not a separate `public/man
 ```
 tri-momentum/
 ├── CLAUDE.md                  ← this file
+├── style-guide.md              ← design system source of truth — colour tokens, type, layout, component patterns
+├── TRI-Momentum-Design-Guide.html  ← browsable visual rendering of style-guide.md
 ├── index.html                 ← ★ CURRENT LIVE APP (shell) — static, self-contained, deployed as-is via GH Pages
 ├── apps-script/
 │   └── Code.gs                ← Google Apps Script Web App — receives session POSTs, writes to the athlete's Sheet
@@ -146,69 +148,7 @@ tri-momentum/
 
 ## Design system — do not deviate
 
-The visual language is established and must be preserved exactly across all new components — **this applies to both the current app and any target-architecture work.** Never introduce Tailwind, Bootstrap, or component libraries that override these tokens.
-
-### Colour tokens (CSS custom properties)
-
-```css
---bg: #F7F8FC;
---s1: #FFFFFF;
---s3: #F0F2F8;
---s4: #E8EBF5;
-
---ink: #0E1020;
---ink2: #4B5278;
---ink3: #8B93B8;
-
---bd: rgba(14,16,32,0.08);
---bd2: rgba(14,16,32,0.14);
-
---blue: #0022FF;    --blue-l: #E8EFFE;   --blue-m: #4F7BE8;
-
-/* Discipline colours */
---swim: #0022FF;   --swim-l: #E8EFFE;
---bike: #0F6E56;   --bike-l: #E1F5EE;
---run:  #993C1D;   --run-l:  #FAECE7;
---brick: #534AB7;  --brick-l: #EEEDFE;
---strength: #854F0B; --strength-l: #FAEEDA;
---rest: #8B93B8;   --rest-l: #F0F2F8;
-
-/* Status colours */
---done: #0F6E56;     --done-l: #E1F5EE;
---skipped: #993C1D;  --skipped-l: #FAECE7;
---modified: #854F0B; --modified-l: #FAEEDA;
-
-/* Phase colours — own tokens, not reused from discipline colours */
---phase-base: #0F6E56;  --phase-base-l: #E1F5EE;   /* green */
---phase-build: #D9660B; --phase-build-l: #FFF1E0;  /* tangerine */
---phase-peak: #993C1D;  --phase-peak-l: #FAECE7;   /* red — shares --run's hex, but is its own token */
-```
-
-### Typography
-
-- **Body / UI:** DM Sans (400, 500, 600)
-- **Monospace / labels / badges:** DM Mono (400, 500)
-- **Page titles:** 23px, weight 600, letter-spacing -0.3px, line-height 1.25 (`h1` in `index.html`)
-- **Eyebrows / tags:** DM Mono, 14px, uppercase, letter-spacing 0.1em (`.eyebrow` in `index.html`)
-- **Body copy:** 13–15px, color `--ink2`, line-height 1.55–1.65
-
-### Layout
-
-- Max width: 430px, centred — never wider
-- Horizontal padding: 1.25rem (20px) throughout
-- Bottom nav: 64px fixed, 4-column grid
-- Page headers: sticky, white background, 0.5px border-bottom in `--bd`
-- Cards: white background, 0.5px border in `--bd2`, border-radius 16px
-- All scrollable areas: hide scrollbars, `-webkit-overflow-scrolling: touch`
-
-### Component patterns
-
-- **Primary CTA button:** full width, 14px padding, `--blue` background, DM Sans 17px weight 600
-- **Ghost button:** full width, transparent, `--bd2` border
-- **Status chips:** pill shape, 6px/14px padding, border-radius 20px
-- **Insight card:** `--blue` background, white text, italic body copy
-- **Prompt blocks:** `--blue-l` background, 3px left border in `--blue`, italic text
-- **Month week phase pill:** solid `--phase-{base,build,peak}` background, reversed light text in the matching `-l` tint, pill shape (999px radius), 3px/10px padding, DM Sans 11.5px weight 600 — sits inline next to the "Week N" label in each Month-view week card (`.month-week-pill` in `index.html`)
+Colour tokens, typography, layout rules, and component patterns now live in **[style-guide.md](style-guide.md)**, not here — that's the single source of truth for the visual language, applies to both the current app and any target-architecture work, and is what [TRI-Momentum-Design-Guide.html](TRI-Momentum-Design-Guide.html) is compiled from. Never introduce Tailwind, Bootstrap, or component libraries that override those tokens. This file (CLAUDE.md) keeps the product/architecture decisions and their "why" — see Key product decisions below for the design-relevant ones (16, 18, 20, 21).
 
 ---
 
@@ -593,7 +533,7 @@ PORT=3001
 13. **The target Supabase schema adopts the current app's check-in + computed-signals model, not the original reflection model.** `session_checkins` (mirroring `index.html`'s `log` array: `disc`, `duration`, `intensity`, `rpe`, `a1-a3`, `b2-b3`, `note`, `phase`) replaces the old `session_logs` + `week_reflections` tables. Signals (fuelling, intensity drift, compound-pair detection) stay computed at read time, not stored — matching how the current app already works. Freemium copy referencing "reflection persistence" or "readiness/grey zone" now means this model's equivalents. `calendar_sessions`/`week_cadences` are **dropped** — proactive day-of-week planning that neither the current app nor the adopted model implements; design fresh if it's ever actually wanted. **Still open:** whether the target UI adopts the current app's tabs (Strength/Check-in/This week/Month) or the original ones (Today/Week/Tips/Calendar) — see Session build order.
 14. **`TRI-swim-strength mobile app/` and `TRI-run-strength mobile app/` are core architecture, not an add-on.** They implement the Strength tab's Swim and Ride/Run sub-tabs (via `<iframe>` in `index.html`), ship in this repo, and deploy under the same GitHub Pages site as the main app. They're separate deployable units (their own `index.html`/`app.js`/`manifest.webmanifest`/`sw.js`) for build-isolation reasons, not because they're peripheral — any session touching the Strength tab should treat these two directories with the same weight as `index.html` itself.
 15. **The app opens on a splash screen, not straight into a tab.** `--blue` background, `favicon.png` logo, sub head, page-title-styled headline, base nav visible beneath it. No auto-advance — dismissed only by a nav tap. Tapping Check-in with no phase set routes to the training-phase picker first (see Training phase); every other tab still bypasses it, as before.
-16. **`--blue` is now the favicon's blue, `#0022FF` — not `#1650C8`.** Rebranded so the brand blue and the app-icon artwork are the same colour everywhere it's defined: `index.html`, this file, and the design guide. `--swim` (which has always shared `--blue`'s value) moved with it. `--blue-l`/`--blue-m` (tints) were left as-is — close enough in hue not to need re-deriving. Not touched: the base nav's hardcoded `#002DFF` and the PWA manifest's inline `theme_color` (`#002DFF`) — both pre-existing, separately-flagged discrepancies from `--blue`, unrelated to this change.
+16. **`--blue` is now the favicon's blue, `#0022FF` — not `#1650C8`.** Rebranded so the brand blue and the app-icon artwork are the same colour everywhere it's defined: `index.html`, `style-guide.md`, and `TRI-Momentum-Design-Guide.html`. `--swim` (which has always shared `--blue`'s value) moved with it. `--blue-l`/`--blue-m` (tints) were left as-is — close enough in hue not to need re-deriving. Not touched: the base nav's hardcoded `#002DFF` and the PWA manifest's inline `theme_color` (`#002DFF`) — both pre-existing, separately-flagged discrepancies from `--blue`, unrelated to this change.
 17. **Completion in Warm up and both Strength mini-apps is auto-detected only — there's no manual "mark complete" button anywhere anymore.** Checking the *last* exercise (or last round) off directly auto-fires a "Well done! [X] complete 🎉" banner immediately — mirroring TRI-run-strength's original `handleAllComplete()`, which TRI-swim-strength has now also gained (it previously had no auto-detect at all; its manual button was its only way to log a session, so the auto-detect logic was ported in *before* that button was removed, so it wasn't left with no way to complete). The banner increments an all-time completed-count (`localStorage`, device-local — not Sheet-synced), leaves the checklist checked rather than clearing it, logs exactly once per completion, and only its "Reset & go again" button or the always-visible header reset ("Reset warm-up" / "Reset session") clears it. Warm up's version is recoloured to the app's own `--done`/`--done-l` green and `--blue` button, matching the rest of `index.html`; both Strength apps keep their own existing yellow/green palette. **Consequence:** partial-completion logging (banking progress on a session you didn't finish) is no longer possible in any of the three — completion is all-or-nothing now.
 18. **The documented type scale was wrong and has been corrected to match the shipped CSS.** Page titles are **23px** (not 26px) and eyebrows are **14px** (not 9–10px) — both now read directly from `index.html`'s `h1`/`.eyebrow` rules rather than the unused `frontend/src/index.css` scaffold they'd drifted to match instead. The splash headline (decision 15) was built against the old, wrong 26px figure and has been corrected to 23px/line-height 1.25 along with it.
 19. **Check-in shows and lets you change the current phase, not just the once-ever picker.** A returning user who already has a phase saved skips straight into Check-in (see Training phase above) — with no way to see or change it without leaving to the dashboard first. The flow header now shows the current phase label plus a "Change phase" link on every question and on the review screen (hidden on the post-save screen, where the eyebrow already shows the phase). Tapping it opens the same one-time picker and returns straight back to the question you were on.
