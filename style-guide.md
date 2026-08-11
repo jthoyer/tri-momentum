@@ -17,7 +17,7 @@
 
 --ink: #0E1020;
 --ink2: #4B5278;
---ink3: #8B93B8;
+--ink3: #626B8C; /* darkened from #8B93B8 — the original failed WCAG AA (3.02:1 on white); this clears 4.5:1 on --s1/--bg/--blue-l */
 
 --bd: rgba(14,16,32,0.08);
 --bd2: rgba(14,16,32,0.14);
@@ -45,10 +45,9 @@
 
 ## Typography
 
-- **Body / UI:** DM Sans (400, 500, 600)
-- **Monospace / labels / badges:** DM Mono (400, 500)
+- **One family, Outfit (400, 500, 600), for everything** — replaced the earlier two-family DM Sans (body/display) + DM Mono (labels) system. With a single typeface, the "sentence a human reads" vs. "the interface talking about itself" distinction is carried by weight/case/letter-spacing, not a family switch: body and titles stay sentence case at normal tracking; labels/eyebrows/badges go uppercase with wide tracking. `--fd`, `--fb`, and `--fm` in `index.html` all point to Outfit now — the three token names stay (still useful for "what role is this text playing"), only the value changed.
 - **Page titles:** 23px, weight 600, letter-spacing -0.3px, line-height 1.25 (`h1` in `index.html`)
-- **Eyebrows / tags:** DM Mono, 14px, uppercase, letter-spacing 0.1em (`.eyebrow` in `index.html`)
+- **Eyebrows / tags / "mono" labels:** Outfit, 14px, uppercase, letter-spacing 0.1em (`.eyebrow` in `index.html`) — still called "mono" by convention/class-name (`.race-month-label`, etc.) even though it's no longer a literal monospace typeface
 - **Body copy:** 13–15px, color `--ink2`, line-height 1.55–1.65
 
 ## Layout
@@ -62,13 +61,22 @@
 
 ## Component patterns
 
-- **Primary CTA button:** full width, 14px padding, `--blue` background, DM Sans 17px weight 600
-- **Ghost button:** full width, transparent, `--bd2` border
+- **Primary CTA button:** full width, 14px padding, `--blue` background, Outfit 17px weight 600
+- **Ghost button:** full width, transparent, `--bd2` border. Transparent only reads as a real button on a **white (`--s1`) surface** — the flow footer, cards, etc. On the page background (`--bg`, a near-white grey), transparent blends in and looks disabled/unpressable; use a solid `--s1` fill with the `--bd2` border there instead (see Add a race toggle below)
 - **Status chips:** pill shape, 6px/14px padding, border-radius 20px
 - **Insight card:** `--blue` background, white text, italic body copy
 - **Prompt blocks:** `--blue-l` background, 3px left border in `--blue`, italic text
-- **Month week phase pill:** solid `--phase-{base,build,peak}` background, reversed light text in the matching `-l` tint, pill shape (999px radius), 3px/10px padding, DM Sans 11.5px weight 600 — sits inline next to the "Week N" label in each Month-view week card (`.month-week-pill` in `index.html`)
-- **Splash countdown card:** on the splash's `--blue` background, a translucent white card (`rgba(255,255,255,.12)` fill, `rgba(255,255,255,.22)` 1px border, `--rlg` radius) below the headline — DM Mono eyebrow ("Next race"), DM Sans 15px/600 race name, DM Sans 22px/600 countdown line. Hidden entirely when there's no upcoming race, rather than showing an empty state (`.splash-countdown` in `index.html`)
-- **Race card:** white card, `--bd2` border, `--rlg` radius, matching `.floor-card`/`.week-row` conventions — DM Mono date + countdown on one line, DM Sans 16px/600 race name, a commitment pill (see below), optional notes and "Race website" link, "Remove" text action. The nearest upcoming race gets `--blue`/`--blue-l` emphasis (`.race-card.is-next` in `index.html`)
-- **Commitment pill:** solid-fill pill (999px radius, 3px/10px padding, DM Sans 11.5px weight 600) reading "Considering" (`--modified`/`--modified-l`, amber) or "Locked in" (`--done`/`--done-l`, green) — same reversed-fill convention as the Month week phase pill. Set via a two-option `.choices.grid2` toggle on the Add a race form (defaults to "Considering"), shown on every race card (`.race-status-pill` in `index.html`)
+- **Month week phase pill:** solid `--phase-{base,build,peak}` background, reversed light text in the matching `-l` tint, pill shape (999px radius), 3px/10px padding, Outfit 11.5px weight 600 — sits inline next to the "Week N" label in each Month-view week card (`.month-week-pill` in `index.html`)
+- **Splash countdown card:** on the splash's `--blue` background, a translucent white card (`rgba(255,255,255,.12)` fill, `rgba(255,255,255,.22)` 1px border, `--rlg` radius) below the headline — Outfit eyebrow ("Next race"), Outfit 15px/600 race name, Outfit 22px/600 countdown line. Hidden entirely when there's no upcoming race, rather than showing an empty state (`.splash-countdown` in `index.html`)
+- **Race card:** native `<details>` disclosure, white, `--rlg` radius, **soft two-layer shadow instead of a flat border** (`0 1px 2px rgba(14,16,32,.04), 0 10px 24px -10px rgba(14,16,32,.16)`) — the "lifted card" treatment borrowed from the Strength apps' exercise rows, recoloured to this app's `--ink` rather than reusing their palette. 18px/16px padding. Collapsed by default. The `<summary>` (always visible, even collapsed) holds Outfit date + countdown on one line, then 10px down the race name with a rotating chevron, then 12px down the commitment pill; notes sit 10px below the (12px-separated) expanded body, the "Race website" section label 16px below that, its link 6px under the label, and the Remove row 16px below everything — generous internal spacing throughout, not the tight 2–8px gaps of the first pass. The nearest upcoming race gets a `--blue`-tinted shadow plus `--blue-l` fill (`.race-card.is-next` in `index.html`) — same idea as the Strength apps' checked/active row states, recoloured
+- **Card section label:** Outfit, 10.5px, uppercase, 0.08em letter-spacing, `--ink3` — e.g. "RACE WEBSITE" — labels a distinct field inside an expanded race card, echoing the labelled-section pattern from the club calendar reference app's expanded race view. The link beneath it shows the full URL exactly as stored, not a generic "Race website" label (`.race-card-section-label` in `index.html`)
+- **Section header with count pill:** Outfit eyebrow ("Upcoming") on the left, a `--s3`-fill count pill ("4 races") on the right — the Races tab's own header for its Upcoming/Past lists, echoing the Strength apps' phase-card header (eyebrow + trailing status pill). Deliberately its own class (`.race-section`/`.race-section-hd`), not a reuse of the shared `.dash-section` (which stays plain-eyebrow-only for This week/Month) — a change there would have cascaded to every other signal section in the app
+- **Month group label:** Outfit, 12px, uppercase, 0.08em letter-spacing, `--ink3` — e.g. "Sep 2026" — sits above each run of same-month race cards on the Races tab, grouping the Upcoming/Past lists the way the athlete's club calendar reference app groups by month (`.race-month-label` in `index.html`)
+- **Form field label:** Outfit 13.5px weight 600, `margin-bottom:12px` before its input/textarea (double the original 6px — cramped otherwise) — applies to every field on the Add a race form, including the Commitment toggle's label, which is a `<span>` rather than a `<label>` (it labels a radio group, not one control) but shares the exact same `.field-lbl` class and styling (`.race-field .field-lbl` in `index.html`)
+- **Add a race toggle:** full-width pill button, `--blue` fill/white text when closed ("Add a race" — no "+", plain label reads clearly enough on its own), flips to a **solid white** pill (`--s1` fill, `--bd2` border, "Cancel") when open — not transparent. A transparent fill on the page's `--bg` background read as a disabled/unpressable button; white + border reads as a real secondary button. Sits above the (collapsed-by-default) add-race form on the Races tab; the form auto-collapses back behind the button after a successful add. Mirrors the toggle-a-hidden-form pattern from the athlete's club calendar reference app's "Add a race +" button, minus its own "+" (`.race-add-toggle` in `index.html`)
+- **Commitment pill:** solid-fill pill (999px radius, 3px/10px padding, Outfit 11.5px weight 600) reading "Considering" (`--modified`/`--modified-l`, amber) or "Locked in" (`--done`/`--done-l`, green) — same reversed-fill convention as the Month week phase pill. Set via a two-option `.choices.grid2` toggle on the Add a race form (defaults to "Considering"), shown on every race card (`.race-status-pill` in `index.html`)
 - **Text input:** same shape as `.date-input` (1px `--bd2` border, `--rmd` radius, 52px min-height) but full width — used for race name/website fields (`.text-input` in `index.html`). Never use `type="url"` for a free-text website field — its native constraint validation requires a full `https://` scheme and silently blocks form submission on a bare domain like `ironman.com/geelong`; use `type="text"` and prefix the scheme at render time instead
+
+## Accessibility
+
+- **Text colour must clear WCAG AA contrast — 4.5:1 for normal text, 3:1 for large text (18px+/14px bold+) and UI components/icons** — check any new colour against its actual background before shipping, not just against `--bg`/white in isolation. `--ink3` was originally `#8B93B8` (3.02:1 on white, 2.84:1 on `--bg`) — it read fine to the eye but failed AA everywhere it was used: `.eyebrow`, `.dash-eyebrow`, dates, hints, placeholders. Darkened to `#626B8C` (5.25:1 on white, 4.95:1 on `--bg`, 4.55:1 on `--blue-l`) — a token-level fix, not a per-component override, so every screen using "tertiary grey" got fixed at once rather than leaving some places compliant and others not. `--ink2` (7.56:1) and `--ink` (18.86:1) were already comfortably compliant and weren't touched.

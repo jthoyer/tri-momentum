@@ -9,12 +9,12 @@
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22TRI%20Momentum%22%2C%22short_name%22%3A%22TRI%22%2C%22display%22%3A%22standalone%22%2C%22start_url%22%3A%22.%22%2C%22theme_color%22%3A%22%23002DFF%22%2C%22background_color%22%3A%22%23F7F8FC%22%7D">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme: only light;
   --bg:#F7F8FC;--s1:#FFFFFF;--s3:#F0F2F8;--s4:#E8EBF5;
-  --ink:#0E1020;--ink2:#4B5278;--ink3:#8B93B8;
+  --ink:#0E1020;--ink2:#4B5278;--ink3:#626B8C;
   --bd:rgba(14,16,32,0.08);--bd2:rgba(14,16,32,0.14);--bd3:rgba(14,16,32,0.25);
   --blue:#0022FF;--blue-l:#E8EFFE;--blue-m:#4F7BE8;
   --swim:#0022FF;--swim-l:#E8EFFE;
@@ -31,7 +31,7 @@
   --modified:#854F0B;--modified-l:#FAEEDA;
   --dash-good:#0E9A5C;--dash-mid:#E0A100;--dash-bad:#C81E1E;
   --rmd:10px;--rlg:16px;--rxl:22px;--tabbar-h:84px;--tabbar-lift:0px;
-  --fd:'DM Sans',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
+  --fd:'Outfit',sans-serif;--fb:'Outfit',sans-serif;--fm:'Outfit',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-tap-highlight-color:transparent}
@@ -133,7 +133,6 @@ textarea::placeholder{color:var(--ink3)}
 .splash{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--blue)}
 .splash[hidden]{display:none}
 .splash-logo{width:192px;height:192px;border-radius:var(--rxl)}
-.splash-sub{margin-top:10px;font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
 .splash-headline{margin-top:36px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
 .splash-headline:focus,.splash-headline:focus-visible{outline:none}
 .splash-countdown{margin-top:28px;padding:14px 18px;max-width:300px;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
@@ -215,26 +214,52 @@ textarea::placeholder{color:var(--ink3)}
 /* ── Race calendar ── */
 .text-input{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1)}
 .text-input::placeholder{color:var(--ink3)}
+.race-add-toggle{width:100%;min-height:52px;margin-top:1.1rem;padding:14px;border-radius:999px;border:1px solid transparent;background:var(--blue);color:#fff;font-family:var(--fd);font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.race-add-toggle:hover{background:#1246ad}
+/* A transparent fill here read as a disabled/unpressable button — the page
+   background (--bg) is almost the same tone as transparent-on-page, so
+   there was nothing to signal "this is a button." Solid white + border
+   reads as a real, tappable secondary button instead. */
+.race-add-toggle.is-open{background:var(--s1);color:var(--ink);border-color:var(--bd2)}
+.race-add-toggle.is-open:hover{background:var(--s3)}
+.race-form-wrap[hidden]{display:none}
 .race-form{margin-top:1.1rem;padding:1rem 1.05rem 1.1rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);display:flex;flex-direction:column;gap:14px}
-.race-field label.field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:6px}
+.race-field .field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:12px}
 .race-field .sub{font-weight:400;font-size:12.5px;color:var(--ink2)}
 .race-field textarea{min-height:48px}
 .race-form .btn-primary{margin-top:2px;border-radius:999px}
-.race-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}
-.race-card{padding:14px 15px;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
-.race-card.is-next{border-color:var(--blue);background:var(--blue-l)}
+.race-section{margin-top:2.3rem;padding-top:1.1rem;border-top:1px solid var(--bd)}
+.race-section-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.race-section-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+.race-section-count{flex:none;padding:3px 10px;border-radius:999px;background:var(--s3);color:var(--ink2);font-family:var(--fd);font-size:12.5px;font-weight:600}
+.race-month-label{margin-top:1.3rem;font-family:var(--fm);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.race-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:.7rem}
+/* Soft two-layer shadow instead of a flat border — same "lifted card"
+   treatment as the Strength apps' exercise rows, recoloured from their ink
+   (24,37,66) to ours (14,16,32) rather than reusing their palette. */
+.race-card{padding:18px 16px;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);transition:background .2s ease,box-shadow .2s ease}
+.race-card.is-next{background:var(--blue-l);box-shadow:0 0 0 1.5px var(--blue),0 10px 24px -10px rgba(0,34,255,.22)}
+.race-card summary{cursor:pointer;list-style:none}
+.race-card summary::-webkit-details-marker{display:none}
+.race-card summary::marker{display:none}
 .race-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .race-card-date{font-family:var(--fm);font-size:12.5px;color:var(--ink3)}
 .race-card.is-next .race-card-date{color:var(--blue)}
 .race-card-countdown{font-family:var(--fm);font-size:12.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
 .race-card.is-next .race-card-countdown{color:var(--blue);font-weight:600}
-.race-card-name{margin-top:5px;font-family:var(--fd);font-size:16px;font-weight:600;color:var(--ink);line-height:1.35}
-.race-status-pill{display:inline-flex;align-items:center;margin-top:8px;padding:3px 10px;border-radius:999px;font-family:var(--fd);font-size:11.5px;font-weight:600}
+.race-card-name-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:10px}
+.race-card-name{font-family:var(--fd);font-size:16px;font-weight:600;color:var(--ink);line-height:1.35}
+.race-card-chevron{flex:none;width:16px;height:16px;color:var(--ink3);transition:transform .15s ease}
+.race-card[open] .race-card-chevron{transform:rotate(180deg)}
+.race-status-pill{display:inline-flex;align-items:center;margin-top:12px;padding:3px 10px;border-radius:999px;font-family:var(--fd);font-size:11.5px;font-weight:600}
 .race-status-pill.locked{background:var(--done);color:var(--done-l)}
 .race-status-pill.considering{background:var(--modified);color:var(--modified-l)}
-.race-card-notes{margin-top:6px;font-size:13.5px;color:var(--ink2);line-height:1.5}
-.race-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
-.race-card-link{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-decoration:none}
+.race-card-body{margin-top:12px}
+.race-card-notes{margin-top:10px;font-size:13.5px;color:var(--ink2);line-height:1.5}
+.race-card-section-label{margin-top:16px;font-family:var(--fm);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.race-card-website{margin-top:6px}
+.race-card-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:16px}
+.race-card-link{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--blue);text-decoration:none;word-break:break-word}
 .race-card-link:hover{color:var(--blue-m)}
 .race-card-delete{margin-left:auto;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
 .race-card-delete:hover{color:var(--run)}
@@ -291,8 +316,7 @@ textarea::placeholder{color:var(--ink3)}
   <!-- ══════════ SPLASH — dismissed by tapping any nav tab, never auto-advances ══════════ -->
   <section class="splash" id="view-splash" aria-labelledby="splash-h">
     <img class="splash-logo" src="favicon.png" alt="TRI Momentum" width="192" height="192">
-    <p class="splash-sub">Helping triathletes progress</p>
-    <h1 class="splash-headline" id="splash-h" tabindex="-1">Mobility, intensity, fuelling, strength</h1>
+    <h1 class="splash-headline" id="splash-h" tabindex="-1">Helping you prepare for your next race</h1>
     <div class="splash-countdown" id="splash-countdown" hidden>
       <p class="splash-countdown-eyebrow">Next race</p>
       <p class="splash-countdown-race" id="splash-countdown-race"></p>
@@ -1386,6 +1410,7 @@ if(window.caches && caches.keys){
     races.push(race);
     persistRaces();
     submitRaceToSheet('add', race);
+    raceFormOpen = false;
     renderRaces();
     renderSplashCountdown();
     say('Race added: ' + race.name + '.');
@@ -1404,11 +1429,13 @@ if(window.caches && caches.keys){
     var lbl = el('label', 'field-lbl');
     lbl.appendChild(document.createTextNode(labelText + ' '));
     if(subText){ lbl.appendChild(el('span', 'sub', subText)); }
-    lbl.appendChild(document.createElement('br'));
     inputEl.id = inputEl.id || ('race-' + labelText.toLowerCase().replace(/[^a-z]+/g, '-'));
     lbl.htmlFor = inputEl.id;
-    lbl.appendChild(inputEl);
+    // Label and input are siblings, not nested, so the label's
+    // margin-bottom creates real space above the input instead of relying
+    // on a <br> (which most browsers don't apply vertical margin around).
     wrap.appendChild(lbl);
+    wrap.appendChild(inputEl);
     return wrap;
   }
   function renderRaceForm(root){
@@ -1479,26 +1506,54 @@ if(window.caches && caches.keys){
 
     root.appendChild(form);
   }
+  // A native <details> disclosure — collapsed by default, so the list stays
+  // scannable. The date/countdown/name/pill header (inside <summary>) is
+  // always visible even collapsed, so "how far out is this race" never
+  // needs an extra tap; only notes, the website, and remove are tucked
+  // behind the expand.
   function raceCard(race, isNext){
-    var card = el('div', 'race-card' + (isNext ? ' is-next' : ''));
+    var card = document.createElement('details');
+    card.className = 'race-card' + (isNext ? ' is-next' : '');
+    var summary = document.createElement('summary');
     var top = el('div', 'race-card-top');
     top.appendChild(el('span', 'race-card-date', formatRaceDateLabel(race.date)));
     var days = daysUntil(race.date);
     if(days >= 0){ top.appendChild(el('span', 'race-card-countdown', raceCountdownLabel(days))); }
-    card.appendChild(top);
-    card.appendChild(el('div', 'race-card-name', race.name));
+    summary.appendChild(top);
+    var nameRow = el('div', 'race-card-name-row');
+    nameRow.appendChild(el('span', 'race-card-name', race.name));
+    var chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    chevron.setAttribute('class', 'race-card-chevron');
+    chevron.setAttribute('viewBox', '0 0 24 24');
+    chevron.setAttribute('fill', 'none');
+    chevron.setAttribute('stroke', 'currentColor');
+    chevron.setAttribute('stroke-width', '2');
+    chevron.setAttribute('stroke-linecap', 'round');
+    chevron.setAttribute('stroke-linejoin', 'round');
+    chevron.setAttribute('aria-hidden', 'true');
+    var chevronPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    chevronPath.setAttribute('d', 'M6 9l6 6 6-6');
+    chevron.appendChild(chevronPath);
+    nameRow.appendChild(chevron);
+    summary.appendChild(nameRow);
     var statusCls = race.status === 'locked' ? 'locked' : 'considering';
-    card.appendChild(el('span', 'race-status-pill ' + statusCls, RACE_STATUS_LABEL[statusCls]));
-    if(race.notes){ card.appendChild(el('p', 'race-card-notes', race.notes)); }
-    var foot = el('div', 'race-card-foot');
+    summary.appendChild(el('span', 'race-status-pill ' + statusCls, RACE_STATUS_LABEL[statusCls]));
+    card.appendChild(summary);
+
+    var body = el('div', 'race-card-body');
+    if(race.notes){ body.appendChild(el('p', 'race-card-notes', race.notes)); }
     if(race.url){
+      var website = el('div', 'race-card-website');
+      website.appendChild(el('p', 'race-card-section-label', 'Race website'));
       var link = document.createElement('a');
       link.className = 'race-card-link';
       link.href = /^https?:\/\//i.test(race.url) ? race.url : 'https://' + race.url;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
-      link.textContent = 'Race website';
-      foot.appendChild(link);
+      link.textContent = race.url;
+      website.appendChild(link);
+      body.appendChild(website);
     }
+    var foot = el('div', 'race-card-foot');
     var del = el('button', 'race-card-delete', 'Remove');
     del.type = 'button';
     del.setAttribute('aria-label', 'Remove ' + race.name + ' from the race calendar');
@@ -1506,26 +1561,64 @@ if(window.caches && caches.keys){
       if(window.confirm('Remove ' + race.name + ' from your race calendar?')){ deleteRace(race.id); }
     });
     foot.appendChild(del);
-    card.appendChild(foot);
+    body.appendChild(foot);
+    card.appendChild(body);
     return card;
   }
+  // Consecutive races sharing a month/year become one group — list is
+  // already date-sorted (ascending for upcoming, descending for past), so
+  // a same-key check against the previous race is enough, and groups come
+  // out in the right order for either direction.
+  function groupRacesByMonth(list){
+    var groups = [];
+    var lastKey = null;
+    list.forEach(function(race){
+      var d = new Date(race.date + 'T00:00:00');
+      var key = d.getFullYear() + '-' + d.getMonth();
+      if(key !== lastKey){
+        groups.push({label: MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear(), races: []});
+        lastKey = key;
+      }
+      groups[groups.length - 1].races.push(race);
+    });
+    return groups;
+  }
+  // Eyebrow + right-aligned count pill, echoing the Strength apps'
+  // phase-card header (eyebrow + pill badge) rather than the plain
+  // ::before label the rest of the app's .dash-section uses — races get
+  // their own wrapper class so this doesn't bleed into This week/Month.
   function raceListSection(label, list, opts){
-    var wrap = el('div', 'dash-section');
-    wrap.setAttribute('data-label', label);
+    var wrap = el('div', 'race-section');
+    var hd = el('div', 'race-section-hd');
+    hd.appendChild(el('span', 'race-section-eyebrow', label));
+    if(list.length){
+      hd.appendChild(el('span', 'race-section-count', list.length + (list.length === 1 ? ' race' : ' races')));
+    }
+    wrap.appendChild(hd);
     if(!list.length){
       wrap.appendChild(el('p', 'empty-note', opts.emptyText));
       return wrap;
     }
-    var ul = el('ul', 'race-list');
-    ul.setAttribute('aria-label', label);
-    list.forEach(function(race, i){
-      var li = document.createElement('li');
-      li.appendChild(raceCard(race, !!opts.markFirstAsNext && i === 0));
-      ul.appendChild(li);
+    var globalIndex = 0;
+    groupRacesByMonth(list).forEach(function(group){
+      wrap.appendChild(el('p', 'race-month-label', group.label));
+      var ul = el('ul', 'race-list');
+      ul.setAttribute('aria-label', label + ' — ' + group.label);
+      group.races.forEach(function(race){
+        var li = document.createElement('li');
+        li.appendChild(raceCard(race, !!opts.markFirstAsNext && globalIndex === 0));
+        ul.appendChild(li);
+        globalIndex++;
+      });
+      wrap.appendChild(ul);
     });
-    wrap.appendChild(ul);
     return wrap;
   }
+  // Whether the Add a race form is open — module state rather than derived
+  // from the DOM, since renderRaces() fully rebuilds the view (including on
+  // a background Sheet refresh) and a mid-fill-in form shouldn't silently
+  // snap shut because of that.
+  var raceFormOpen = false;
   function renderRaces(){
     var root = els.viewRaces;
     clear(root);
@@ -1533,7 +1626,35 @@ if(window.caches && caches.keys){
     h.id = 'races-h'; h.tabIndex = -1;
     root.appendChild(h);
     root.appendChild(el('p', 'hint', 'Add a race and see how many weeks out it is. Synced to your training log Sheet, so it shows on every device.'));
-    renderRaceForm(root);
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'race-add-toggle' + (raceFormOpen ? ' is-open' : '');
+    toggleBtn.setAttribute('aria-expanded', String(raceFormOpen));
+    toggleBtn.setAttribute('aria-controls', 'race-form-wrap');
+    toggleBtn.appendChild(document.createTextNode(raceFormOpen ? 'Cancel' : 'Add a race'));
+    root.appendChild(toggleBtn);
+
+    var formWrap = el('div', 'race-form-wrap');
+    formWrap.id = 'race-form-wrap';
+    formWrap.hidden = !raceFormOpen;
+    renderRaceForm(formWrap);
+    root.appendChild(formWrap);
+
+    toggleBtn.addEventListener('click', function(){
+      raceFormOpen = !raceFormOpen;
+      renderRaces();
+      // renderRaces() just rebuilt the whole view, so toggleBtn above is now
+      // a detached node — re-find the live one for focus.
+      if(raceFormOpen){
+        var nameInput = document.getElementById('race-name');
+        if(nameInput){ nameInput.focus(); }
+      } else {
+        var freshBtn = root.querySelector('.race-add-toggle');
+        if(freshBtn){ freshBtn.focus(); }
+      }
+    });
+
     root.appendChild(raceListSection('Upcoming', upcomingRaces(), {
       emptyText: 'No upcoming races yet — add one above.', markFirstAsNext: true
     }));
