@@ -352,7 +352,7 @@ textarea::placeholder{color:var(--ink3)}
     </button>
     <button type="button" class="view-tab" id="tab-dash" role="tab" aria-selected="false" aria-controls="view-dashboard">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
-      <span>This week</span>
+      <span>Review</span>
     </button>
     <button type="button" class="view-tab" id="tab-races" role="tab" aria-selected="false" aria-controls="view-races">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h13l-3 4 3 4H5"></path></svg>
@@ -1372,7 +1372,7 @@ if(window.caches && caches.keys){
   function renderDashboard(){
     var root = els.viewDash;
     clear(root);
-    var h = el('h1', 'dash-eyebrow', 'This week');
+    var h = el('h1', 'dash-eyebrow', 'Review');
     h.id = 'dash-h'; h.tabIndex = -1;
     root.appendChild(h);
     root.appendChild(dashPhaseSection());
