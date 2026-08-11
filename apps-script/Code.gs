@@ -26,10 +26,24 @@
  *   - doPost(e): appends one row per logged session. Creates the header
  *     row automatically on the very first write if the sheet is still
  *     empty, using the exact column order/names the app's read path
- *     (parseTrainingLogRows in Tri-momentum-log-v9.html) expects.
+ *     (parseTrainingLogRows in Tri-momentum-log-v9.html) expects. A body
+ *     with `kind: 'race'` is routed to the race calendar instead (see
+ *     "Race calendar" below) — everything else is treated as a session.
  *   - doGet(e): a plain health-check page, so you (and the app, in a
  *     pinch) can confirm the endpoint is reachable without POSTing
- *     anything. Also handles the Strava OAuth redirect (see below).
+ *     anything. Also handles the Strava OAuth redirect (see below), and
+ *     `?races=1` to list the race calendar.
+ *
+ * ---------------------------------------------------------------------
+ * Race calendar: a second sheet tab named "Races" (created automatically
+ * on first use), independent of the session-log sheet. The app's Race
+ * calendar tab reads it via `?races=1` and writes to it via POST bodies
+ * shaped `{ kind: 'race', action: 'add'|'delete', race: {...} }`. The
+ * race `id` is generated client-side (index.html) rather than by the
+ * script, so a fire-and-forget no-cors write (same pattern as session
+ * logging) can still be deleted later without needing to read a response
+ * body back. See handleRacePost_ / listRaces_ below.
+ * ---------------------------------------------------------------------
  *
  * Redeploying after edits: Deploy -> Manage deployments -> pencil icon ->
  * "New version" -> Deploy. Editing the code alone does NOT update the live
@@ -131,6 +145,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.list === '1') {
     return listSessions_();
   }
+  if (e && e.parameter && e.parameter.races === '1') {
+    return listRaces_();
+  }
   return ContentService
     .createTextOutput('TRI Momentum training log endpoint is live.')
     .setMimeType(ContentService.MimeType.TEXT);
@@ -183,44 +200,136 @@ function formatWhen_(v) {
 function doPost(e) {
   var result = { ok: false };
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    ensureHeaders_(sheet);
-
     var body = JSON.parse(e.postData.contents);
-
-    // Order must match SHEET_HEADERS exactly — this is the one place that
-    // encodes the column layout the read side (parseTrainingLogRows) relies
-    // on by header name, not position, so a re-order here is harmless to
-    // the reader as long as the header row and the values stay in the same
-    // order as each other. The trailing blanks are the Strava columns —
-    // syncStravaActivities fills those in later, on a separate write.
-    var row = [
-      body.when ? isoWeekNumber_(body.when) : '',
-      body.when || '',
-      body.disc || '',
-      body.duration != null ? body.duration : '',
-      body.intensity || '',
-      body.rpe != null ? body.rpe : '',
-      body.a1 || '',
-      body.a2 || '',
-      body.a3 || '',
-      body.b2 || '',
-      body.b3 || '',
-      body.note || '',
-      body.phase || '',
-      '', '', '', '', '', '', ''
-    ];
-
-    sheet.appendRow(row);
-    result.ok = true;
-    result.row = sheet.getLastRow();
+    result = body.kind === 'race' ? handleRacePost_(body) : handleSessionPost_(body);
   } catch (err) {
-    result.error = String(err);
+    result = { ok: false, error: String(err) };
   }
 
   return ContentService
     .createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleSessionPost_(body) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  ensureHeaders_(sheet);
+
+  // Order must match SHEET_HEADERS exactly — this is the one place that
+  // encodes the column layout the read side (parseTrainingLogRows) relies
+  // on by header name, not position, so a re-order here is harmless to
+  // the reader as long as the header row and the values stay in the same
+  // order as each other. The trailing blanks are the Strava columns —
+  // syncStravaActivities fills those in later, on a separate write.
+  var row = [
+    body.when ? isoWeekNumber_(body.when) : '',
+    body.when || '',
+    body.disc || '',
+    body.duration != null ? body.duration : '',
+    body.intensity || '',
+    body.rpe != null ? body.rpe : '',
+    body.a1 || '',
+    body.a2 || '',
+    body.a3 || '',
+    body.b2 || '',
+    body.b3 || '',
+    body.note || '',
+    body.phase || '',
+    '', '', '', '', '', '', ''
+  ];
+
+  sheet.appendRow(row);
+  return { ok: true, row: sheet.getLastRow() };
+}
+
+/* ============================= Race calendar ============================= */
+
+var RACE_SHEET_NAME = 'Races';
+// Status is 'considering' | 'locked' — the commitment level set on the Add
+// a race form, shown as a pill on each race card. Appended after the
+// original columns (not inserted after Date) so a sheet created before
+// this field existed backfills cleanly via the trailing-column check below,
+// same pattern as ensureHeaders_ does for the session sheet's Strava columns.
+var RACE_HEADERS = ['ID', 'Name', 'Date', 'Url', 'Notes', 'CreatedAt', 'Status'];
+
+function getRacesSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(RACE_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(RACE_SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(RACE_HEADERS);
+  } else {
+    var existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (existing.length < RACE_HEADERS.length) {
+      sheet.getRange(1, existing.length + 1, 1, RACE_HEADERS.length - existing.length)
+        .setValues([RACE_HEADERS.slice(existing.length)]);
+    }
+  }
+  return sheet;
+}
+
+// Read path for the Race calendar tab — mirrors listSessions_ in shape
+// (an { ok, races } JSON envelope) so the app's fetch/parse handling can
+// follow the same pattern as the session log.
+function listRaces_() {
+  var sheet = getRacesSheet_();
+  var lastRow = sheet.getLastRow();
+  var races = [];
+  if (lastRow > 1) {
+    var values = sheet.getRange(2, 1, lastRow - 1, RACE_HEADERS.length).getValues();
+    for (var i = 0; i < values.length; i++) {
+      var r = values[i];
+      if (!r[0]) { continue; }
+      races.push({
+        id: String(r[0]),
+        name: r[1] || '',
+        date: formatWhen_(r[2]),
+        url: r[3] || '',
+        notes: r[4] || '',
+        status: r[6] || 'considering'
+      });
+    }
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, races: races }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// action: 'add' | 'delete'. The race id is generated client-side (see
+// index.html) so a delete can target a row without ever having read an
+// id back from a (opaque, no-cors) add response.
+function handleRacePost_(body) {
+  var sheet = getRacesSheet_();
+  var action = body.action;
+  var race = body.race || {};
+
+  if (action === 'add') {
+    if (!race.id || !race.name || !race.date) {
+      return { ok: false, error: 'race add requires id, name, date' };
+    }
+    sheet.appendRow([race.id, race.name, race.date, race.url || '', race.notes || '', new Date(), race.status || 'considering']);
+    return { ok: true };
+  }
+
+  if (action === 'delete') {
+    var row = findRaceRow_(sheet, race.id);
+    if (row) { sheet.deleteRow(row); }
+    return { ok: true };
+  }
+
+  return { ok: false, error: 'unknown race action: ' + action };
+}
+
+function findRaceRow_(sheet, id) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return null; }
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(id)) { return i + 2; }
+  }
+  return null;
 }
 
 // Creates the header row on a blank sheet, or appends any headers a sheet

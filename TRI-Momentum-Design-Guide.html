@@ -215,6 +215,21 @@ section.doc:last-of-type{border-bottom:none}
 .pv-splash-logo{width:192px; height:192px; border-radius:22px}
 .pv-splash-sub{margin-top:10px; font-family:'DM Mono',monospace; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.7)}
 .pv-splash-headline{margin-top:36px; max-width:280px; font-family:'DM Sans',sans-serif; font-size:23px; font-weight:600; letter-spacing:-.3px; line-height:1.25; color:#fff}
+.pv-splash-countdown{margin-top:28px; max-width:280px; padding:14px 18px; border-radius:16px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22)}
+.pv-splash-countdown-eyebrow{font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.7)}
+.pv-splash-countdown-race{margin-top:4px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; color:#fff}
+.pv-splash-countdown-time{margin-top:2px; font-family:'DM Sans',sans-serif; font-size:22px; font-weight:600; letter-spacing:-.3px; color:#fff}
+
+.pv-race-card{padding:14px 15px; background:var(--s1); border:0.5px solid var(--bd2); border-radius:16px; max-width:400px; margin:0 auto}
+.pv-race-card.is-next{border-color:var(--blue); background:var(--blue-l)}
+.pv-race-top{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+.pv-race-date{font-family:'DM Mono',monospace; font-size:12.5px; color:var(--ink3)}
+.pv-race-card.is-next .pv-race-date{color:var(--blue)}
+.pv-race-countdown{font-family:'DM Mono',monospace; font-size:12.5px; font-weight:600; color:var(--blue)}
+.pv-race-name{margin-top:5px; font-family:'DM Sans',sans-serif; font-size:16px; font-weight:600; color:var(--ink)}
+.pv-race-status{display:inline-flex; align-items:center; margin-top:8px; padding:3px 10px; border-radius:999px; font-family:'DM Sans',sans-serif; font-size:11.5px; font-weight:600}
+.pv-race-status.locked{background:var(--done); color:var(--done-l)}
+.pv-race-status.considering{background:var(--modified); color:var(--modified-l)}
 
 .pv-tabbar{display:flex; gap:0; max-width:430px; margin:0 auto; background:#002DFF; border-radius:14px; overflow:hidden}
 .pv-tab{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:84px; padding:8px 4px; background:none; border:none; font-family:'DM Sans',sans-serif; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.6); cursor:pointer}
@@ -452,9 +467,14 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
             <img class="pv-splash-logo" src="favicon.png" alt="TRI Momentum" width="192" height="192">
             <p class="pv-splash-sub">Helping triathletes progress</p>
             <p class="pv-splash-headline">Mobility, intensity, fuelling, strength</p>
+            <div class="pv-splash-countdown">
+              <p class="pv-splash-countdown-eyebrow">Next race</p>
+              <p class="pv-splash-countdown-race">70.3 Geelong</p>
+              <p class="pv-splash-countdown-time">31 weeks · 5 days to go</p>
+            </div>
           </div>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">First thing shown on load, base nav visible beneath it throughout. Dismissed only by tapping a nav tab — no auto-advance timer, no separate "get started" control. Headline is the page-title spec (23px / 600 / &minus;0.3px, line-height 1.25) in white; sub head sits above it, DM Mono 14px uppercase at 70% white, echoing the app's eyebrow treatment. No drop shadow on the logo — flat against the fill.</p>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">First thing shown on load, base nav visible beneath it throughout. Dismissed only by tapping a nav tab — no auto-advance timer, no separate "get started" control. Headline is the page-title spec (23px / 600 / &minus;0.3px, line-height 1.25) in white; sub head sits above it, DM Mono 14px uppercase at 70% white, echoing the app's eyebrow treatment. No drop shadow on the logo — flat against the fill. Below the headline, a translucent countdown card names the nearest upcoming race from the Races tab and how far out it is — hidden entirely, not shown empty, when no race is saved.</p>
         <div class="flag"><span class="dot"></span>Fill is the canonical <span class="mono">--blue</span> token (#0022FF) — same colour as the favicon artwork itself, so the logo sits flush with no edge. Still not the base nav's hardcoded #002DFF (see below); that discrepancy is separate and unrelated.</div>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
@@ -501,12 +521,16 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
         <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Ported from TRI-run-strength's completion banner (and now added to TRI-swim-strength too, which had no auto-detect logic of its own before), recoloured to the app's own <span class="mono">--done</span>/<span class="mono">--done-l</span> green and its "Reset & go again" button to <span class="mono">--blue</span>, matching Warm up's other CTAs. Fires automatically the instant the last exercise is checked — this is the <em>only</em> way any of these three (Warm up, TRI-swim-strength, TRI-run-strength) log a completion now; the manual "Mark complete" buttons all three used to have were removed. Leaves every row checked rather than clearing them, and logs exactly once — only "Reset & go again," or the always-visible header reset button ("Reset warm-up" / "Reset session"), clears it.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
-        <div class="comp-hd"><span class="name">Base navigation</span><span class="spec mono">#002DFF fill · 84px tall · 4 tabs</span></div>
+        <div class="comp-hd"><span class="name">Base navigation</span><span class="spec mono">#002DFF fill · 84px tall · 5 tabs</span></div>
         <div class="comp-stage">
           <nav class="pv-tabbar" aria-label="Sections">
             <button class="pv-tab" type="button">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 3v2M12 19v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
               <span>Warm up</span>
+            </button>
+            <button class="pv-tab" type="button">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
+              <span>Strength</span>
             </button>
             <button class="pv-tab is-active" type="button">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C6.06294 1.25 1.25 6.06294 1.25 12C1.25 17.9371 6.06294 22.75 12 22.75C17.9371 22.75 22.75 17.9371 22.75 12C22.75 6.06294 17.9371 1.25 12 1.25ZM2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12Z" fill="currentColor"></path></svg>
@@ -517,13 +541,35 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
               <span>This week</span>
             </button>
             <button class="pv-tab" type="button">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
-              <span>Strength</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h13l-3 4 3 4H5"></path></svg>
+              <span>Races</span>
             </button>
           </nav>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Fixed to the viewport bottom in the shipped app, visible beneath every screen including the splash and the training-phase picker. Active tab in <span class="mono">#37C6FC</span> on a <span class="mono">rgba(255,255,255,.16)</span> fill. Tabs: Warm up, Check-in (default), This week, Strength — Month is reachable only via a link from This week's signal sections, not from the nav itself.</p>
-        <div class="flag"><span class="dot"></span>style-guide.md specifies a 64px, 4-column bottom nav — the shipped app ships 84px (<span class="mono">--tabbar-h</span>) and fills with a hardcoded #002DFF rather than the --blue token. Documented here as built.</div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Fixed to the viewport bottom in the shipped app, visible beneath every screen including the splash and the training-phase picker. Active tab in <span class="mono">#37C6FC</span> on a <span class="mono">rgba(255,255,255,.16)</span> fill. Tabs: Warm up, Strength, Check-in (default), This week, Races — Month is reachable only via a link from This week's signal sections, not from the nav itself.</p>
+        <div class="flag"><span class="dot"></span>Fills with a hardcoded #002DFF rather than the --blue token — a pre-existing, separately-flagged discrepancy, unrelated to the Races tab addition.</div>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">Race card</span><span class="spec mono">--bd2 border · --blue emphasis on next race</span></div>
+        <div class="comp-stage" style="display:flex; flex-direction:column; gap:10px">
+          <div class="pv-race-card is-next">
+            <div class="pv-race-top">
+              <span class="pv-race-date">Sun 21 Mar 2027</span>
+              <span class="pv-race-countdown">31 weeks · 5 days</span>
+            </div>
+            <p class="pv-race-name">70.3 Geelong</p>
+            <span class="pv-race-status locked">Locked in</span>
+          </div>
+          <div class="pv-race-card">
+            <div class="pv-race-top">
+              <span class="pv-race-date">Sat 13 Jun 2026</span>
+              <span class="pv-race-countdown" style="color:var(--ink2)">44 weeks</span>
+            </div>
+            <p class="pv-race-name">Panthers Tri Club Duathlon</p>
+            <span class="pv-race-status considering">Considering</span>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Same card conventions as <span class="mono">.floor-card</span>/<span class="mono">.week-row</span> — white fill, 0.5px --bd2 border, --rlg radius. The nearest upcoming race in the list gets the --blue/--blue-l "is-next" treatment; every other card stays neutral. Each card carries a commitment pill — "Considering" or "Locked in," set on the Add a race form and defaulting to "Considering" — using the same reversed-fill convention as the Month week phase pill. Lives on the Races tab, synced to the same Google Sheet as the training log (a second "Races" tab in the spreadsheet).</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Table</span><span class="spec mono">DM Mono headers · 1px row dividers</span></div>

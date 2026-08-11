@@ -136,6 +136,12 @@ textarea::placeholder{color:var(--ink3)}
 .splash-sub{margin-top:10px;font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
 .splash-headline{margin-top:36px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
 .splash-headline:focus,.splash-headline:focus-visible{outline:none}
+.splash-countdown{margin-top:28px;padding:14px 18px;max-width:300px;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+.splash-countdown[hidden]{display:none}
+.splash-countdown-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.splash-countdown-race{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
+.splash-countdown-time{margin-top:2px;font-family:var(--fd);font-size:22px;font-weight:600;letter-spacing:-.3px;color:#fff}
+.splash-countdown-time .u{font-size:14px;font-weight:500;color:rgba(255,255,255,.75)}
 
 /* ── One-time training phase screen ── */
 .period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;justify-content:center}
@@ -206,6 +212,33 @@ textarea::placeholder{color:var(--ink3)}
 .dash-phase-note{font-size:12.5px;color:var(--ink3);margin-top:.8rem;line-height:1.5}
 .dash-phase-change{display:block;margin-top:.6rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
+/* ── Race calendar ── */
+.text-input{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1)}
+.text-input::placeholder{color:var(--ink3)}
+.race-form{margin-top:1.1rem;padding:1rem 1.05rem 1.1rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);display:flex;flex-direction:column;gap:14px}
+.race-field label.field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:6px}
+.race-field .sub{font-weight:400;font-size:12.5px;color:var(--ink2)}
+.race-field textarea{min-height:48px}
+.race-form .btn-primary{margin-top:2px;border-radius:999px}
+.race-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}
+.race-card{padding:14px 15px;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
+.race-card.is-next{border-color:var(--blue);background:var(--blue-l)}
+.race-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.race-card-date{font-family:var(--fm);font-size:12.5px;color:var(--ink3)}
+.race-card.is-next .race-card-date{color:var(--blue)}
+.race-card-countdown{font-family:var(--fm);font-size:12.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.race-card.is-next .race-card-countdown{color:var(--blue);font-weight:600}
+.race-card-name{margin-top:5px;font-family:var(--fd);font-size:16px;font-weight:600;color:var(--ink);line-height:1.35}
+.race-status-pill{display:inline-flex;align-items:center;margin-top:8px;padding:3px 10px;border-radius:999px;font-family:var(--fd);font-size:11.5px;font-weight:600}
+.race-status-pill.locked{background:var(--done);color:var(--done-l)}
+.race-status-pill.considering{background:var(--modified);color:var(--modified-l)}
+.race-card-notes{margin-top:6px;font-size:13.5px;color:var(--ink2);line-height:1.5}
+.race-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.race-card-link{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-decoration:none}
+.race-card-link:hover{color:var(--blue-m)}
+.race-card-delete{margin-left:auto;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
+.race-card-delete:hover{color:var(--run)}
+
 /* ── Warm up ── */
 .warmup-hero{margin-top:1.4rem;padding:1.5rem 1.3rem 1.4rem;border-radius:var(--rxl);background:#182542;color:#fff}
 .warmup-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#F8C44F}
@@ -260,6 +293,11 @@ textarea::placeholder{color:var(--ink3)}
     <img class="splash-logo" src="favicon.png" alt="TRI Momentum" width="192" height="192">
     <p class="splash-sub">Helping triathletes progress</p>
     <h1 class="splash-headline" id="splash-h" tabindex="-1">Mobility, intensity, fuelling, strength</h1>
+    <div class="splash-countdown" id="splash-countdown" hidden>
+      <p class="splash-countdown-eyebrow">Next race</p>
+      <p class="splash-countdown-race" id="splash-countdown-race"></p>
+      <p class="splash-countdown-time" id="splash-countdown-time"></p>
+    </div>
   </section>
 
   <!-- ══════════ TRAINING PHASE — asked once, ever ══════════ -->
@@ -278,6 +316,10 @@ textarea::placeholder{color:var(--ink3)}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 3v2M12 19v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
       <span>Warm up</span>
     </button>
+    <button type="button" class="view-tab" id="tab-strength" role="tab" aria-selected="false" aria-controls="view-strength">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
+      <span>Strength</span>
+    </button>
     <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-flow">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C6.06294 1.25 1.25 6.06294 1.25 12C1.25 17.9371 6.06294 22.75 12 22.75C17.9371 22.75 22.75 17.9371 22.75 12C22.75 6.06294 17.9371 1.25 12 1.25ZM2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12Z" fill="currentColor"></path></svg>
       <span>Check-in</span>
@@ -286,9 +328,9 @@ textarea::placeholder{color:var(--ink3)}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
       <span>This week</span>
     </button>
-    <button type="button" class="view-tab" id="tab-strength" role="tab" aria-selected="false" aria-controls="view-strength">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
-      <span>Strength</span>
+    <button type="button" class="view-tab" id="tab-races" role="tab" aria-selected="false" aria-controls="view-races">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h13l-3 4 3 4H5"></path></svg>
+      <span>Races</span>
     </button>
   </div>
 
@@ -339,6 +381,9 @@ textarea::placeholder{color:var(--ink3)}
     </div>
     <iframe class="strength-frame" id="strength-frame" src="TRI-swim-strength mobile app/index.html" title="Swim strength session" loading="lazy"></iframe>
   </div>
+
+  <!-- ══════════ RACE CALENDAR ══════════ -->
+  <div class="dash" id="view-races" role="tabpanel" aria-labelledby="tab-races" hidden></div>
 
   </div>
   <!-- /#app-main -->
@@ -577,6 +622,7 @@ if(window.caches && caches.keys){
   var LOG_KEY = 'triMomentumLog_v1';
   var PHASE_KEY = 'triMomentumPhase_v1';
   var WARMUP_SESSIONS_KEY = 'triMomentumWarmupSessions_v1';
+  var RACES_KEY = 'triMomentumRaces_v1';
   var storageOk = true;
   try{ window.localStorage.setItem('__tri_test__','1'); window.localStorage.removeItem('__tri_test__'); }
   catch(e){ storageOk = false; }
@@ -615,6 +661,18 @@ if(window.caches && caches.keys){
   function persistWarmupSessions(){
     if(!storageOk){ return; }
     try{ window.localStorage.setItem(WARMUP_SESSIONS_KEY, JSON.stringify(state.warmupSessions)); } catch(e){}
+  }
+  function loadRaces(){
+    if(!storageOk){ return []; }
+    try{
+      var raw = window.localStorage.getItem(RACES_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch(e){ return []; }
+  }
+  function persistRaces(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(RACES_KEY, JSON.stringify(races)); } catch(e){}
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -689,6 +747,44 @@ if(window.caches && caches.keys){
 
   var log = loadLog(); // cached copy; replaced by refreshLogFromSheet() as soon as the Sheet responds — see STORAGE above
 
+  // ═══════════════════════════════════════════════════════════════
+  // RACE CALENDAR SYNC — same Sheet, same pattern as the session log above:
+  // a second sheet tab ("Races", created on demand by Code.gs) is the
+  // cross-device source of truth. Adds/deletes are fire-and-forget no-cors
+  // writes; the race `id` is generated here on the client (not by the
+  // Sheet) specifically so a delete never needs to read an id back out of
+  // an opaque add response.
+  // ═══════════════════════════════════════════════════════════════
+  var RACES_READ_URL = TRAINING_LOG_WRITE_URL + '?races=1';
+  function newRaceId(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function submitRaceToSheet(action, race){
+    if(!TRAINING_LOG_WRITE_URL){ return; }
+    try{
+      fetch(TRAINING_LOG_WRITE_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify({ kind: 'race', action: action, race: race })
+      });
+    } catch(err){ /* best-effort — same trade-off as submitSessionToSheet */ }
+  }
+  var racesFetchInFlight = null;
+  function refreshRacesFromSheet(){
+    if(racesFetchInFlight){ return racesFetchInFlight; }
+    racesFetchInFlight = fetch(RACES_READ_URL)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(!data || !data.ok || !Array.isArray(data.races)){ throw new Error('bad response'); }
+        races = data.races;
+        persistRaces();
+        return true;
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ racesFetchInFlight = null; return ok; });
+    return racesFetchInFlight;
+  }
+
+  var races = loadRaces(); // cached copy; replaced by refreshRacesFromSheet() as soon as the Sheet responds
+
   // ── Dates ─────────────────────────────────────────────────────
   var MONTH_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   function isoDate(d){
@@ -719,6 +815,43 @@ if(window.caches && caches.keys){
     return 1 + Math.round(diff / (7 * 86400000));
   }
   function weekKey(d){ return isoDate(mondayOf(d)); }
+
+  // ── Races ─────────────────────────────────────────────────────
+  function formatRaceDateLabel(iso){
+    var d = new Date(iso + 'T00:00:00');
+    return MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  // Whole days between today and iso (positive = future). Both sides are
+  // taken at local midnight so a race "today" always reads as 0, never -1
+  // or 1 depending on time of day.
+  function daysUntil(iso){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var target = new Date(iso + 'T00:00:00');
+    return Math.round((target - today) / 86400000);
+  }
+  function raceCountdownLabel(days){
+    if(days === 0){ return 'Today'; }
+    if(days === 1){ return 'Tomorrow'; }
+    if(days < 7){ return days + ' days'; }
+    var weeks = Math.floor(days / 7), rem = days % 7;
+    var label = weeks + (weeks === 1 ? ' week' : ' weeks');
+    if(rem){ label += ' · ' + rem + (rem === 1 ? ' day' : ' days'); }
+    return label;
+  }
+  function upcomingRaces(){
+    var today = todayISO();
+    return races.filter(function(r){ return r.date >= today; })
+      .sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
+  function pastRaces(){
+    var today = todayISO();
+    return races.filter(function(r){ return r.date < today; })
+      .sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+  }
+  function nextRace(){
+    var up = upcomingRaces();
+    return up.length ? up[0] : null;
+  }
 
   // Real calendar week (Mon–Sun) containing `anchor`, built from the actual
   // log — no fabricated sessions, no seeded demo days.
@@ -1241,6 +1374,184 @@ if(window.caches && caches.keys){
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // RACE CALENDAR
+  // ═══════════════════════════════════════════════════════════════
+  var RACE_STATUS_LABEL = {considering: 'Considering', locked: 'Locked in'};
+  function addRace(fields){
+    var race = {
+      id: newRaceId(), name: fields.name.trim(), date: fields.date,
+      url: (fields.url || '').trim(), notes: (fields.notes || '').trim(),
+      status: fields.status === 'locked' ? 'locked' : 'considering'
+    };
+    races.push(race);
+    persistRaces();
+    submitRaceToSheet('add', race);
+    renderRaces();
+    renderSplashCountdown();
+    say('Race added: ' + race.name + '.');
+  }
+  function deleteRace(id){
+    var race = races.filter(function(r){ return r.id === id; })[0];
+    races = races.filter(function(r){ return r.id !== id; });
+    persistRaces();
+    submitRaceToSheet('delete', {id: id});
+    renderRaces();
+    renderSplashCountdown();
+    if(race){ say('Removed ' + race.name + '.'); }
+  }
+  function raceField(labelText, subText, inputEl){
+    var wrap = el('div', 'race-field');
+    var lbl = el('label', 'field-lbl');
+    lbl.appendChild(document.createTextNode(labelText + ' '));
+    if(subText){ lbl.appendChild(el('span', 'sub', subText)); }
+    lbl.appendChild(document.createElement('br'));
+    inputEl.id = inputEl.id || ('race-' + labelText.toLowerCase().replace(/[^a-z]+/g, '-'));
+    lbl.htmlFor = inputEl.id;
+    lbl.appendChild(inputEl);
+    wrap.appendChild(lbl);
+    return wrap;
+  }
+  function renderRaceForm(root){
+    var form = document.createElement('form');
+    form.className = 'race-form';
+    form.setAttribute('aria-label', 'Add a race');
+
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text'; nameInput.className = 'text-input'; nameInput.id = 'race-name';
+    nameInput.required = true; nameInput.maxLength = 80;
+    nameInput.placeholder = 'e.g. 70.3 Geelong';
+    form.appendChild(raceField('Race name', null, nameInput));
+
+    var dateInput = document.createElement('input');
+    dateInput.type = 'date'; dateInput.className = 'date-input'; dateInput.id = 'race-date';
+    dateInput.required = true;
+    form.appendChild(raceField('Date', null, dateInput));
+
+    var statusWrap = el('div', 'race-field');
+    statusWrap.appendChild(el('span', 'field-lbl', 'Commitment'));
+    var statusChoices = el('div', 'choices grid2');
+    var statusInputs = ['considering', 'locked'].map(function(v, i){
+      var opt = el('div', 'opt');
+      var input = document.createElement('input');
+      input.type = 'radio'; input.name = 'race-status'; input.id = 'race-status-' + v;
+      // defaultChecked (not .checked) so form.reset() after a successful
+      // add restores "Considering" rather than leaving neither selected.
+      input.value = v; input.defaultChecked = i === 0;
+      opt.appendChild(input);
+      var label = el('label', 'choice', RACE_STATUS_LABEL[v]);
+      label.htmlFor = input.id;
+      opt.appendChild(label);
+      statusChoices.appendChild(opt);
+      return input;
+    });
+    statusWrap.appendChild(statusChoices);
+    form.appendChild(statusWrap);
+
+    var urlInput = document.createElement('input');
+    // type="text", not "url" — the url type demands a full scheme
+    // (https://...), so a bare "ironman.com/geelong" fails native
+    // constraint validation and silently blocks the whole form. The
+    // https:// prefix is added on render instead (see raceCard).
+    urlInput.type = 'text'; urlInput.className = 'text-input'; urlInput.id = 'race-url';
+    urlInput.placeholder = 'e.g. ironman.com/geelong';
+    form.appendChild(raceField('Website', 'optional', urlInput));
+
+    var notesInput = document.createElement('textarea');
+    notesInput.id = 'race-notes'; notesInput.rows = 2; notesInput.maxLength = 140;
+    notesInput.placeholder = 'e.g. A-race, club focus race';
+    form.appendChild(raceField('Notes', 'optional', notesInput));
+
+    var submitBtn = el('button', 'btn btn-primary', 'Add race');
+    submitBtn.type = 'submit';
+    form.appendChild(submitBtn);
+
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      if(!nameInput.value.trim() || !dateInput.value){ return; }
+      var checked = statusInputs.filter(function(i){ return i.checked; })[0];
+      addRace({
+        name: nameInput.value, date: dateInput.value, url: urlInput.value, notes: notesInput.value,
+        status: checked ? checked.value : 'considering'
+      });
+      form.reset();
+      nameInput.focus();
+    });
+
+    root.appendChild(form);
+  }
+  function raceCard(race, isNext){
+    var card = el('div', 'race-card' + (isNext ? ' is-next' : ''));
+    var top = el('div', 'race-card-top');
+    top.appendChild(el('span', 'race-card-date', formatRaceDateLabel(race.date)));
+    var days = daysUntil(race.date);
+    if(days >= 0){ top.appendChild(el('span', 'race-card-countdown', raceCountdownLabel(days))); }
+    card.appendChild(top);
+    card.appendChild(el('div', 'race-card-name', race.name));
+    var statusCls = race.status === 'locked' ? 'locked' : 'considering';
+    card.appendChild(el('span', 'race-status-pill ' + statusCls, RACE_STATUS_LABEL[statusCls]));
+    if(race.notes){ card.appendChild(el('p', 'race-card-notes', race.notes)); }
+    var foot = el('div', 'race-card-foot');
+    if(race.url){
+      var link = document.createElement('a');
+      link.className = 'race-card-link';
+      link.href = /^https?:\/\//i.test(race.url) ? race.url : 'https://' + race.url;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = 'Race website';
+      foot.appendChild(link);
+    }
+    var del = el('button', 'race-card-delete', 'Remove');
+    del.type = 'button';
+    del.setAttribute('aria-label', 'Remove ' + race.name + ' from the race calendar');
+    del.addEventListener('click', function(){
+      if(window.confirm('Remove ' + race.name + ' from your race calendar?')){ deleteRace(race.id); }
+    });
+    foot.appendChild(del);
+    card.appendChild(foot);
+    return card;
+  }
+  function raceListSection(label, list, opts){
+    var wrap = el('div', 'dash-section');
+    wrap.setAttribute('data-label', label);
+    if(!list.length){
+      wrap.appendChild(el('p', 'empty-note', opts.emptyText));
+      return wrap;
+    }
+    var ul = el('ul', 'race-list');
+    ul.setAttribute('aria-label', label);
+    list.forEach(function(race, i){
+      var li = document.createElement('li');
+      li.appendChild(raceCard(race, !!opts.markFirstAsNext && i === 0));
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+    return wrap;
+  }
+  function renderRaces(){
+    var root = els.viewRaces;
+    clear(root);
+    var h = el('h1', 'dash-eyebrow', 'Races');
+    h.id = 'races-h'; h.tabIndex = -1;
+    root.appendChild(h);
+    root.appendChild(el('p', 'hint', 'Add a race and see how many weeks out it is. Synced to your training log Sheet, so it shows on every device.'));
+    renderRaceForm(root);
+    root.appendChild(raceListSection('Upcoming', upcomingRaces(), {
+      emptyText: 'No upcoming races yet — add one above.', markFirstAsNext: true
+    }));
+    var past = pastRaces();
+    if(past.length){
+      root.appendChild(raceListSection('Past', past, {emptyText: ''}));
+    }
+  }
+  function renderSplashCountdown(){
+    var next = nextRace();
+    if(!next){ els.splashCountdown.hidden = true; return; }
+    els.splashCountdownRace.textContent = next.name;
+    var days = daysUntil(next.date);
+    els.splashCountdownTime.textContent = raceCountdownLabel(days) + (days >= 7 ? ' to go' : '');
+    els.splashCountdown.hidden = false;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // WARM UP
   // ═══════════════════════════════════════════════════════════════
   function warmupCheckKey(disc, i){ return disc + '-' + i; }
@@ -1466,17 +1777,22 @@ if(window.caches && caches.keys){
     tabDash: document.getElementById('tab-dash'),
     tabStrength: document.getElementById('tab-strength'),
     tabWarmup: document.getElementById('tab-warmup'),
+    tabRaces: document.getElementById('tab-races'),
     viewFlow: document.getElementById('view-flow'),
     viewDash: document.getElementById('view-dashboard'),
     viewTrends: document.getElementById('view-trends'),
     viewStrength: document.getElementById('view-strength'),
     viewWarmup: document.getElementById('view-warmup'),
+    viewRaces: document.getElementById('view-races'),
     strengthFrame: document.getElementById('strength-frame'),
     tabStrengthSwim: document.getElementById('tab-strength-swim'),
     tabStrengthRun: document.getElementById('tab-strength-run'),
     viewTabs: document.getElementById('view-tabs'),
     appMain: document.getElementById('app-main'),
     splashScreen: document.getElementById('view-splash'),
+    splashCountdown: document.getElementById('splash-countdown'),
+    splashCountdownRace: document.getElementById('splash-countdown-race'),
+    splashCountdownTime: document.getElementById('splash-countdown-time'),
     periodScreen: document.getElementById('view-period'),
     periodChoices: document.getElementById('period-choices')
   };
@@ -1778,25 +2094,30 @@ if(window.caches && caches.keys){
     var isTrends = view === 'trends';
     var isStrength = view === 'strength';
     var isWarmup = view === 'warmup';
-    els.viewFlow.hidden = isDash || isTrends || isStrength || isWarmup;
+    var isRaces = view === 'races';
+    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces;
+    els.viewFlow.hidden = !isFlow;
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
     els.viewStrength.hidden = !isStrength;
     els.viewWarmup.hidden = !isWarmup;
-    els.tabFlow.setAttribute('aria-selected', String(!isDash && !isTrends && !isStrength && !isWarmup));
+    els.viewRaces.hidden = !isRaces;
+    els.tabFlow.setAttribute('aria-selected', String(isFlow));
     els.tabDash.setAttribute('aria-selected', String(isDash));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
     els.tabWarmup.setAttribute('aria-selected', String(isWarmup));
+    els.tabRaces.setAttribute('aria-selected', String(isRaces));
     if(isDash){ renderDashboard(); }
     if(isTrends){ renderTrends(); }
     if(isStrength){ sizeStrengthFrame(); }
     if(isWarmup){ renderWarmup(); }
+    if(isRaces){ renderRaces(); }
     // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
-    if(!isDash && !isTrends && !isStrength && !isWarmup){ renderChrome(); }
+    if(isFlow){ renderChrome(); }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : 'step-h'))));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : 'step-h')))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
     // This week / Month reflect logged sessions from any device, so pull
@@ -1808,6 +2129,14 @@ if(window.caches && caches.keys){
         if(!changed){ return; }
         if(isDash && !els.viewDash.hidden){ renderDashboard(); }
         if(isTrends && !els.viewTrends.hidden){ renderTrends(); }
+      });
+    }
+    // Races can change on another device too (add/remove), so refresh the
+    // same way whenever the tab is opened.
+    if(isRaces){
+      refreshRacesFromSheet().then(function(changed){
+        if(changed && !els.viewRaces.hidden){ renderRaces(); }
+        renderSplashCountdown();
       });
     }
   }
@@ -1871,6 +2200,7 @@ if(window.caches && caches.keys){
   els.tabDash.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('dashboard'); });
   els.tabStrength.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('strength'); });
   els.tabWarmup.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('warmup'); });
+  els.tabRaces.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('races'); });
   els.strengthFrame.addEventListener('load', sizeStrengthFrame);
   window.addEventListener('resize', function(){ if(!els.viewStrength.hidden){ sizeStrengthFrame(); } });
 
@@ -1950,6 +2280,10 @@ if(window.caches && caches.keys){
   // data as soon as they're opened, even though the check-in flow (the
   // default view) doesn't need it itself.
   refreshLogFromSheet();
+  // Same idea for races — paint the cached countdown on the splash
+  // immediately, then refresh from the Sheet and repaint if it changed.
+  renderSplashCountdown();
+  refreshRacesFromSheet().then(function(changed){ if(changed){ renderSplashCountdown(); } });
 })();
 </script>
 </body>

@@ -55,7 +55,7 @@
 
 - Max width: 430px, centred — never wider
 - Horizontal padding: 1.25rem (20px) throughout
-- Bottom nav: 64px fixed, 4-column grid
+- Bottom nav: 84px fixed (`--tabbar-h`), flex row, 5 equal-width tabs
 - Page headers: sticky, white background, 0.5px border-bottom in `--bd`
 - Cards: white background, 0.5px border in `--bd2`, border-radius 16px
 - All scrollable areas: hide scrollbars, `-webkit-overflow-scrolling: touch`
@@ -68,3 +68,7 @@
 - **Insight card:** `--blue` background, white text, italic body copy
 - **Prompt blocks:** `--blue-l` background, 3px left border in `--blue`, italic text
 - **Month week phase pill:** solid `--phase-{base,build,peak}` background, reversed light text in the matching `-l` tint, pill shape (999px radius), 3px/10px padding, DM Sans 11.5px weight 600 — sits inline next to the "Week N" label in each Month-view week card (`.month-week-pill` in `index.html`)
+- **Splash countdown card:** on the splash's `--blue` background, a translucent white card (`rgba(255,255,255,.12)` fill, `rgba(255,255,255,.22)` 1px border, `--rlg` radius) below the headline — DM Mono eyebrow ("Next race"), DM Sans 15px/600 race name, DM Sans 22px/600 countdown line. Hidden entirely when there's no upcoming race, rather than showing an empty state (`.splash-countdown` in `index.html`)
+- **Race card:** white card, `--bd2` border, `--rlg` radius, matching `.floor-card`/`.week-row` conventions — DM Mono date + countdown on one line, DM Sans 16px/600 race name, a commitment pill (see below), optional notes and "Race website" link, "Remove" text action. The nearest upcoming race gets `--blue`/`--blue-l` emphasis (`.race-card.is-next` in `index.html`)
+- **Commitment pill:** solid-fill pill (999px radius, 3px/10px padding, DM Sans 11.5px weight 600) reading "Considering" (`--modified`/`--modified-l`, amber) or "Locked in" (`--done`/`--done-l`, green) — same reversed-fill convention as the Month week phase pill. Set via a two-option `.choices.grid2` toggle on the Add a race form (defaults to "Considering"), shown on every race card (`.race-status-pill` in `index.html`)
+- **Text input:** same shape as `.date-input` (1px `--bd2` border, `--rmd` radius, 52px min-height) but full width — used for race name/website fields (`.text-input` in `index.html`). Never use `type="url"` for a free-text website field — its native constraint validation requires a full `https://` scheme and silently blocks form submission on a bare domain like `ironman.com/geelong`; use `type="text"` and prefix the scheme at render time instead
