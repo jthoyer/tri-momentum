@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<!-- Zoom is deliberately NOT capped (no maximum-scale) — WCAG 2.2 1.4.4 -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After-session check-in · stepped flow — TRI Momentum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: only light;
+  /* ── Design tokens: taken verbatim from triathlon_momentum_v5.html ── */
+  --bg:#F7F8FC;--s1:#FFFFFF;--s2:#FFFFFF;--s3:#F0F2F8;--s4:#E8EBF5;
+  --ink:#0E1020;--ink2:#4B5278;--ink3:#8B93B8;
+  --bd:rgba(14,16,32,0.08);--bd2:rgba(14,16,32,0.14);--bd3:rgba(14,16,32,0.25);
+  --blue:#1650C8;--blue-l:#E8EFFE;--blue-m:#4F7BE8;
+  --swim:#1650C8;--swim-l:#E8EFFE;
+  --bike:#0F6E56;--bike-l:#E1F5EE;
+  --run:#993C1D;--run-l:#FAECE7;
+  --brick:#534AB7;--brick-l:#EEEDFE;
+  --strength:#854F0B;--strength-l:#FAEEDA;
+  --rest:#8B93B8;--rest-l:#F0F2F8;
+  --done:#0F6E56;--done-l:#E1F5EE;
+  --skipped:#993C1D;--skipped-l:#FAECE7;
+  --modified:#854F0B;--modified-l:#FAEEDA;
+  --rmd:10px;--rlg:16px;--rxl:22px;
+  --fd:'DM Sans',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);font-family:var(--fb);color:var(--ink);
+  font-size:15px;line-height:1.5;min-height:100vh;
+}
+/* App column — never wider than 430px, centred, 20px gutters */
+#app{max-width:430px;margin:0 auto;padding:0 1.25rem 3rem}
+
+/* ── Visible focus everywhere ── */
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);outline-offset:2px}
+
+.visually-hidden{
+  position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THE FLOW — one question per screen.
+   Header and footer are sticky within the flow's own box, so the
+   whole page still scrolls normally at 200%+ zoom (1.4.4 / 1.4.10).
+   ═══════════════════════════════════════════════════════════════ */
+.flow{
+  display:flex;flex-direction:column;
+  min-height:100vh;min-height:100dvh;
+  margin:0 -1.25rem;  /* header/footer bleed to the column edges */
+}
+
+/* ── Sticky progress header ── */
+.flow-hdr{
+  position:sticky;top:0;z-index:2;flex:none;
+  padding:1rem 1.25rem .8rem;
+  background:var(--s1);border-bottom:0.5px solid var(--bd);
+}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.eyebrow{
+  font-family:var(--fm);font-size:14px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink3);line-height:1.2;
+  /* Yields to the counter rather than colliding with it on narrow screens */
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.counter{font-family:var(--fm);font-size:14px;color:var(--ink2);line-height:1.2;white-space:nowrap;flex:none}
+/* Bar is aria-hidden — .counter is the accessible statement of progress (1.4.1) */
+.bar{height:4px;background:var(--s4);border-radius:2px;overflow:hidden}
+.bar > i{display:block;height:100%;width:0;background:var(--blue);border-radius:2px;transition:width .2s ease}
+
+/* ── Question body ── */
+.flow-body{flex:1;padding:1.5rem 1.25rem 1.25rem;min-height:0}
+.q-set{border:none;padding:0;margin:0;display:block}
+.q-set > legend{display:block;width:100%;padding:0;float:left}
+h1{
+  font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;
+  line-height:1.25;color:var(--ink);
+}
+h1:focus,h1:focus-visible{outline:none}
+.hint{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px;clear:both}
+.choices-wrap{margin-top:1.35rem;clear:both}
+
+/* ── Choice chips (radio buttons visually) — shared with Prototype 02 ── */
+.choices{display:flex;flex-direction:column;gap:10px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;margin:0;cursor:pointer}
+.choice{
+  display:flex;align-items:center;gap:11px;
+  min-height:56px;padding:12px 14px;
+  background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rmd);
+  font-size:15px;color:var(--ink);line-height:1.35;cursor:pointer;
+}
+.opt input:checked + .choice{border-color:var(--blue);background:var(--blue-l);color:var(--blue);font-weight:600}
+.opt input:focus-visible + .choice{outline:3px solid var(--blue);outline-offset:2px}
+.choice .tick{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bd3);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;
+}
+.opt input:checked + .choice .tick{border-color:var(--blue);background:var(--blue);color:#fff}
+
+/* affect / body severity swatch — the label always carries the meaning, colour only reinforces */
+.sev{flex-shrink:0;width:14px;height:14px;border-radius:3px;border:1px solid rgba(14,16,32,.25)}
+.sev-strong{background:var(--done)}
+.sev-solid{background:var(--blue-m)}
+.sev-flat{background:var(--modified)}
+.sev-rough{background:var(--run)}
+.sev-1{background:var(--done-l);border-color:var(--done)}
+.sev-2{background:#CFE8DE}
+.sev-3{background:var(--modified)}
+.sev-4{background:var(--run)}
+
+/* Two-line options (the Fast/Full mode chooser) — the first line still
+   carries the meaning on its own; the second line only elaborates. */
+.choice .opt-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.choice .opt-sub{font-size:14px;font-weight:400;color:var(--ink2);line-height:1.45}
+
+/* RPE 1–10: 5×2 grid, every target >=56px */
+.choices.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.choices.scale .choice{justify-content:center;min-height:56px;padding:8px 4px;font-family:var(--fm);font-size:17px;font-weight:500}
+.scale-ends{display:flex;justify-content:space-between;font-family:var(--fm);font-size:14px;color:var(--ink3);margin-top:10px}
+
+/* 3-up and 2-up chip grids */
+.choices.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.choices.grid3 .choice{justify-content:center;min-height:56px;text-align:center}
+.choices.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.choices.grid2 .choice{justify-content:center;min-height:56px;text-align:center}
+
+/* ── Review step ── */
+.review-row{
+  display:flex;width:100%;align-items:baseline;gap:12px;
+  min-height:52px;padding:11px 13px;margin-bottom:8px;
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);
+  text-align:left;cursor:pointer;font-family:var(--fb);
+}
+.review-row:hover{background:var(--s3)}
+.review-q{flex:1;font-size:14px;color:var(--ink2);line-height:1.45}
+.review-a{flex:none;max-width:58%;font-size:14px;font-weight:600;color:var(--blue);text-align:right;line-height:1.45}
+.review-a.none{color:var(--run);font-weight:500;font-style:italic}
+/* ── "Add detail" panel — Fast mode's home for intent, plan and fuelling ── */
+/* details.instr is declared further down and would otherwise win on specificity */
+details.detail-panel{margin-top:1.5rem}
+details.detail-panel .body{padding:2px 14px 16px}
+.detail-field{border:none;padding:0;margin:1.1rem 0 0;display:block}
+.detail-field > legend{display:block;width:100%;padding:0;float:left}
+.detail-legend{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink);line-height:1.35}
+.detail-field .choices-wrap{margin-top:.75rem}
+
+label.note-lbl{display:block;font-family:var(--fd);font-size:15px;font-weight:600;margin:1.5rem 0 .5rem}
+.note-lbl .sub{font-weight:400;font-size:14px;color:var(--ink2)}
+textarea{
+  width:100%;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);
+  font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1);
+  resize:vertical;min-height:56px;line-height:1.5;
+}
+textarea::placeholder{color:var(--ink3)}
+
+/* ── Saved / week step ── */
+.saved-flag{display:flex;align-items:center;gap:8px;color:var(--done);font-size:14px;font-weight:600}
+.saved-flag .g{font-size:15px}
+.week-lead{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px}
+.week-list{list-style:none;display:flex;flex-direction:column;gap:7px;margin-top:1.25rem}
+.week-row{
+  display:flex;align-items:center;gap:11px;padding:12px 13px;
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);
+}
+.week-row.is-now{background:var(--blue-l);border:1px solid var(--blue)}
+.week-day{font-family:var(--fm);font-size:14px;color:var(--ink3);width:36px;flex:none}
+.week-row.is-now .week-day{color:var(--blue)}
+.week-what{font-size:14px;color:var(--ink2);line-height:1.4}
+.week-row.is-now .week-what{color:var(--ink);font-weight:600}
+.week-state{margin-left:auto;font-size:14px;color:var(--ink3);white-space:nowrap;padding-left:6px}
+.week-state.done{color:var(--done);font-weight:500}
+.floor-card{
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);
+  padding:1rem 1.05rem;margin-top:1.25rem;
+}
+.floor-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.floor-title{font-size:15px;font-weight:600;color:var(--ink)}
+.floor-count{font-family:var(--fm);font-size:14px;color:var(--ink2);white-space:nowrap}
+.floor-card .bar{margin-top:12px}
+.floor-note{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:12px}
+
+/* ── Test-data export (saved screen) ── */
+.btn-block{display:block;width:100%;margin-top:1.5rem}
+.export-note{font-size:14px;color:var(--ink2);line-height:1.55;margin-top:10px}
+.export-out{margin-top:10px;font-family:var(--fm);font-size:14px;min-height:132px}
+
+/* ── Sticky action footer ── */
+.flow-foot{
+  position:sticky;bottom:0;z-index:2;flex:none;
+  display:flex;gap:10px;
+  padding:.75rem 1.25rem calc(.9rem + env(safe-area-inset-bottom));
+  background:var(--s1);border-top:0.5px solid var(--bd);
+}
+.btn{
+  min-height:52px;padding:14px;border-radius:var(--rmd);
+  font-family:var(--fd);font-size:17px;font-weight:600;letter-spacing:.01em;
+  border:1px solid transparent;cursor:pointer;
+}
+.btn-primary{flex:1;background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-ghost{flex:none;padding:14px 18px;background:transparent;color:var(--ink);border-color:var(--bd2)}
+.btn-primary:hover{background:#1246ad}
+.btn-ghost:hover{background:var(--s3)}
+.btn-ghost:disabled{color:var(--ink3);border-color:var(--bd);cursor:default}
+.btn-ghost:disabled:hover{background:transparent}
+
+/* ═══════════════════════════════════════════════════════════════
+   Below the fold — prototype apparatus, not app chrome
+   ═══════════════════════════════════════════════════════════════ */
+.aside{margin-top:1.75rem}
+.divider-label{
+  font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink3);margin:0 0 .6rem;
+}
+.map-note{color:var(--ink2);font-size:14px;line-height:1.55;margin-bottom:.8rem}
+.map{list-style:none;display:flex;flex-direction:column;gap:4px}
+.map-item{
+  display:flex;width:100%;align-items:center;gap:10px;
+  min-height:48px;padding:9px 11px;
+  background:transparent;border:1px solid transparent;border-radius:8px;
+  text-align:left;font-family:var(--fb);
+}
+button.map-item{cursor:pointer}
+button.map-item:hover{background:var(--s3)}
+.map-item.is-now{background:var(--blue-l);border-color:var(--blue)}
+.map-n{font-family:var(--fm);font-size:14px;color:var(--ink3);width:24px;flex:none}
+.map-q{flex:1;font-size:14px;color:var(--ink2);line-height:1.35}
+.map-item.is-now .map-q{color:var(--blue);font-weight:600}
+.map-item.answered .map-q{color:var(--ink)}
+.map-a{font-family:var(--fm);font-size:14px;color:var(--ink3);white-space:nowrap;padding-left:6px}
+.map-item.answered .map-a{color:var(--ink2)}
+.map-item.is-now .map-a{color:var(--blue)}
+
+.toggle{
+  display:flex;align-items:center;gap:12px;min-height:52px;
+  padding:11px 13px;margin-top:.9rem;
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);
+  font-size:14px;color:var(--ink);cursor:pointer;
+}
+.toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue);cursor:pointer}
+.toggle .sub{display:block;color:var(--ink2);font-size:14px;line-height:1.5;margin-top:3px}
+
+details.instr{margin-top:1rem;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--s1)}
+details.instr summary{padding:14px;font-family:var(--fd);font-weight:600;font-size:15px;cursor:pointer;color:var(--ink);min-height:52px}
+details.instr[open] summary{border-bottom:0.5px solid var(--bd)}
+details.instr .body{padding:4px 14px 14px;font-size:14px;color:var(--ink2);line-height:1.65}
+details.instr .body p{margin-top:.7rem}
+details.instr .body ul{margin:.5rem 0 .3rem 1.1rem}
+details.instr .body li{margin:.35rem 0}
+details.instr .body code{font-family:var(--fm);font-size:14px;color:var(--ink)}
+.provenance-note{font-size:14px;color:var(--ink3);margin-top:1.4rem;line-height:1.55}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+@media (prefers-reduced-motion: no-preference){
+  .btn,.choice,.opt input:checked + .choice{transition:background .15s, border-color .15s, color .15s}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ THE STEPPED FLOW ══════════ -->
+  <section class="flow" aria-label="After-session check-in">
+
+    <div class="flow-hdr">
+      <div class="hdr-row">
+        <p class="eyebrow" id="eyebrow">Just finished</p>
+        <p class="counter" id="counter">1 / 9</p>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="bar-fill"></i></div>
+    </div>
+
+    <!-- Rendered per step by renderStep() -->
+    <div class="flow-body" id="flow-body"></div>
+
+    <div class="flow-foot" id="flow-foot">
+      <button type="button" class="btn btn-ghost" id="btn-back">Back</button>
+      <button type="button" class="btn btn-primary" id="btn-next">Next</button>
+    </div>
+
+    <p class="visually-hidden" aria-live="polite" id="live"></p>
+  </section>
+
+  <!-- ══════════ FLOW MAP ══════════ -->
+  <section class="aside" aria-labelledby="map-h">
+    <p class="divider-label" id="map-h">Flow map</p>
+    <p class="map-note">Jump to any step. In <strong>Full</strong>, the fuelling question only appears once you log a session over 45&nbsp;minutes. In <strong>Fast</strong>, intent, plan and fuelling sit behind <strong>Add detail</strong> on the review screen rather than in the step list.</p>
+    <ul class="map" id="map"></ul>
+
+    <label class="toggle" for="auto-advance">
+      <input type="checkbox" id="auto-advance" checked>
+      <span>Auto-advance
+        <span class="sub">On: picking an answer moves to the next question after a short pause. Off: nothing moves until you tap Next.</span>
+      </span>
+    </label>
+
+    <!-- Same action as the saved screen. It also lives here because a run that
+         is abandoned never reaches the saved screen, and abandonment is one of
+         the things this build exists to measure. -->
+    <div id="export-aside"></div>
+  </section>
+
+  <!-- ══════════ RATIONALE ══════════ -->
+  <details class="instr">
+    <summary>Why this shape</summary>
+    <div class="body">
+      <p>One decision per screen matches the moment of use — driveway, heart rate still up, one thumb. Options get large because nothing competes for the space, and the count replaces scroll length as the signal of how much is left.</p>
+      <p>The niggle question is asked third, not eighth. It is the one answer that can force a caution for the whole week, so it is the one answer a stepped flow can least afford to lose to someone closing the app halfway. Everything behind it is refinement; that question is the floor.</p>
+      <p><strong>Fast</strong> and <strong>Full</strong> exist because the cost of the long flow is an open question, not a settled one. Fast asks what TrainingPeaks asks after a workout — session, duration, effort, feel — plus the niggle, and keeps intent, plan and fuelling one tap away rather than removing them. Which shape is right is a question about completion rates and elapsed time, so both are here to be run against the same athletes and compared rather than argued.</p>
+      <p>Saving does not end on a receipt. The last screen is the week: the session drops into today and the count moves toward the five-session floor the roll-up needs. Seeing the week become computable is the argument for logging the next one.</p>
+      <p>The captured values use the same vocabulary as Prototype&nbsp;02, so a session logged here feeds the identical D/E/F/N/S computation at week's end — this changes the shape of the capture, not what gets captured.</p>
+    </div>
+  </details>
+
+  <details class="instr">
+    <summary>Accessibility notes</summary>
+    <div class="body">
+      <ul>
+        <li>Auto-advance carries a 260&nbsp;ms delay, a live-region announcement, focus moved to the new heading, and Back that keeps your answer selected — 3.2.2 / 2.2.1. Turn it off with the <strong>Auto-advance</strong> switch above.</li>
+        <li>Progress is stated as text as well as drawn as a bar; the bar is <code>aria-hidden</code> so it is not announced twice.</li>
+        <li>Targets are 56&nbsp;px, single column — past 2.5.5 at AAA. Text floor is 14&nbsp;px throughout, matching the app.</li>
+        <li>The review step is the commit point: nothing is saved until you tap Save (3.3.4). Unanswered questions send you back to the first gap rather than failing silently.</li>
+        <li>The week screen states progress as text, and the logged row carries <code>aria-current</code> plus the words “just logged” — never colour alone (1.4.1).</li>
+        <li>Header and footer are sticky within the flow rather than fixed to the viewport, so the page still reflows and scrolls at 200%&nbsp;zoom (1.4.4 / 1.4.10).</li>
+        <li>The mode chooser and the <strong>Add detail</strong> panel are ordinary radio groups and a native <code>&lt;details&gt;</code> — keyboard-reachable, and answering inside the panel never moves you off the screen. Copying the test data announces success or falls back to a selectable text box if the clipboard is unavailable.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="instr">
+    <summary>For testers — how this works</summary>
+    <div class="body">
+      <p>This is the stepped-flow alternative to Prototype&nbsp;02's single scrolling form. In the shipped app it fires when a session ends and pulls discipline, intended intensity and duration from your plan; here you declare them so there is something to compute from.</p>
+      <ul>
+        <li>The first screen picks <strong>Full</strong> (8–9 steps) or <strong>Fast</strong> (5 steps). Run real sessions through both — that comparison is the point of this build.</li>
+        <li>Answer end to end. In Full, duration over 45&nbsp;minutes inserts the fuelling question, so the count in the header changes from 8 to 9 as you go.</li>
+        <li>Three sessions are pre-seeded into the week (Mon–Wed) so the final screen has something to sit in. Your logged session lands on the next open day.</li>
+        <li><strong>Log another</strong> returns to the mode chooser and fills the next day forward, so you can alternate Fast and Full within one visit.</li>
+        <li><strong>Copy test data</strong> puts every timing and answer from this visit on your clipboard as JSON. It sits on the last screen and again under the flow map, so a check-in you gave up on part-way can still be sent in. Do it before you close the tab — reloading clears everything.</li>
+        <li>State resets when you reload — nothing is saved anywhere.</li>
+      </ul>
+    </div>
+  </details>
+
+  <p class="provenance-note">Prototype only — no accounts, no browser storage, no analytics service. Sessions and step timings live in memory for this visit and clear on reload. Nothing is transmitted anywhere; the one way data leaves this page is <strong>Copy test data</strong>, which you tap yourself and which puts the JSON on your own clipboard.</p>
+
+</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ═══════════════════════════════════════════════════════════════
+  // QUESTIONS
+  //
+  // Values are deliberately identical to Prototype 02's vocabulary
+  // (disc / duration / intensity / a1 / a2 / a3 / rpe / b2 / b3) so a
+  // session captured through this flow feeds the same D/E/F/N/S
+  // computation without translation.
+  //
+  // ORDER IS LOAD-BEARING, twice over:
+  //   · b3 (pain / niggle) sits third rather than eighth. It is the single
+  //     answer that can force a caution for the whole week, so it is the one
+  //     that must not be lost to someone abandoning halfway down a nine-step
+  //     flow. Everything after it degrades gracefully; this one does not.
+  //   · duration must be answered before a3, because a3 is conditional on it
+  //     (onlyLong). Keep duration ahead of a3 if this array is reordered again.
+  //
+  // fast:true marks the questions Fast mode asks as steps — TrainingPeaks'
+  // actual post-workout ask (session, duration, effort, feel) plus b3. The
+  // rest stay reachable behind "Add detail" on the review step; they are
+  // deferred, never dropped.
+  // ═══════════════════════════════════════════════════════════════
+  var QUESTIONS = [
+    {
+      k:'disc', map:'Which session', layout:'grid3', fast:true,
+      legend:'Which session was it?',
+      hint:'In the shipped app this comes from your plan — declared here so there is something to compute from.',
+      opts:[
+        {v:'swim', label:'Swim'}, {v:'bike', label:'Bike'}, {v:'run', label:'Run'},
+        {v:'brick', label:'Brick'}, {v:'strength', label:'Strength'}
+      ]
+    },
+    {
+      k:'b3', map:'Body', layout:'list', fast:true,
+      legend:'Any pain, tightness or niggle?',
+      hint:'Not tiredness — something physical. Asked early because this one answer can force a caution for the whole week.',
+      opts:[
+        {v:'nothing', label:'Nothing', chip:'nothing', sev:'sev-1'},
+        {v:'warmed',  label:'A niggle that warmed up and went', chip:'warmed up', sev:'sev-2'},
+        {v:'end',     label:'Still there at the end', chip:'at the end', sev:'sev-3'},
+        {v:'changed', label:'Changed how I moved, or made me stop', chip:'changed me', sev:'sev-4'}
+      ]
+    },
+    {
+      k:'duration', map:'Duration', layout:'grid3', mono:true, fast:true,
+      legend:'Roughly how long?',
+      hint:'Decides whether we ask about fuelling, and which sessions count as your long ones.',
+      opts:[
+        {v:'30', label:'≤ 45 min', chip:'≤45'},
+        {v:'60', label:'45–90 min', chip:'45–90'},
+        {v:'120', label:'90 min +', chip:'90+'}
+      ]
+    },
+    {
+      k:'intensity', map:'Intent', layout:'list', tick:true,
+      legend:'Was it meant to be easy or hard?',
+      hint:'Drift is only measured on the sessions you intended to keep easy.',
+      opts:[
+        {v:'easy', label:'Easy / steady', chip:'easy'},
+        {v:'hard', label:'Hard / quality', chip:'hard'}
+      ]
+    },
+    {
+      // Relative to expectation rather than an absolute 1–10 rating. Captured
+      // as a bucket the same way duration is — the stored value is that
+      // bucket's representative RPE, so session.rpe stays numeric downstream.
+      k:'rpe', map:'Effort felt', layout:'grid3', fast:true,
+      legend:'How hard was it?',
+      hint:'What it actually felt like against what you expected — not what the plan said. Against your answer above, this is what catches a session that quietly ran hotter than intended.',
+      opts:[
+        {v:'4', label:'Easy', chip:'easy'},
+        {v:'6', label:'As expected', chip:'as expected'},
+        {v:'9', label:'Harder than expected', chip:'harder'}
+      ]
+    },
+    {
+      k:'a1', map:'Vs intent', layout:'list', tick:true,
+      legend:'Did it finish at the effort you intended?',
+      hint:'You set a ceiling this morning — did you stop at it?',
+      opts:[
+        {v:'intent', label:'At intent', chip:'at intent'},
+        {v:'slight', label:'Slightly over', chip:'slight'},
+        {v:'well', label:'Well over', chip:'well over'},
+        {v:'none', label:'I hadn’t set one', chip:'none set'}
+      ]
+    },
+    {
+      k:'a2', map:'Vs plan', layout:'list', tick:true,
+      legend:'Did you do it as planned?',
+      hint:'Shortened and substituted both still count as completed — they are flagged, not penalised.',
+      opts:[
+        {v:'planned', label:'As planned', chip:'as planned'},
+        {v:'short', label:'Shortened, same structure', chip:'shortened'},
+        {v:'sub', label:'Substituted', chip:'substituted'},
+        {v:'didnt', label:'Didn’t do it', chip:'missed'}
+      ]
+    },
+    {
+      k:'a3', map:'Fuelling', layout:'list', tick:true, onlyLong:true,
+      legend:'Did you fuel during it?',
+      hint:'Asked because you logged a session over 45 minutes.',
+      opts:[
+        {v:'race', label:'At race concentration', chip:'race conc.'},
+        {v:'lighter', label:'Lighter than race', chip:'lighter'},
+        {v:'no', label:'No', chip:'no'}
+      ]
+    },
+    {
+      k:'b2', map:'How it felt', layout:'list', fast:true,
+      legend:'How did it feel?',
+      hint:'Affect, not effort. Three flat or rough sessions is what moves your state.',
+      opts:[
+        {v:'strong', label:'Strong', sev:'sev-strong'},
+        {v:'solid',  label:'Solid',  sev:'sev-solid'},
+        {v:'flat',   label:'Flat',   sev:'sev-flat'},
+        {v:'rough',  label:'Rough',  sev:'sev-rough'}
+      ]
+    }
+  ];
+
+  // ── Flow modes ────────────────────────────────────────────────
+  // Full is the nine-step flow as designed. Fast is the control: the ask
+  // TrainingPeaks makes after a workout, plus the niggle question. Which one
+  // is right is a question about elapsed time and completion, not about
+  // principle — so both ship here and get run on the same athletes.
+  var MODES = [
+    {v:'full', label:'Full', sub:'Every question, one per screen. The flow as designed.'},
+    {v:'fast', label:'Fast', sub:'Session, niggle, duration, effort, feel. Intent, plan and fuelling wait behind Add detail.'}
+  ];
+
+  // ── Week model ────────────────────────────────────────────────
+  // Three sessions are pre-seeded so the closing screen has a week to sit in.
+  // PLANNED_SESSIONS_PER_WEEK and the fraction gating it are Prototype 02's;
+  // the floor the closing screen counts toward is the same number.
+  var PLANNED_SESSIONS_PER_WEEK = 8;
+
+  // UNTESTED. 0.6 is the fraction of a planned week that has to be logged
+  // before the roll-up computes rather than degrades to recall. It was chosen
+  // by feel, not from data — nothing has yet established that a week with 5 of
+  // 8 sessions logged is meaningfully more computable than one with 4. The
+  // telemetry this build collects (logging cadence across real weeks) is what
+  // should move it. Treat the number as a placeholder with a name, not a
+  // finding; when real cadence is in, set it from that and delete this comment.
+  var WEEK_FLOOR_FRACTION = 0.6;
+  var WEEK_FLOOR = Math.ceil(WEEK_FLOOR_FRACTION * PLANNED_SESSIONS_PER_WEEK);
+  var SEEDED = 3;
+
+  // 'what' is only ever the athlete's own logged detail — a day that hasn't
+  // been checked in for doesn't get a fabricated session description, just
+  // the day and its state (open / planned / rest).
+  var WEEK = [
+    {day:'Mon', what:'Swim · easy · RPE 3', state:'logged'},
+    {day:'Tue', what:'Bike · hard · RPE 7', state:'logged'},
+    {day:'Wed', what:'Strength · RPE 5',    state:'logged'},
+    {day:'Thu', what:'',                    state:'open'},
+    {day:'Fri', what:'',                    state:'rest'},
+    {day:'Sat', what:'',                    state:'planned'},
+    {day:'Sun', what:'',                    state:'planned'}
+  ];
+
+  var DISC_LABEL = {swim:'Swim',bike:'Bike',run:'Run',brick:'Brick',strength:'Strength'};
+
+  // ── State ─────────────────────────────────────────────────────
+  var state = {
+    ans: {},           // k -> value
+    step: 0,
+    mode: 'start',     // 'start' | 'ask' | 'review' | 'saved'
+    flowMode: 'full',  // 'full' | 'fast' — chosen on the start screen
+    note: '',
+    logs: [],          // sessions saved this visit
+    autoAdvance: true,
+    telemetry: null    // set below
+  };
+  var advanceTimer = null;
+
+  // ═══════════════════════════════════════════════════════════════
+  // TELEMETRY
+  //
+  // Everything here lives in memory for this visit and is never sent
+  // anywhere. It exists to answer four questions this design cannot answer
+  // by argument: how long the flow actually takes, where people stop, how
+  // Fast compares with Full on the same athletes, and whether the intent /
+  // plan / feel / pain answers ever diverge from each other in practice.
+  //
+  // The only way any of it leaves the browser is "Copy test data" on the
+  // saved screen — a visible action the tester takes themselves.
+  // ═══════════════════════════════════════════════════════════════
+  var TELEMETRY_VERSION = 1;
+
+  state.telemetry = {
+    version: TELEMETRY_VERSION,
+    pageOpenedAt: Date.now(),
+    runs: []          // one entry per pass through the flow, saved or not
+  };
+
+  // How the athlete left the step they were on. Set immediately before the
+  // go() that performs the move, then consumed and reset by go().
+  var navVia = 'manual';
+
+  function currentRun(){
+    var r = state.telemetry.runs;
+    return r.length ? r[r.length - 1] : null;
+  }
+  function openVisit(){
+    var r = currentRun();
+    if(!r){ return null; }
+    for(var i = r.visits.length - 1; i >= 0; i--){
+      if(r.visits[i].leftAt === null){ return r.visits[i]; }
+    }
+    return null;
+  }
+
+  function telStartRun(){
+    state.telemetry.runs.push({
+      mode: state.flowMode,
+      autoAdvanceAtStart: state.autoAdvance,
+      autoAdvanceToggles: 0,
+      startedAt: Date.now(),      // the moment "Start check-in" was tapped
+      visits: [],                 // one per arrival at a step (revisits included)
+      backCount: 0,               // running count of backward moves
+      detailOpened: false,        // Fast mode: was "Add detail" ever expanded
+      detailOpenedAt: null,
+      saved: false,
+      savedAt: null,
+      totalMs: null,              // start → save
+      interruptions: [],          // backgrounded / unloaded mid-flow
+      abandonedAt: null,          // last step reached with no save; null once saved
+      session: null               // the saved answer set, attached on save
+    });
+  }
+
+  // Called on arrival at a step. `k` is the question key, or '__review' for
+  // the review screen — review time is part of time-to-save and would
+  // otherwise vanish from the total.
+  function telEnter(k, position){
+    var r = currentRun();
+    if(!r){ return; }
+    r.visits.push({
+      k: k,
+      position: position,          // 1-based index within this mode's step list
+      enteredAt: Date.now(),
+      answeredAt: null,
+      answerMs: null,              // enter → answer, i.e. decision time
+      value: null,
+      leftAt: null,
+      dwellMs: null,               // enter → leave, i.e. total time on screen
+      via: null,                   // how the athlete left: auto | manual | back | map | review-row | save-gap
+      answered: false
+    });
+  }
+
+  function telLeave(via){
+    var v = openVisit();
+    if(!v){ return; }
+    v.leftAt = Date.now();
+    v.dwellMs = v.leftAt - v.enteredAt;
+    v.via = via;
+  }
+
+  function telAnswer(k, value, context){
+    var r = currentRun();
+    if(!r){ return; }
+    if(context === 'detail'){
+      // Answered inside the Fast-mode "Add detail" panel — no step to attach
+      // to, so it gets its own record with the panel as its origin.
+      r.visits.push({
+        k: k, position: 'detail',
+        enteredAt: r.detailOpenedAt || Date.now(),
+        answeredAt: Date.now(),
+        answerMs: r.detailOpenedAt ? (Date.now() - r.detailOpenedAt) : null,
+        value: value, leftAt: Date.now(), dwellMs: null,
+        via: 'detail', answered: true
+      });
+      return;
+    }
+    var v = openVisit();
+    if(!v || v.k !== k){ return; }
+    // First answer on this visit is the decision; a change of mind keeps the
+    // original decision time and records the value that was actually left.
+    if(v.answeredAt === null){
+      v.answeredAt = Date.now();
+      v.answerMs = v.answeredAt - v.enteredAt;
+    }
+    v.value = value;
+    v.answered = true;
+  }
+
+  function telBack(){
+    var r = currentRun();
+    if(r){ r.backCount++; }
+  }
+
+  // No save by the time the page goes away or into the background. On mobile
+  // 'unload' often never fires, so visibilitychange is the one that matters —
+  // it also fires for someone who just switched apps and will come back, which
+  // is why returning and saving clears the flag rather than leaving it set.
+  function telInterrupt(reason){
+    var r = currentRun();
+    var at = Date.now();
+    var v = r ? openVisit() : null;
+    var where = {
+      reason: reason,
+      at: at,
+      mode: r ? r.mode : state.flowMode,
+      screen: state.mode,
+      step: v ? v.k : (state.mode === 'start' ? '__mode-select' : null),
+      position: v ? v.position : null,
+      msSinceStart: r ? (at - r.startedAt) : null
+    };
+    if(!r){
+      // Left before ever starting a run.
+      state.telemetry.abandonedBeforeStart = where;
+      return;
+    }
+    if(r.saved){ return; }
+    r.interruptions.push(where);
+    r.abandonedAt = where;
+  }
+
+  function telSave(session){
+    var r = currentRun();
+    if(!r){ return; }
+    r.saved = true;
+    r.savedAt = Date.now();
+    r.totalMs = r.savedAt - r.startedAt;
+    r.abandonedAt = null;     // it completed; interruptions[] keeps the history
+    r.session = session;      // the answer set, alongside the timings
+  }
+
+  function telExport(){
+    return {
+      prototype: 'after-session-checkin-stepped',
+      telemetryVersion: TELEMETRY_VERSION,
+      exportedAt: new Date().toISOString(),
+      pageOpenedAt: new Date(state.telemetry.pageOpenedAt).toISOString(),
+      viewport: window.innerWidth + '×' + window.innerHeight,
+      userAgent: navigator.userAgent,
+      plannedSessionsPerWeek: PLANNED_SESSIONS_PER_WEEK,
+      weekFloorFraction: WEEK_FLOOR_FRACTION,
+      abandonedBeforeStart: state.telemetry.abandonedBeforeStart || null,
+      runs: state.telemetry.runs
+    };
+  }
+
+  var els = {
+    eyebrow: document.getElementById('eyebrow'),
+    counter: document.getElementById('counter'),
+    barFill: document.getElementById('bar-fill'),
+    body:    document.getElementById('flow-body'),
+    foot:    document.getElementById('flow-foot'),
+    back:    document.getElementById('btn-back'),
+    next:    document.getElementById('btn-next'),
+    live:    document.getElementById('live'),
+    map:     document.getElementById('map'),
+    auto:    document.getElementById('auto-advance'),
+    exportAside: document.getElementById('export-aside')
+  };
+  var asideExport = null;   // built once at init; its note text is refreshed per render
+
+  // ── Derived ───────────────────────────────────────────────────
+  // Anything over 45 min gets the fuelling question. Duration is captured as
+  // a bucket; the stored value is the bucket's representative minute count.
+  function isLong(v){ return v !== null && v !== undefined && parseInt(v,10) > 45; }
+  function asked(q){ return !q.onlyLong || isLong(state.ans.duration); }
+
+  // The steps the athlete walks through, in order, for the mode they picked.
+  function steps(){
+    return QUESTIONS.filter(function(q){
+      return asked(q) && (state.flowMode !== 'fast' || q.fast);
+    });
+  }
+  // Fast mode only: what sits behind "Add detail" on the review step. These
+  // are deferred, not dropped — the session object still has a slot for each.
+  function detailQuestions(){
+    if(state.flowMode !== 'fast'){ return []; }
+    return QUESTIONS.filter(function(q){ return asked(q) && !q.fast; });
+  }
+  // "8–9 steps" / "5 steps" — shown on the mode chooser so the difference
+  // between the two flows is stated before either is chosen.
+  function stepCountLabel(mode){
+    var all = QUESTIONS.filter(function(q){ return mode !== 'fast' || q.fast; });
+    var min = all.filter(function(q){ return !q.onlyLong; }).length;
+    var max = all.length;
+    return (min === max ? String(min) : min + '–' + max) + ' step' + (max === 1 ? '' : 's');
+  }
+  function missing(){
+    return steps().filter(function(q){ return !state.ans[q.k]; });
+  }
+  function optionFor(q, v){
+    for(var i=0;i<q.opts.length;i++){ if(q.opts[i].v === v){ return q.opts[i]; } }
+    return null;
+  }
+  function chipFor(q){
+    var o = optionFor(q, state.ans[q.k]);
+    return o ? (o.chip || o.label) : '';
+  }
+  function loggedCount(){ return SEEDED + state.logs.length; }
+
+  function say(msg){
+    // Re-set to '' first so repeated identical messages still announce.
+    els.live.textContent = '';
+    window.setTimeout(function(){ els.live.textContent = msg; }, 20);
+  }
+
+  function clear(node){ while(node.firstChild){ node.removeChild(node.firstChild); } }
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if(cls){ n.className = cls; }
+    if(text !== undefined && text !== null){ n.textContent = text; }
+    return n;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // NAVIGATION
+  // ═══════════════════════════════════════════════════════════════
+  function cancelAdvance(){
+    if(advanceTimer){ window.clearTimeout(advanceTimer); advanceTimer = null; }
+  }
+
+  // Every move between steps re-renders and then lands focus on the new
+  // heading — including the auto-advance path, which is the one that would
+  // otherwise strand a keyboard or screen-reader user on <body> (2.4.3).
+  function go(i, announce){
+    cancelAdvance();
+    var list = steps();
+    var target = Math.max(0, i);
+    // Backward moves are counted before the visit closes, so the count and the
+    // visit that produced it line up in the export.
+    if(state.mode === 'ask' && target < state.step){ telBack(); }
+    if(state.mode === 'review' && i < list.length){ telBack(); }
+    telLeave(navVia);
+    navVia = 'manual';
+
+    if(i >= list.length){
+      state.mode = 'review';
+      telEnter('__review', 'review');
+      render();
+      focusHeading();
+      if(announce){ say('Review and save. ' + list.length + ' question' + (list.length===1?'':'s') + ' in this check-in.'); }
+      return;
+    }
+    state.step = target;
+    state.mode = 'ask';
+    telEnter(list[state.step].k, state.step + 1);
+    render();
+    focusHeading();
+    if(announce){
+      say('Question ' + (state.step + 1) + ' of ' + list.length + '. ' + list[state.step].legend);
+    }
+  }
+
+  function focusHeading(){
+    var h = document.getElementById('step-h');
+    if(h){ h.focus({preventScroll:true}); }
+    // The flow's own header is sticky, so scrolling the page to the top keeps
+    // the question heading clear of it rather than tucked underneath.
+    window.scrollTo(0, 0);
+  }
+
+  // `context` is 'step' (the normal path) or 'detail' (answered inside Fast
+  // mode's Add-detail panel, where there is no step to advance from).
+  function pick(q, value, context){
+    state.ans[q.k] = value;
+    telAnswer(q.k, value, context);
+    // Dropping below 45 min removes the fuelling question — drop its answer too,
+    // so the counter and the review list stay honest.
+    if(q.k === 'duration' && !isLong(value)){ delete state.ans.a3; }
+    if(context === 'detail'){
+      // Redrawing the review body would collapse the panel under the athlete's
+      // thumb; the chips already show their own checked state.
+      renderChrome();
+      return;
+    }
+    // Chrome only: rebuilding the question body here would tear the just-clicked
+    // radio out from under the user's focus. The chips already show their checked
+    // state through CSS, so nothing in the body needs redrawing.
+    renderChrome();
+    if(!state.autoAdvance){ return; }
+    cancelAdvance();
+    advanceTimer = window.setTimeout(function(){
+      advanceTimer = null;
+      navVia = 'auto';
+      go(state.step + 1, true);
+    }, 260);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER — header, body, footer, flow map
+  // ═══════════════════════════════════════════════════════════════
+  // Header, footer and flow map — everything outside the question itself.
+  function renderChrome(){
+    var list = steps();
+    var idx = Math.min(state.step, list.length - 1);
+
+    // ── Header ──
+    if(state.mode === 'start'){
+      els.eyebrow.textContent = 'Before you start';
+      els.counter.textContent = stepCountLabel(state.flowMode);
+      els.barFill.style.width = '0%';
+    } else if(state.mode === 'saved'){
+      els.eyebrow.textContent = 'Build 2 · week 6';
+      els.counter.textContent = 'logged';
+      els.barFill.style.width = '100%';
+    } else if(state.mode === 'review'){
+      var gaps = missing().length;
+      els.eyebrow.textContent = 'Just finished';
+      // Says how many are actually answered, not how many exist — the count stays honest.
+      els.counter.textContent = 'review · ' + (list.length - gaps) + '/' + list.length;
+      els.barFill.style.width = '100%';
+    } else {
+      els.eyebrow.textContent = 'Just finished';
+      els.counter.textContent = (idx + 1) + ' / ' + list.length;
+      els.barFill.style.width = Math.round(idx / list.length * 100) + '%';
+    }
+
+    // ── Footer ──
+    renderFoot(list, idx);
+
+    // ── Flow map ──
+    renderMap(list, idx);
+
+    // ── Apparatus export ── (rebuilt never, only re-labelled — a fallback
+    // textarea the tester is mid-copy of must not vanish under them)
+    if(asideExport){ asideExport.refresh(); }
+
+    return {list: list, idx: idx};
+  }
+
+  function render(){
+    var c = renderChrome();
+    clear(els.body);
+    if(state.mode === 'start'){ renderStart(); }
+    else if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
+    else if(state.mode === 'review'){ renderReview(c.list); }
+    else { renderSaved(); }
+  }
+
+  // The radio group for one question. Shared by the stepped screens and the
+  // Fast-mode Add-detail panel so both paths produce identical controls —
+  // same targets, same checked state, same keyboard behaviour.
+  // `idPrefix` keeps the two paths from colliding on element ids.
+  function choiceGroup(q, idPrefix, context){
+    var wrap = el('div', 'choices-wrap');
+    var cls = 'choices';
+    if(q.layout === 'scale'){ cls += ' scale'; }
+    else if(q.layout === 'grid3'){ cls += ' grid3'; }
+    else if(q.layout === 'grid2'){ cls += ' grid2'; }
+    var group = el('div', cls);
+
+    q.opts.forEach(function(o){
+      var id = idPrefix + '-' + q.k + '-' + o.v;
+      var opt = el('div', 'opt');
+
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = idPrefix + '-q-' + q.k;
+      input.id = id;
+      input.value = o.v;
+      input.checked = state.ans[q.k] === o.v;
+      input.addEventListener('change', function(){ pick(q, o.v, context); });
+      opt.appendChild(input);
+
+      var label = el('label', 'choice');
+      label.htmlFor = id;
+      if(q.tick){
+        var tick = el('span', 'tick', '✓');
+        tick.setAttribute('aria-hidden', 'true');
+        label.appendChild(tick);
+      }
+      if(o.sev){
+        var sev = el('span', 'sev ' + o.sev);
+        sev.setAttribute('aria-hidden', 'true');
+        label.appendChild(sev);
+      }
+      label.appendChild(document.createTextNode(o.label));
+      opt.appendChild(label);
+
+      group.appendChild(opt);
+    });
+
+    wrap.appendChild(group);
+    return wrap;
+  }
+
+  function renderAsk(q){
+    var fs = el('fieldset', 'q-set');
+    fs.setAttribute('aria-describedby', 'step-hint');
+
+    var lg = document.createElement('legend');
+    var h = el('h1', null, q.legend);
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    lg.appendChild(h);
+    fs.appendChild(lg);
+
+    var hint = el('p', 'hint', q.hint);
+    hint.id = 'step-hint';
+    fs.appendChild(hint);
+
+    var wrap = choiceGroup(q, 'o', 'step');
+    if(q.ends){
+      // What 1 and 10 mean is information, not decoration — it joins the
+      // group's description rather than being hidden from assistive tech.
+      var ends = el('div', 'scale-ends');
+      ends.id = 'step-ends';
+      ends.appendChild(el('span', null, q.ends[0]));
+      ends.appendChild(el('span', null, q.ends[1]));
+      wrap.appendChild(ends);
+      fs.setAttribute('aria-describedby', 'step-hint step-ends');
+    }
+    fs.appendChild(wrap);
+    els.body.appendChild(fs);
+  }
+
+  // ── Mode chooser ──────────────────────────────────────────────
+  // Sits ahead of the flow rather than inside it, so the choice is made once
+  // and the whole run belongs to one mode. Test apparatus, not app chrome —
+  // in the shipped app the flow starts at question one.
+  function renderStart(){
+    var fs = el('fieldset', 'q-set');
+    fs.setAttribute('aria-describedby', 'step-hint');
+
+    var lg = document.createElement('legend');
+    var h = el('h1', null, 'Which flow are you testing?');
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    lg.appendChild(h);
+    fs.appendChild(lg);
+
+    var hint = el('p', 'hint', 'Test setting — pick one, then log the session you just finished. Run both across a few sessions; the difference between them is what is being measured.');
+    hint.id = 'step-hint';
+    fs.appendChild(hint);
+
+    var wrap = el('div', 'choices-wrap');
+    var group = el('div', 'choices');
+    MODES.forEach(function(m){
+      var id = 'mode-' + m.v;
+      var opt = el('div', 'opt');
+
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'flow-mode';
+      input.id = id;
+      input.value = m.v;
+      input.checked = state.flowMode === m.v;
+      input.addEventListener('change', function(){
+        state.flowMode = m.v;
+        renderChrome();   // the step count in the header is the point of the choice
+        say(m.label + ' selected. ' + stepCountLabel(m.v) + '. ' + m.sub);
+      });
+      opt.appendChild(input);
+
+      var label = el('label', 'choice');
+      label.htmlFor = id;
+      var tick = el('span', 'tick', '✓');
+      tick.setAttribute('aria-hidden', 'true');
+      label.appendChild(tick);
+      var body = el('span', 'opt-body');
+      body.appendChild(el('span', null, m.label + ' · ' + stepCountLabel(m.v)));
+      body.appendChild(el('span', 'opt-sub', m.sub));
+      label.appendChild(body);
+      opt.appendChild(label);
+
+      group.appendChild(opt);
+    });
+    wrap.appendChild(group);
+    fs.appendChild(wrap);
+    els.body.appendChild(fs);
+  }
+
+  function renderReview(list){
+    var h = el('h1', null, 'Check and save');
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    els.body.appendChild(h);
+    els.body.appendChild(el('p', 'hint', 'Tap any line to change it. Nothing is saved until you save.'));
+
+    var rows = el('div', 'choices-wrap');
+    list.forEach(function(q, i){
+      var btn = el('button', 'review-row');
+      btn.type = 'button';
+      btn.appendChild(el('span', 'review-q', q.legend.replace(/\?$/, '')));
+      var o = optionFor(q, state.ans[q.k]);
+      var a = el('span', 'review-a' + (o ? '' : ' none'), o ? o.label : 'Not answered');
+      btn.appendChild(a);
+      btn.addEventListener('click', function(){ navVia = 'review-row'; go(i, true); });
+      rows.appendChild(btn);
+    });
+
+    els.body.appendChild(rows);
+
+    // Full mode keeps the note on the review screen. Fast mode folds it into
+    // the Add-detail panel with the questions it deferred.
+    if(state.flowMode === 'fast'){
+      els.body.appendChild(renderDetailPanel());
+    } else {
+      rows.appendChild(noteBlock());
+    }
+  }
+
+  function noteBlock(){
+    var frag = document.createDocumentFragment();
+    var lbl = el('label', 'note-lbl');
+    lbl.htmlFor = 'note';
+    lbl.appendChild(document.createTextNode('Anything to add? '));
+    lbl.appendChild(el('span', 'sub', 'Optional — not scored, just surfaced back to you at week’s end.'));
+    frag.appendChild(lbl);
+
+    var ta = document.createElement('textarea');
+    ta.id = 'note';
+    ta.rows = 2;
+    ta.maxLength = 140;
+    ta.placeholder = 'e.g. left calf tight from 20 min · gut off after gel 4';
+    ta.value = state.note;
+    ta.addEventListener('input', function(){ state.note = ta.value; });
+    frag.appendChild(ta);
+    return frag;
+  }
+
+  // Fast mode's deferred questions — intent, plan, fuelling and the note —
+  // one tap away rather than removed. Answering here never navigates, so the
+  // panel stays open and the review screen stays put.
+  function renderDetailPanel(){
+    var det = el('details', 'instr detail-panel');
+    var extras = detailQuestions();
+    var sum = document.createElement('summary');
+    sum.appendChild(document.createTextNode('Add detail'));
+    det.appendChild(sum);
+
+    var body = el('div', 'body');
+    body.appendChild(el('p', null, 'Not asked as steps in Fast, but still captured if you answer them. Left blank, they save as unanswered.'));
+
+    extras.forEach(function(q){
+      var fs = el('fieldset', 'detail-field');
+      var lg = document.createElement('legend');
+      lg.appendChild(el('span', 'detail-legend', q.legend));
+      fs.appendChild(lg);
+      fs.appendChild(choiceGroup(q, 'd', 'detail'));
+      body.appendChild(fs);
+    });
+
+    body.appendChild(noteBlock());
+    det.appendChild(body);
+
+    det.addEventListener('toggle', function(){
+      var r = currentRun();
+      if(!r){ return; }
+      if(det.open && !r.detailOpened){
+        r.detailOpened = true;
+        r.detailOpenedAt = Date.now();
+      }
+    });
+    return det;
+  }
+
+  function renderSaved(){
+    var flag = el('p', 'saved-flag');
+    var g = el('span', 'g', '✓');
+    g.setAttribute('aria-hidden', 'true');
+    flag.appendChild(g);
+    flag.appendChild(document.createTextNode('Session logged'));
+    els.body.appendChild(flag);
+
+    var h = el('h1', null, 'Your week so far');
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    h.style.marginTop = '10px';
+    els.body.appendChild(h);
+
+    var n = loggedCount();
+    var lead = n >= WEEK_FLOOR
+      ? 'That is ' + n + ' logged — the week computes on Sunday night.'
+      : 'This one is number ' + n + '. ' + (WEEK_FLOOR - n) + ' more and the week computes rather than gets recalled.';
+    els.body.appendChild(el('p', 'week-lead', lead));
+
+    var ul = el('ul', 'week-list');
+    ul.setAttribute('aria-label', 'Your week');
+    WEEK.forEach(function(d){
+      var li = el('li', 'week-row' + (d.state === 'just' ? ' is-now' : ''));
+      if(d.state === 'just'){ li.setAttribute('aria-current', 'true'); }
+      li.appendChild(el('span', 'week-day', d.day));
+      // Only a logged day carries a description — nothing is invented for a
+      // day the athlete hasn't checked in for.
+      if(d.what){ li.appendChild(el('span', 'week-what', d.what)); }
+      var stateText = '';
+      var stateCls = 'week-state';
+      if(d.state === 'just'){ stateText = '✓ just logged'; stateCls += ' done'; }
+      else if(d.state === 'logged'){ stateText = '✓ logged'; stateCls += ' done'; }
+      else if(d.state === 'open'){ stateText = 'not logged yet'; }
+      else if(d.state === 'planned'){ stateText = 'planned'; }
+      else if(d.state === 'rest'){ stateText = 'rest day'; }
+      if(stateText){ li.appendChild(el('span', stateCls, stateText)); }
+      ul.appendChild(li);
+    });
+    els.body.appendChild(ul);
+
+    var card = el('div', 'floor-card');
+    var top = el('div', 'floor-top');
+    top.appendChild(el('p', 'floor-title', 'Toward a computed week'));
+    top.appendChild(el('p', 'floor-count', n + ' / ' + WEEK_FLOOR + ' sessions'));
+    card.appendChild(top);
+
+    var bar = el('div', 'bar');
+    bar.setAttribute('aria-hidden', 'true');
+    var fill = document.createElement('i');
+    fill.style.width = Math.min(100, Math.round(n / WEEK_FLOOR * 100)) + '%';
+    bar.appendChild(fill);
+    card.appendChild(bar);
+
+    card.appendChild(el('p', 'floor-note', n >= WEEK_FLOOR
+      ? 'Drift, execution, fuelling, structure and state all have enough to run on.'
+      : WEEK_FLOOR + ' logged sessions is the floor for a computed week — ' +
+        Math.round(WEEK_FLOOR_FRACTION * 100) + '% of a notional ' +
+        PLANNED_SESSIONS_PER_WEEK + '-session week. Under that, the roll-up degrades to recall.'));
+    els.body.appendChild(card);
+
+    els.body.appendChild(buildExport('saved').node);
+  }
+
+  // ── Test-data export ──────────────────────────────────────────
+  // The only route out of the page, and deliberately a visible tap rather
+  // than anything automatic. Clipboard first; where that is unavailable —
+  // file:// on some browsers, older iOS Safari — a selectable box instead,
+  // because a test on a borrowed phone cannot fall back to a console.
+  //
+  // Mounted twice: on the saved screen, where a completed run ends, and in
+  // the apparatus section below the flow, which is the only place a run that
+  // never reaches Save can still be got at.
+  function buildExport(where){
+    var box = el('div', 'export');
+    var outId = 'export-out-' + where;
+
+    var btn = el('button', 'btn btn-ghost btn-block', 'Copy test data');
+    btn.type = 'button';
+    box.appendChild(btn);
+
+    var note = el('p', 'export-note', '');
+    box.appendChild(note);
+
+    function refresh(){
+      var n = state.telemetry.runs.length;
+      var open = n && !state.telemetry.runs[n-1].saved ? ', including the one in progress' : '';
+      note.textContent = 'Puts every step timing and saved session from this visit on your clipboard as JSON — ' +
+        n + ' run' + (n === 1 ? '' : 's') + ' so far' + open +
+        '. Nothing is sent anywhere; reloading clears it.';
+    }
+    refresh();
+
+    function fallback(json, reason){
+      var existing = box.querySelector('#' + outId);
+      if(existing){ existing.value = json; existing.focus(); existing.select(); return; }
+      var lbl = el('label', 'note-lbl');
+      lbl.htmlFor = outId;
+      lbl.appendChild(document.createTextNode('Copy this instead '));
+      lbl.appendChild(el('span', 'sub', reason));
+      box.appendChild(lbl);
+      var ta = document.createElement('textarea');
+      ta.id = outId;
+      ta.className = 'export-out';
+      ta.rows = 6;
+      ta.readOnly = true;
+      ta.value = json;
+      box.appendChild(ta);
+      ta.focus();
+      ta.select();
+    }
+
+    btn.addEventListener('click', function(){
+      var json = JSON.stringify(telExport(), null, 2);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(json).then(function(){
+          btn.textContent = 'Copied ✓';
+          say('Test data copied to the clipboard. ' + json.length + ' characters.');
+        }, function(){
+          fallback(json, 'The clipboard was refused — select all of this and copy it by hand.');
+          say('Clipboard unavailable. The data is in a text box below — select all and copy.');
+        });
+      } else {
+        fallback(json, 'This browser has no clipboard access here — select all of this and copy it by hand.');
+        say('Clipboard unavailable. The data is in a text box below — select all and copy.');
+      }
+    });
+
+    return {node: box, refresh: refresh};
+  }
+
+  function renderFoot(list, idx){
+    if(state.mode === 'start'){
+      els.back.textContent = 'Back';
+      els.back.disabled = true;
+      els.next.textContent = 'Start check-in';
+      return;
+    }
+    if(state.mode === 'saved'){
+      els.back.textContent = 'Log another';
+      els.back.disabled = false;
+      els.next.textContent = 'Done';
+      return;
+    }
+    els.back.textContent = 'Back';
+    els.back.disabled = (state.mode === 'ask' && idx === 0);
+    if(state.mode === 'review'){
+      els.next.textContent = 'Save session';
+    } else {
+      els.next.textContent = state.ans[list[idx].k] ? 'Next' : 'Skip for now';
+    }
+  }
+
+  function renderMap(list, idx){
+    clear(els.map);
+    list.forEach(function(q, i){
+      var here = state.mode === 'ask' && i === idx;
+      var answered = !!state.ans[q.k];
+      var cls = 'map-item' + (here ? ' is-now' : '') + (answered ? ' answered' : '');
+      var li = document.createElement('li');
+      // Before the flow starts and once it is saved, the map reports rather
+      // than navigates — there is nothing to jump into either side of the run.
+      var inert = state.mode === 'saved' || state.mode === 'start';
+      var node = inert ? el('div', cls) : el('button', cls);
+      if(!inert){
+        node.type = 'button';
+        node.addEventListener('click', function(){ navVia = 'map'; go(i, true); });
+      }
+      node.appendChild(el('span', 'map-n', String(i + 1).padStart(2, '0')));
+      node.appendChild(el('span', 'map-q', q.map));
+      node.appendChild(el('span', 'map-a', chipFor(q)));
+      if(here){
+        node.setAttribute('aria-current', 'step');
+      }
+      li.appendChild(node);
+      els.map.appendChild(li);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SAVE
+  // ═══════════════════════════════════════════════════════════════
+  function save(){
+    var gaps = missing();
+    if(gaps.length){
+      var list = steps();
+      var first = 0;
+      for(var i=0;i<list.length;i++){ if(list[i].k === gaps[0].k){ first = i; break; } }
+      navVia = 'save-gap';
+      go(first, false);
+      say('Cannot save yet — ' + gaps.length + ' question' + (gaps.length===1?'':'s') + ' unanswered. Taken to the first one.');
+      return;
+    }
+
+    var a = state.ans;
+    var dur = parseInt(a.duration, 10);
+    // Same shape as Prototype 02's session object — feeds computeD/E/F/N/S
+    // unchanged. Fast mode fills the same keys; anything left behind Add
+    // detail saves as null rather than absent, so nothing downstream has to
+    // know which flow produced the session.
+    var session = {
+      disc: a.disc,
+      intensity: a.intensity || null,
+      duration: dur,
+      a1: a.a1 || null,
+      a2: a.a2 || null,
+      a3: dur > 45 ? (a.a3 || null) : null,
+      rpe: parseInt(a.rpe, 10),
+      b2: a.b2,
+      b3: a.b3,
+      note: state.note.trim()
+    };
+    state.logs.push(session);
+    telLeave('save');
+    telSave(session);
+
+    // Drop it into the next open day, and demote any previous "just logged" row.
+    // Intended intensity is only stated when it was actually captured — Fast
+    // leaves it blank unless Add detail was opened.
+    var line = (DISC_LABEL[session.disc] || 'Session') +
+               (session.intensity ? ' · ' + (session.intensity === 'hard' ? 'hard' : 'easy') : '') +
+               ' · RPE ' + session.rpe;
+    for(var j=0;j<WEEK.length;j++){ if(WEEK[j].state === 'just'){ WEEK[j].state = 'logged'; } }
+    for(var d=0;d<WEEK.length;d++){
+      if(WEEK[d].state === 'open' || WEEK[d].state === 'planned'){
+        WEEK[d].what = line;
+        WEEK[d].state = 'just';
+        break;
+      }
+    }
+
+    state.mode = 'saved';
+    render();
+    focusHeading();
+    var n = loggedCount();
+    var r = currentRun();
+    say('Session saved in ' + Math.round((r ? r.totalMs : 0) / 1000) + ' seconds. ' +
+        n + ' of ' + WEEK_FLOOR + ' sessions logged this week.');
+  }
+
+  // "Log another" returns to the mode chooser rather than straight into the
+  // flow, so Fast and Full can be alternated within one visit and compared on
+  // the same athlete rather than across two of them.
+  function reset(){
+    cancelAdvance();
+    state.ans = {};
+    state.note = '';
+    state.step = 0;
+    state.mode = 'start';
+    render();
+    focusHeading();
+    say('New check-in. Choose Full or Fast, then start.');
+  }
+
+  // Leaving the mode chooser is the first moment there is a run to time.
+  function startFlow(){
+    telStartRun();
+    state.step = 0;
+    state.mode = 'ask';
+    var list = steps();
+    telEnter(list[0].k, 1);
+    render();
+    focusHeading();
+    say((state.flowMode === 'fast' ? 'Fast flow. ' : 'Full flow. ') +
+        'Question 1 of ' + list.length + '. ' + list[0].legend);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WIRING
+  // ═══════════════════════════════════════════════════════════════
+  els.back.addEventListener('click', function(){
+    if(state.mode === 'start'){ return; }
+    if(state.mode === 'saved'){ reset(); return; }
+    navVia = 'back';
+    var list = steps();
+    if(state.mode === 'review'){ go(list.length - 1, true); }
+    else { go(state.step - 1, true); }
+  });
+
+  els.next.addEventListener('click', function(){
+    if(state.mode === 'start'){ startFlow(); return; }
+    if(state.mode === 'saved'){
+      // Hand-off point. In the app this returns to Today; here it starts a fresh session.
+      reset();
+      return;
+    }
+    if(state.mode === 'review'){ save(); return; }
+    navVia = 'next';
+    go(state.step + 1, true);
+  });
+
+  els.auto.addEventListener('change', function(){
+    state.autoAdvance = els.auto.checked;
+    cancelAdvance();
+    var r = currentRun();
+    if(r && !r.saved){ r.autoAdvanceToggles++; }
+    say(state.autoAdvance
+      ? 'Auto-advance on. Picking an answer moves to the next question.'
+      : 'Auto-advance off. Use Next to move between questions.');
+  });
+
+  // ── Abandonment ───────────────────────────────────────────────
+  // A run that never reaches Save is the finding this prototype most needs.
+  // beforeunload misses most mobile exits, so visibilitychange does the work;
+  // both are recorded, and both are cleared if the athlete comes back and saves.
+  window.addEventListener('beforeunload', function(){ telInterrupt('unload'); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){ telInterrupt('hidden'); }
+  });
+  window.addEventListener('pagehide', function(){ telInterrupt('pagehide'); });
+
+  // init
+  state.autoAdvance = els.auto.checked;
+  asideExport = buildExport('aside');
+  els.exportAside.appendChild(asideExport.node);
+  render();
+})();
+</script>
+</body>
+</html>

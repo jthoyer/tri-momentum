@@ -25,7 +25,7 @@
   --strength:#854F0B; --strength-l:#FAEEDA;
   --rest:#8B93B8; --rest-l:#F0F2F8;
   --phase-base:#0F6E56; --phase-base-l:#E1F5EE;
-  --phase-build:#D9660B; --phase-build-l:#FFF1E0;
+  --phase-build:#A64C09; --phase-build-l:#FFF1E0;
   --phase-peak:#993C1D; --phase-peak-l:#FAECE7;
   --done:#0F6E56; --done-l:#E1F5EE;
   --skipped:#993C1D; --skipped-l:#FAECE7;
@@ -42,9 +42,9 @@ body{
 }
 ::selection{background:var(--blue); color:#fff}
 a{color:inherit}
-.mono{font-family:'Outfit',monospace}
+.mono{font-family:'Outfit',sans-serif}
 .eyebrow{
-  font-family:'Outfit',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
   color:var(--page-ink3);
 }
 h1,h2,h3{font-family:'Outfit',sans-serif; font-weight:600; letter-spacing:-.3px; text-wrap:balance; margin:0}
@@ -71,7 +71,7 @@ p{margin:0}
 .navlinks{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none}
 .navlinks::-webkit-scrollbar{display:none}
 .navlinks a{
-  flex:none; font-family:'Outfit',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  flex:none; font-family:'Outfit',sans-serif; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--page-ink2); text-decoration:none; padding:8px 12px; border-radius:999px; white-space:nowrap;
 }
 .navlinks a:hover{background:var(--page-line)}
@@ -87,14 +87,14 @@ p{margin:0}
 }
 .hero-meta{
   margin-top:26px; display:flex; gap:28px; flex-wrap:wrap;
-  font-family:'Outfit',monospace; font-size:11.5px; color:var(--page-ink3);
+  font-family:'Outfit',sans-serif; font-size:11.5px; color:var(--page-ink3);
 }
 .hero-meta b{color:var(--page-ink2); font-weight:500}
 
 section.doc{padding:56px 0; border-bottom:1px solid var(--page-line)}
 section.doc:last-of-type{border-bottom:none}
 .doc-hd{display:flex; align-items:baseline; gap:16px; margin-bottom:8px; scroll-margin-top:74px}
-.doc-hd .num{font-family:'Outfit',monospace; font-size:12px; color:var(--page-ink3)}
+.doc-hd .num{font-family:'Outfit',sans-serif; font-size:12px; color:var(--page-ink3)}
 .doc-hd h2{font-size:24px}
 .doc-intro{max-width:660px; margin:14px 0 34px; color:var(--page-ink2); font-size:14.5px; line-height:1.65}
 .doc-intro + .doc-intro{margin-top:-20px}
@@ -119,34 +119,34 @@ section.doc:last-of-type{border-bottom:none}
 .swatch-fill{height:64px; position:relative}
 .swatch-fill .on{
   position:absolute; inset:0; display:flex; align-items:flex-end; padding:9px 11px;
-  font-family:'Outfit',monospace; font-size:10px; letter-spacing:.04em;
+  font-family:'Outfit',sans-serif; font-size:10px; letter-spacing:.04em;
 }
 .swatch-body{padding:11px 12px 12px}
 .swatch-name{font-size:13px; font-weight:600}
 .swatch-role{font-size:11.5px; color:var(--page-ink3); margin-top:2px; line-height:1.4}
 .swatch-hex{
-  margin-top:8px; font-family:'Outfit',monospace; font-size:11px; color:var(--page-ink2);
+  margin-top:8px; font-family:'Outfit',sans-serif; font-size:11px; color:var(--page-ink2);
   display:flex; align-items:center; justify-content:space-between; gap:6px;
 }
 .swatch-copied{color:var(--blue); font-weight:500}
 .swatch:hover .swatch-hex{color:var(--blue)}
 
 .pairband{display:flex; height:52px; border-radius:14px; overflow:hidden; border:1px solid var(--page-line)}
-.pairband > div{flex:1; display:flex; align-items:center; justify-content:center; font-family:'Outfit',monospace; font-size:10.5px}
+.pairband > div{flex:1; display:flex; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; font-size:10.5px}
 
 /* ── Type specimens ── */
 .spec-row{
   display:flex; align-items:baseline; gap:24px; padding:20px 0; border-top:1px solid var(--page-line);
 }
 .spec-row:first-child{border-top:none; padding-top:0}
-.spec-meta{flex:none; width:190px; font-family:'Outfit',monospace; font-size:11px; color:var(--page-ink3); line-height:1.7}
+.spec-meta{flex:none; width:190px; font-family:'Outfit',sans-serif; font-size:11px; color:var(--page-ink3); line-height:1.7}
 .spec-meta b{display:block; color:var(--page-ink2); font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:600; margin-bottom:2px}
 .spec-sample{flex:1; min-width:0; color:var(--page-ink)}
 
 .type-title-sample{font-family:'Outfit',sans-serif; font-weight:600; font-size:23px; letter-spacing:-.3px; line-height:1.25}
-.type-eyebrow-sample{font-family:'Outfit',monospace; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:var(--page-ink3)}
+.type-eyebrow-sample{font-family:'Outfit',sans-serif; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:var(--page-ink3)}
 .type-body-sample{font-family:'Outfit',sans-serif; font-size:14.5px; line-height:1.6; color:var(--page-ink2); max-width:56ch}
-.type-mono-sample{font-family:'Outfit',monospace; font-size:13px; color:var(--page-ink2)}
+.type-mono-sample{font-family:'Outfit',sans-serif; font-size:13px; color:var(--page-ink2)}
 
 /* ── Mobile frame (illustrates app layout at real 430px scale) ── */
 .frame-row{display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start}
@@ -154,11 +154,11 @@ section.doc:last-of-type{border-bottom:none}
   width:280px; flex:none; border-radius:26px; border:1px solid var(--page-line2);
   background:var(--bg); overflow:hidden; box-shadow:0 20px 40px -24px rgba(0,0,0,.35);
 }
-.frame-cap{margin-top:10px; font-family:'Outfit',monospace; font-size:11px; color:var(--page-ink3); max-width:280px; line-height:1.5}
+.frame-cap{margin-top:10px; font-family:'Outfit',sans-serif; font-size:11px; color:var(--page-ink3); max-width:280px; line-height:1.5}
 .f-hdr{
   background:var(--s1); border-bottom:.5px solid var(--bd); padding:16px 16px 12px;
 }
-.f-hdr .eb{font-family:'Outfit',monospace; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3)}
+.f-hdr .eb{font-family:'Outfit',sans-serif; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3)}
 .f-hdr .ti{font-family:'Outfit',sans-serif; font-weight:600; font-size:17px; letter-spacing:-.2px; color:var(--ink); margin-top:5px}
 .f-body{padding:14px 16px; display:flex; flex-direction:column; gap:10px; min-height:220px}
 .f-card{background:var(--s1); border:.5px solid var(--bd2); border-radius:16px; padding:12px 13px}
@@ -178,7 +178,7 @@ section.doc:last-of-type{border-bottom:none}
 }
 .comp-hd{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
 .comp-hd .name{font-size:13px; font-weight:600}
-.comp-hd .spec{font-family:'Outfit',monospace; font-size:10.5px; color:var(--page-ink3)}
+.comp-hd .spec{font-family:'Outfit',sans-serif; font-size:10.5px; color:var(--page-ink3)}
 .comp-stage{
   background:var(--bg); border-radius:10px; padding:22px 18px; display:flex; flex-direction:column; gap:10px;
   align-items:stretch;
@@ -187,14 +187,14 @@ section.doc:last-of-type{border-bottom:none}
 .icon-ref{display:flex; align-items:center; gap:16px; margin-top:14px; padding:16px; background:var(--card); border:1px solid var(--page-line); border-radius:14px}
 .icon-ref img{width:64px; height:64px; border-radius:14px; flex:none; box-shadow:0 8px 18px -8px rgba(14,16,32,.35)}
 .icon-ref-name{font-size:13px; font-weight:600; color:var(--page-ink)}
-.icon-ref-meta{margin-top:3px; font-family:'Outfit',monospace; font-size:11px; color:var(--page-ink3)}
+.icon-ref-meta{margin-top:3px; font-family:'Outfit',sans-serif; font-size:11px; color:var(--page-ink3)}
 .icon-ref-note{margin-top:6px; font-size:12.5px; color:var(--page-ink3); line-height:1.5}
 
 /* Real product component CSS, scoped, reproduced verbatim from the app */
 .pv-btn{min-height:52px;padding:14px;border-radius:10px;font-family:'Outfit',sans-serif;font-size:17px;font-weight:600;letter-spacing:.01em;border:1px solid transparent;cursor:pointer;width:100%}
 .pv-btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
 
-.pv-signal-label{font-family:'Outfit',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue)}
+.pv-signal-label{font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue)}
 .pv-insight-strip{margin-top:10px; padding:.85rem 1rem; border-left:3px solid transparent; border-radius:0 10px 10px 0}
 .pv-insight-strip p{font-size:15.5px; font-weight:600; line-height:1.5; color:var(--ink)}
 .pv-insight-strip.good{border-left-color:var(--dash-good); background:color-mix(in srgb, var(--dash-good) 12%, var(--s1))}
@@ -206,35 +206,36 @@ section.doc:last-of-type{border-bottom:none}
 .pv-month-pill.phase-base{background:var(--phase-base); color:var(--phase-base-l)}
 .pv-month-pill.phase-build{background:var(--phase-build); color:var(--phase-build-l)}
 .pv-month-pill.phase-peak{background:var(--phase-peak); color:var(--phase-peak-l)}
-.pv-month-current{font-family:'Outfit',monospace; font-size:11.5px; color:var(--ink3)}
+.pv-month-current{font-family:'Outfit',sans-serif; font-size:11.5px; color:var(--ink3)}
 
 .pv-splash{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; background:var(--blue); border-radius:14px; padding:40px 20px}
 .pv-splash-logo{width:192px; height:192px; border-radius:22px}
 .pv-splash-headline{margin-top:36px; max-width:280px; font-family:'Outfit',sans-serif; font-size:23px; font-weight:600; letter-spacing:-.3px; line-height:1.25; color:#fff}
-.pv-splash-countdown{margin-top:28px; max-width:280px; padding:14px 18px; border-radius:16px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22)}
-.pv-splash-countdown-eyebrow{font-family:'Outfit',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.7)}
+.pv-splash-countdown{margin-top:56px; max-width:280px; padding:14px 18px; border-radius:16px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22)}
+.pv-splash-countdown-eyebrow{font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.7)}
 .pv-splash-countdown-race{margin-top:4px; font-family:'Outfit',sans-serif; font-size:15px; font-weight:600; color:#fff}
 .pv-splash-countdown-time{margin-top:2px; font-family:'Outfit',sans-serif; font-size:22px; font-weight:600; letter-spacing:-.3px; color:#fff}
 
-.pv-race-card{padding:14px 15px; background:var(--s1); border-radius:16px; max-width:400px; margin:0 auto; box-shadow:0 1px 2px rgba(14,16,32,.04), 0 10px 24px -10px rgba(14,16,32,.16)}
-.pv-race-card.is-next{background:var(--blue-l); box-shadow:0 0 0 1.5px var(--blue), 0 10px 24px -10px rgba(0,34,255,.22)}
+.pv-race-card{background:var(--s1); border-radius:16px; max-width:400px; margin:0 auto; overflow:hidden; box-shadow:0 1px 2px rgba(14,16,32,.04), 0 10px 24px -10px rgba(14,16,32,.16)}
+.pv-race-card.is-next{box-shadow:0 0 0 1.5px var(--blue), 0 10px 24px -10px rgba(0,34,255,.22)}
 .pv-section-hd{display:flex; align-items:center; justify-content:space-between; gap:10px; max-width:400px; margin:0 auto}
-.pv-section-eyebrow{font-family:'Outfit',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue)}
+.pv-section-eyebrow{font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue)}
 .pv-section-count{flex:none; padding:3px 10px; border-radius:999px; background:var(--s3); color:var(--ink2); font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:600}
-.pv-race-top{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
-.pv-race-date{font-family:'Outfit',monospace; font-size:12.5px; color:var(--ink3)}
-.pv-race-card.is-next .pv-race-date{color:var(--blue)}
-.pv-race-countdown{font-family:'Outfit',monospace; font-size:12.5px; font-weight:600; color:var(--blue)}
-.pv-race-name-row{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:5px}
-.pv-race-name{font-family:'Outfit',sans-serif; font-size:16px; font-weight:600; color:var(--ink)}
-.pv-race-chevron{flex:none; width:16px; height:16px; color:var(--ink3)}
+.pv-race-banner{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 16px 14px; background:var(--bd2)}
+.pv-race-banner-main{display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px}
+.pv-race-headline{font-family:'Outfit',sans-serif; font-size:17px; font-weight:600; line-height:1.32; color:var(--ink)}
+.pv-race-chevron{flex:none; width:18px; height:18px; margin-top:1px; color:var(--ink)}
 .pv-race-chevron.is-open{transform:rotate(180deg)}
-.pv-race-status{display:inline-flex; align-items:center; margin-top:8px; padding:3px 10px; border-radius:999px; font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600}
+.pv-race-meta{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px; background:var(--s3)}
+.pv-race-date{font-family:'Outfit',sans-serif; font-size:12.5px; color:var(--ink2)}
+.pv-race-countdown{font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:600; color:var(--ink)}
+.pv-race-status{display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600}
 .pv-race-status.locked{background:var(--done); color:var(--done-l)}
-.pv-race-status.considering{background:var(--modified); color:var(--modified-l)}
-.pv-race-month{font-family:'Outfit',monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3)}
-.pv-race-notes{margin-top:6px; font-size:13.5px; color:var(--ink2); line-height:1.5}
-.pv-race-section-label{margin-top:10px; font-family:'Outfit',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3)}
+.pv-race-status.considering{background:var(--phase-build); color:var(--phase-build-l)}
+.pv-race-month{font-family:'Outfit',sans-serif; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3)}
+.pv-race-body{padding:12px 16px 16px}
+.pv-race-notes{font-size:13.5px; color:var(--ink2); line-height:1.5}
+.pv-race-section-label{margin-top:10px; font-family:'Outfit',sans-serif; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3)}
 .pv-race-foot{display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:10px}
 .pv-race-link{display:block; margin-top:3px; font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; color:var(--blue); text-decoration:none}
 .pv-race-remove{margin-left:auto; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--ink3)}
@@ -249,7 +250,7 @@ section.doc:last-of-type{border-bottom:none}
 .pv-card{background:var(--s1); border:.5px solid var(--bd2); border-radius:16px; padding:14px 15px}
 .pv-card .row{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
 .pv-card .t{font-size:14px; font-weight:600; color:var(--ink)}
-.pv-card .m{font-family:'Outfit',monospace; font-size:11.5px; color:var(--ink3)}
+.pv-card .m{font-family:'Outfit',sans-serif; font-size:11.5px; color:var(--ink3)}
 
 .pv-completion-banner{padding:20px 22px; border-radius:10px; background:var(--done-l); border:1px solid rgba(15,110,86,.25); text-align:center}
 .pv-completion-title{font-family:'Outfit',sans-serif; font-size:19px; font-weight:600; color:var(--done)}
@@ -259,13 +260,13 @@ section.doc:last-of-type{border-bottom:none}
 /* ── Discipline / status tables ── */
 .tbl{width:100%; border-collapse:collapse; font-size:13px}
 .tbl th{
-  text-align:left; font-family:'Outfit',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; font-family:'Outfit',sans-serif; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--page-ink3); font-weight:500; padding:0 12px 10px; border-bottom:1px solid var(--page-line2);
 }
 .tbl td{padding:12px; border-bottom:1px solid var(--page-line); vertical-align:middle}
 .tbl tr:last-child td{border-bottom:none}
 .tbl-sw{width:22px;height:22px;border-radius:6px; display:block}
-.tbl-key{font-family:'Outfit',monospace; font-size:12px; color:var(--page-ink2)}
+.tbl-key{font-family:'Outfit',sans-serif; font-size:12px; color:var(--page-ink2)}
 .tbl .wrap-x{overflow-x:auto}
 
 /* ── Voice section ── */
@@ -274,14 +275,14 @@ section.doc:last-of-type{border-bottom:none}
 .voice-card{border-radius:14px; padding:16px 17px; border:1px solid var(--page-line)}
 .voice-card.sharp{background:color-mix(in srgb, var(--done) 8%, var(--card)); border-color:color-mix(in srgb, var(--done) 30%, var(--page-line))}
 .voice-card.mediocre{background:color-mix(in srgb, var(--page-ink3) 8%, var(--card))}
-.voice-tag{font-family:'Outfit',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase}
+.voice-tag{font-family:'Outfit',sans-serif; font-size:10px; letter-spacing:.08em; text-transform:uppercase}
 .voice-card.sharp .voice-tag{color:var(--done)}
 .voice-card.mediocre .voice-tag{color:var(--page-ink3)}
 .voice-card p{margin-top:8px; font-size:13.5px; line-height:1.6; color:var(--page-ink)}
 .principle-list{display:flex; flex-direction:column; gap:0}
 .principle{display:flex; gap:16px; padding:16px 0; border-top:1px solid var(--page-line)}
 .principle:first-child{border-top:none; padding-top:0}
-.principle .pn{font-family:'Outfit',monospace; font-size:11px; color:var(--page-ink3); flex:none; width:20px; padding-top:2px}
+.principle .pn{font-family:'Outfit',sans-serif; font-size:11px; color:var(--page-ink3); flex:none; width:20px; padding-top:2px}
 .principle .pb b{font-size:13.5px; font-weight:600}
 .principle .pb p{margin-top:4px; font-size:13px; line-height:1.6; color:var(--page-ink2); max-width:64ch}
 
@@ -289,7 +290,7 @@ footer{padding:34px 0 60px}
 footer p{font-size:12px; color:var(--page-ink3); line-height:1.7; max-width:640px}
 footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--blue) 40%, transparent)}
 .flag{
-  display:inline-flex; align-items:center; gap:7px; font-family:'Outfit',monospace; font-size:10.5px;
+  display:inline-flex; align-items:center; gap:7px; font-family:'Outfit',sans-serif; font-size:10.5px;
   color:var(--run); background:var(--run-l); padding:5px 10px 5px 8px; border-radius:999px; margin-top:14px;
 }
 .flag .dot{width:6px;height:6px;border-radius:50%;background:var(--run)}
@@ -483,7 +484,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
             </div>
           </div>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">First thing shown on load, base nav visible beneath it throughout. Dismissed only by tapping a nav tab — no auto-advance timer, no separate "get started" control. Headline is the page-title spec (23px / 600 / &minus;0.3px, line-height 1.25) in white, directly under the logo — no separate uppercase sub head above it any more (dropped in favour of the headline speaking for itself). No drop shadow on the logo — flat against the fill. Below the headline, a translucent countdown card names the nearest upcoming race from the Races tab and how far out it is — hidden entirely, not shown empty, when no race is saved.</p>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">First thing shown on load, base nav visible beneath it throughout. Dismissed only by tapping a nav tab — no auto-advance timer, no separate "get started" control. Headline is the page-title spec (23px / 600 / &minus;0.3px, line-height 1.25) in white, directly under the logo — no separate uppercase sub head above it any more (dropped in favour of the headline speaking for itself). No drop shadow on the logo — flat against the fill. Below the headline, with double the original gap (56px, up from 28px, so it reads as a distinct block rather than crowding the headline), a translucent countdown card names the nearest upcoming <i>committed</i> race from the Races tab ("Locked in," not "Considering") and how far out it is — hidden entirely, not shown empty, when there's no upcoming locked race.</p>
         <div class="flag"><span class="dot"></span>Fill is the canonical <span class="mono">--blue</span> token (#0022FF) — same colour as the favicon artwork itself, so the logo sits flush with no edge. Still not the base nav's hardcoded #002DFF (see below); that discrepancy is separate and unrelated.</div>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
@@ -567,7 +568,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
         <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Sits above the add-race form on the Races tab, which is collapsed by default. Tapping it reveals the form and the button itself flips to "Cancel" — a solid white (--s1) fill with a --bd2 border, not transparent. A transparent fill on the page's --bg background read as a disabled/unpressable button in testing; white + border reads as a real, tappable secondary button. The form auto-collapses back behind this button the moment a race is successfully added. Mirrors the toggle-a-hidden-form pattern from the athlete's club calendar reference app's "Add a race +" button, adapted to this app's own button language (and its own "+"-free label) rather than copying its colours.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
-        <div class="comp-hd"><span class="name">Race card</span><span class="spec mono">soft shadow, not a border · collapsed by default</span></div>
+        <div class="comp-hd"><span class="name">Race card</span><span class="spec mono">banner headline · grey date/countdown band</span></div>
         <div class="comp-stage" style="display:flex; flex-direction:column; gap:10px">
           <div class="pv-section-hd">
             <span class="pv-section-eyebrow">Upcoming</span>
@@ -575,35 +576,41 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
           </div>
           <span class="pv-race-month">Mar 2027</span>
           <div class="pv-race-card is-next">
-            <div class="pv-race-top">
+            <div class="pv-race-banner">
+              <div class="pv-race-banner-main">
+                <p class="pv-race-headline">70.3 Geelong</p>
+                <span class="pv-race-status locked">Locked in</span>
+              </div>
+              <svg class="pv-race-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+            </div>
+            <div class="pv-race-meta">
               <span class="pv-race-date">Sun 21 Mar 2027</span>
               <span class="pv-race-countdown">31 weeks · 5 days</span>
             </div>
-            <div class="pv-race-name-row">
-              <p class="pv-race-name">70.3 Geelong</p>
-              <svg class="pv-race-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
-            </div>
-            <span class="pv-race-status locked">Locked in</span>
           </div>
           <div class="pv-race-card">
-            <div class="pv-race-top">
-              <span class="pv-race-date">Sat 13 Jun 2026</span>
-              <span class="pv-race-countdown" style="color:var(--ink2)">44 weeks</span>
-            </div>
-            <div class="pv-race-name-row">
-              <p class="pv-race-name">Panthers Tri Club Duathlon</p>
+            <div class="pv-race-banner">
+              <div class="pv-race-banner-main">
+                <p class="pv-race-headline">Panthers Tri Club Duathlon</p>
+                <span class="pv-race-status considering">Considering</span>
+              </div>
               <svg class="pv-race-chevron is-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
             </div>
-            <span class="pv-race-status considering">Considering</span>
-            <p class="pv-race-notes">Club focus race — carpooling with the Tuesday squad.</p>
-            <p class="pv-race-section-label">Race website</p>
-            <a class="pv-race-link" href="#">https://panthers.tri.club/duathlon</a>
-            <div class="pv-race-foot">
-              <span class="pv-race-remove">Remove</span>
+            <div class="pv-race-meta">
+              <span class="pv-race-date">Sat 13 Jun 2026</span>
+              <span class="pv-race-countdown">44 weeks</span>
+            </div>
+            <div class="pv-race-body">
+              <p class="pv-race-notes">Club focus race — carpooling with the Tuesday squad.</p>
+              <p class="pv-race-section-label">Race website</p>
+              <a class="pv-race-link" href="#">https://panthers.tri.club/duathlon</a>
+              <div class="pv-race-foot">
+                <span class="pv-race-remove">Remove</span>
+              </div>
             </div>
           </div>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">White fill, --rlg radius, implemented as a native <span class="mono">&lt;details&gt;</span> element so expand/collapse comes with built-in keyboard and screen-reader support for free — but no flat border any more: a soft two-layer shadow (<span class="mono">0 1px 2px rgba(14,16,32,.04), 0 10px 24px -10px rgba(14,16,32,.16)</span>) gives it the same "lifted card" feel as the Strength apps' exercise rows, recoloured to this app's own --ink rather than reusing their palette. Collapsed by default (top card): date, countdown, name, chevron, and commitment pill stay visible even collapsed, so "how far out is this race" never needs an extra tap. Expanded (bottom card) reveals notes, a labelled "Race website" section showing the full stored URL exactly as saved rather than a generic link label (echoing the club calendar reference app's labelled expanded-card sections), and Remove. The nearest upcoming race gets a --blue-tinted shadow plus --blue-l fill (no more border-colour swap) — the same idea as the Strength apps' checked/active row states, recoloured. Each card carries a commitment pill — "Considering" or "Locked in," set on the Add a race form and defaulting to "Considering" — using the same reversed-fill convention as the Month week phase pill. Cards are grouped under an uppercase Outfit month/year label (<span class="mono">.race-month-label</span>) wherever consecutive races share a month, echoing the club calendar reference app's month grouping. The Upcoming/Past section header itself (top of stage) pairs an uppercase Outfit eyebrow with a trailing count pill — echoing the Strength apps' phase-card header (eyebrow + status pill) in this app's own fonts, on its own class so it doesn't touch the shared <span class="mono">.dash-section</span> used elsewhere. Lives on the Races tab, synced to the same Google Sheet as the training log (a second "Races" tab in the spreadsheet).</p>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Two-band header, echoing the club calendar reference app's race card (a coloured header row, facts underneath), implemented as a native <span class="mono">&lt;details&gt;</span> element so expand/collapse comes with built-in keyboard and screen-reader support for free, with <span class="mono">overflow:hidden</span> so both bands clip to the card's rounded corners. The whole header — banner and meta, all inside <span class="mono">&lt;summary&gt;</span> — stays visible even collapsed, so nothing needs an extra tap to see. <b>Banner:</b> --bd2 fill (same tone on every card — the nearest-upcoming distinction lives in the card's outer ring/shadow, not the banner colour), the race name as an --ink Outfit 17/600 headline with the commitment pill inline right next to it (wraps onto its own line on long names), --ink rotating chevron — a neutral 14%-ink tone that reads as a distinct header band against the card's white body without competing with the commitment pill's colour, and clears 18.9:1 contrast for the --ink text/chevron against it. Iterated through an earlier solid --blue banner (white text) before landing here. <b>Grey meta band:</b> --s3 fill directly below, date (--ink2) and countdown (--ink, weight 600) on one row — same soft two-layer shadow as the Strength apps' exercise rows (<span class="mono">0 1px 2px rgba(14,16,32,.04), 0 10px 24px -10px rgba(14,16,32,.16)</span>), recoloured to this app's own --ink rather than reusing their palette. Expanded (bottom card) reveals notes, a labelled "Race website" section showing the full stored URL exactly as saved rather than a generic link label, and Remove. Each card carries a commitment pill — "Considering" or "Locked in," set on the Add a race form and defaulting to "Considering" — using the same reversed-fill convention as the Month week phase pill. The underlying value lives in a <span class="mono">Status</span> column on the Sheet's <span class="mono">Races</span> tab, so it's equally fine to flip it there by hand — the app picks up the change on its next Sheet read, same as any other race field. Only a "Locked in" race can ever appear as the splash's "Next race" countdown (see Splash above). Cards are grouped under an uppercase Outfit month/year label (<span class="mono">.race-month-label</span>) wherever consecutive races share a month, echoing the club calendar reference app's month grouping. The Upcoming/Past section header itself (top of stage) pairs an uppercase Outfit eyebrow with a trailing count pill — echoing the Strength apps' phase-card header (eyebrow + status pill) in this app's own fonts, on its own class so it doesn't touch the shared <span class="mono">.dash-section</span> used elsewhere. Lives on the Races tab, synced to the same Google Sheet as the training log (a second "Races" tab in the spreadsheet).</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Table</span><span class="spec mono">Uppercase Outfit headers · 1px row dividers</span></div>
@@ -741,7 +748,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
 
   var PHASES = [
     ['Base / Taper','--phase-base','#0F6E56'],
-    ['Build','--phase-build','#D9660B'],
+    ['Build','--phase-build','#A64C09'],
     ['Peak','--phase-peak','#993C1D']
   ];
   var phaseWrap = document.getElementById('sw-phase');

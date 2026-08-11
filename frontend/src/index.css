@@ -373,9 +373,9 @@ input, textarea, select { font-family: var(--fb); }
 .dpc-body    { display: none; padding: 0 1rem 1rem; border-top: 0.5px solid var(--bd); }
 .dpc-body.on { display: block; }
 .dpc-mechanism { font-size: 13px; color: var(--ink2); line-height: 1.65; margin-top: 12px; }
-.dpc-prompt    { background: var(--blue-l); border-radius: var(--rmd); padding: 12px 14px; margin: 10px 0; font-size: 13px; color: var(--blue); line-height: 1.65; font-style: italic; border-left: 3px solid var(--blue); }
+.dpc-prompt    { background: var(--blue-l); border-radius: var(--rmd); padding: 12px 14px; margin: 30px 0; font-size: 13px; color: var(--blue); line-height: 1.65; font-style: italic; border-left: 3px solid var(--blue); }
 .dpc-label     { font-family: var(--fm); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); margin-top: 12px; margin-bottom: 6px; }
-.contrast-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.contrast-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 30px; }
 .cp-cell { padding: 9px 11px; border-radius: var(--rmd); }
 .cp-good { background: var(--bike-l); border: 1px solid rgba(15,110,86,0.2); }
 .cp-mid  { background: var(--s3);     border: 1px solid var(--bd); }

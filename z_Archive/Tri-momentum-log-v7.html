@@ -1,0 +1,2518 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<!-- Zoom is deliberately NOT capped (no maximum-scale) — WCAG 2.2 1.4.4 -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After-session check-in · stepped flow (full) — TRI Momentum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: only light;
+  /* ── Design tokens: taken verbatim from triathlon_momentum_v5.html ── */
+  --bg:#F7F8FC;--s1:#FFFFFF;--s2:#FFFFFF;--s3:#F0F2F8;--s4:#E8EBF5;
+  --ink:#0E1020;--ink2:#4B5278;--ink3:#8B93B8;
+  --bd:rgba(14,16,32,0.08);--bd2:rgba(14,16,32,0.14);--bd3:rgba(14,16,32,0.25);
+  --blue:#1650C8;--blue-l:#E8EFFE;--blue-m:#4F7BE8;
+  --swim:#1650C8;--swim-l:#E8EFFE;
+  --bike:#0F6E56;--bike-l:#E1F5EE;
+  --run:#993C1D;--run-l:#FAECE7;
+  --brick:#534AB7;--brick-l:#EEEDFE;
+  --strength:#854F0B;--strength-l:#FAEEDA;
+  --rest:#8B93B8;--rest-l:#F0F2F8;
+  --done:#0F6E56;--done-l:#E1F5EE;
+  --skipped:#993C1D;--skipped-l:#FAECE7;
+  --modified:#854F0B;--modified-l:#FAEEDA;
+  --dash-good:#0E9A5C;--dash-mid:#E0A100;--dash-bad:#C81E1E;
+  --rmd:10px;--rlg:16px;--rxl:22px;--tabbar-h:74px;
+  --fd:'DM Sans',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);font-family:var(--fb);color:var(--ink);
+  font-size:15px;line-height:1.5;min-height:100vh;
+}
+/* App column — never wider than 430px, centred, 20px gutters */
+#app{max-width:430px;margin:0 auto;padding:0 1.25rem 3rem}
+
+/* ── Visible focus everywhere ── */
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);outline-offset:2px}
+
+.visually-hidden{
+  position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THE FLOW — one question per screen.
+   Header and footer are sticky within the flow's own box, so the
+   whole page still scrolls normally at 200%+ zoom (1.4.4 / 1.4.10).
+   ═══════════════════════════════════════════════════════════════ */
+.flow{
+  display:flex;flex-direction:column;
+  min-height:100vh;min-height:100dvh;
+  margin:0 -1.25rem;  /* header/footer bleed to the column edges */
+}
+
+/* ── Sticky progress header ── */
+.flow-hdr{
+  position:sticky;top:0;z-index:2;flex:none;
+  padding:1rem 1.25rem .8rem;
+  background:var(--s1);border-bottom:0.5px solid var(--bd);
+}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.eyebrow{
+  font-family:var(--fm);font-size:14px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink3);line-height:1.2;
+  /* Yields to the counter rather than colliding with it on narrow screens */
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.counter{font-family:var(--fm);font-size:14px;color:var(--ink2);line-height:1.2;white-space:nowrap;flex:none}
+/* Bar is aria-hidden — .counter is the accessible statement of progress (1.4.1) */
+.bar{height:4px;background:var(--s4);border-radius:2px;overflow:hidden}
+.bar > i{display:block;height:100%;width:0;background:var(--blue);border-radius:2px;transition:width .2s ease}
+
+/* ── Question body ── */
+.flow-body{flex:1;padding:1.5rem 1.25rem 1.25rem;min-height:0}
+.q-set{border:none;padding:0;margin:0;display:block}
+.q-set > legend{display:block;width:100%;padding:0;float:left}
+h1{
+  font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;
+  line-height:1.25;color:var(--ink);
+}
+h1:focus,h1:focus-visible{outline:none}
+.hint{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px;clear:both}
+.choices-wrap{margin-top:1.35rem;clear:both}
+
+/* ── Choice chips (radio buttons visually) — shared with Prototype 02 ── */
+.choices{display:flex;flex-direction:column;gap:10px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;margin:0;cursor:pointer}
+.choice{
+  display:flex;align-items:center;gap:11px;
+  min-height:56px;padding:12px 14px;
+  background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rmd);
+  font-size:15px;color:var(--ink);line-height:1.35;cursor:pointer;
+}
+.opt input:checked + .choice{border-color:var(--blue);background:var(--blue-l);color:var(--blue);font-weight:600}
+.opt input:focus-visible + .choice{outline:3px solid var(--blue);outline-offset:2px}
+.choice .tick{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bd3);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;
+}
+.opt input:checked + .choice .tick{border-color:var(--blue);background:var(--blue);color:#fff}
+
+/* affect / body severity swatch — the label always carries the meaning, colour only reinforces */
+.sev{flex-shrink:0;width:14px;height:14px;border-radius:3px;border:1px solid rgba(14,16,32,.25)}
+.sev-strong{background:var(--done)}
+.sev-solid{background:var(--blue-m)}
+.sev-flat{background:var(--modified)}
+.sev-rough{background:var(--run)}
+.sev-1{background:var(--done-l);border-color:var(--done)}
+.sev-2{background:#CFE8DE}
+.sev-3{background:var(--modified)}
+.sev-4{background:var(--run)}
+
+/* 3-up and 2-up chip grids */
+.choices.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.choices.grid3 .choice{justify-content:center;min-height:56px;text-align:center}
+.choices.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.choices.grid2 .choice{justify-content:center;min-height:56px;text-align:center}
+
+/* ── Review step ── */
+.review-row{
+  display:flex;width:100%;align-items:baseline;gap:12px;
+  min-height:52px;padding:11px 13px;margin-bottom:8px;
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);
+  text-align:left;cursor:pointer;font-family:var(--fb);
+}
+.review-row:hover{background:var(--s3)}
+.review-q{flex:1;font-size:14px;color:var(--ink2);line-height:1.45}
+.review-a{flex:none;max-width:58%;font-size:14px;font-weight:600;color:var(--blue);text-align:right;line-height:1.45}
+.review-a.none{color:var(--run);font-weight:500;font-style:italic}
+
+label.note-lbl{display:block;font-family:var(--fd);font-size:15px;font-weight:600;margin:1.5rem 0 .5rem}
+.note-lbl .sub{font-weight:400;font-size:14px;color:var(--ink2)}
+textarea{
+  width:100%;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);
+  font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1);
+  resize:vertical;min-height:56px;line-height:1.5;
+}
+textarea::placeholder{color:var(--ink3)}
+
+/* ── Saved / week step ── */
+.saved-flag{display:flex;align-items:center;gap:8px;color:var(--done);font-size:14px;font-weight:600}
+.saved-flag .g{font-size:15px}
+.week-lead{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px}
+.week-list{list-style:none;display:flex;flex-direction:column;gap:7px;margin-top:1.25rem}
+.week-row{
+  display:flex;align-items:center;gap:11px;padding:12px 13px;
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);
+}
+.week-row.is-now{background:var(--blue-l);border:1px solid var(--blue)}
+.week-day{font-family:var(--fm);font-size:14px;color:var(--ink3);width:36px;flex:none}
+.week-row.is-now .week-day{color:var(--blue)}
+.week-what{font-size:14px;color:var(--ink2);line-height:1.4}
+.week-row.is-now .week-what{color:var(--ink);font-weight:600}
+.week-state{margin-left:auto;font-size:14px;color:var(--ink3);white-space:nowrap;padding-left:6px}
+.week-state.done{color:var(--done);font-weight:500}
+.floor-card{
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);
+  padding:1rem 1.05rem;margin-top:1.25rem;
+}
+.floor-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.floor-title{font-size:15px;font-weight:600;color:var(--ink)}
+.floor-count{font-family:var(--fm);font-size:14px;color:var(--ink2);white-space:nowrap}
+.floor-card .bar{margin-top:12px}
+.floor-note{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:12px}
+
+/* ── Test-data export (saved screen) ── */
+.btn-block{display:block;width:100%;margin-top:1.5rem}
+.export-note{font-size:14px;color:var(--ink2);line-height:1.55;margin-top:10px}
+.export-out{margin-top:10px;font-family:var(--fm);font-size:14px;min-height:132px}
+
+/* ── Sticky action footer ── */
+.flow-foot{
+  position:sticky;bottom:var(--tabbar-h);z-index:2;flex:none;
+  display:flex;gap:10px;
+  padding:.75rem 1.25rem calc(.9rem + env(safe-area-inset-bottom));
+  background:var(--s1);border-top:0.5px solid var(--bd);
+}
+.btn{
+  min-height:52px;padding:14px;border-radius:var(--rmd);
+  font-family:var(--fd);font-size:17px;font-weight:600;letter-spacing:.01em;
+  border:1px solid transparent;cursor:pointer;
+}
+.btn-primary{flex:1;background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-ghost{flex:none;padding:14px 18px;background:transparent;color:var(--ink);border-color:var(--bd2)}
+.btn-primary:hover{background:#1246ad}
+.btn-ghost:hover{background:var(--s3)}
+.btn-ghost:disabled{color:var(--ink3);border-color:var(--bd);cursor:default}
+.btn-ghost:disabled:hover{background:transparent}
+/* Check-in action buttons — pill radius + brand blue, paired with the tab bar below so both bottom bars read as one dock */
+.flow-foot .btn{border-radius:999px}
+.flow-foot .btn-primary{background:#002DFF;border-color:#002DFF}
+.flow-foot .btn-primary:hover{background:#0022CC}
+.flow-foot .btn-primary::after{content:"\2192";margin-left:8px;font-weight:600;display:inline-block}
+
+/* ── Starting splash — TRI Momentum brand mark, shown once on load ── */
+.splash{
+  min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:0 1.25rem;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  background:#002DFF;
+}
+/* `.splash{display:flex}` is an author rule, so it silently beats the
+   browser's own `[hidden]{display:none}` default (author styles always
+   outrank user-agent styles, regardless of specificity) — the section
+   never actually disappeared even though the `hidden` attribute was set
+   correctly. This raises this rule's specificity above the plain class. */
+.splash[hidden]{display:none}
+.splash-logo{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.splash-badges{display:flex;gap:6px}
+.splash-badge{
+  width:46px;height:46px;border-radius:10px;background:#fff;color:#001DB6;
+  display:flex;align-items:center;justify-content:center;flex:none;
+  font-family:var(--fd);font-size:25px;font-weight:700;
+}
+.splash-word{font-family:var(--fd);font-size:34px;font-weight:700;letter-spacing:-.5px;color:#fff}
+.splash-divider{width:100%;max-width:340px;height:3px;border-radius:2px;background:#37C6FC;margin-top:20px}
+.splash-tag{margin-top:18px;font-family:var(--fb);font-size:15px;color:#fff}
+.splash-hint{margin-top:2.75rem;max-width:280px;color:rgba(255,255,255,.72)}
+/* Only decorative elements fade in — the whole screen is tap-to-dismiss from
+   frame one via the capture-phase click listener below, so there's never a
+   window where a real tap gets dropped mid-transition. */
+@media (prefers-reduced-motion: no-preference){
+  .splash-logo{animation:splash-fade .45s ease both}
+  .splash-tag,.splash-hint{animation:splash-fade .45s ease .1s both}
+}
+@keyframes splash-fade{from{opacity:0}to{opacity:1}}
+
+/* ── Training phase — asked once, right after the splash ── */
+.period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem;display:flex;flex-direction:column;justify-content:center}
+.period[hidden]{display:none}
+
+/* ── View tabs — Check-in ⇄ This week ──
+   A real bottom tab bar (fixed, icon + label) rather than a top segmented
+   control — the standard mobile idiom, and more legible at a glance than
+   text alone. Present from the training-phase screen onward — an explicit
+   [hidden] rule is needed because the plain author `display:flex` below would
+   otherwise outrank the UA default and keep it rendered even when hidden. */
+.view-tabs[hidden]{display:none}
+.view-tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:5;
+  display:flex;gap:0;max-width:430px;margin:0 auto;
+  padding:0;background:#002DFF;border-top:none;
+}
+/* Selection highlight fills the whole third (edge to edge, full bar height) rather than an inset chip */
+.view-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  min-height:var(--tabbar-h);padding:8px 4px calc(8px + env(safe-area-inset-bottom));background:none;border:none;border-radius:0;
+  font-family:var(--fd);font-size:11.5px;font-weight:600;color:rgba(255,255,255,.6);cursor:pointer;
+}
+.view-tab svg{flex:none}
+.view-tab[aria-selected="true"]{color:#37C6FC;background:rgba(255,255,255,.16)}
+.view-tab:disabled{color:rgba(255,255,255,.32);opacity:1;cursor:default}
+
+/* ── Weekly dashboard ── */
+.dash{padding-top:1.5rem;padding-bottom:var(--tabbar-h)}
+.dash-eyebrow{font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+
+/* Editorial section rhythm — the only treatment; every zone gets an
+   uppercase label + rule ahead of its content. The section right under
+   the eyebrow skips the rule so it doesn't double up. */
+.dash-section{margin-top:2.3rem;padding-top:1.1rem;border-top:1px solid var(--bd)}
+.dash-eyebrow + .dash-section{margin-top:1.1rem;padding-top:0;border-top:none}
+.dash-section::before{
+  content:attr(data-label);display:block;font-family:var(--fm);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:.9rem;
+}
+
+.dash-signal-link{display:block;margin-top:14px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+.dash-signal-link:hover{color:var(--blue-m)}
+/* Insight strip — one shared primitive for every rules-based headline in
+   the app (weekly per-signal, monthly per-discipline), replacing the old
+   rounded signal-insight-c card + dot. Severity is carried by the left
+   border + a 12% tint instead of a card's filled background, since there's
+   no full card edge here to contain the colour.
+   .dash-insight-strip-label is optional: the weekly dashboard's two strips
+   sit directly under a section already labelled "Intensity drift" /
+   "Fuelling" with a page-level "This week" eyebrow above that, so a
+   per-strip label would be the third repetition of the same fact — omitted
+   there. The month view's "By discipline" section stacks up to five of
+   these with nothing else distinguishing them, so each one carries its own
+   label (e.g. "BRICK · THURSDAYS"). margin-top+:first-child (rather than
+   margin-bottom) is the same stacking idiom month-week-block already uses
+   below, so a single strip (week) and a stack of them (month) both get the
+   right spacing without a special case. */
+.dash-insight-strip{margin-top:.6rem;padding:.85rem 1rem;border-left:3px solid transparent;border-radius:0 10px 10px 0}
+.dash-insight-strip:first-child{margin-top:0}
+.dash-insight-strip-label{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-bottom:.4rem}
+.dash-insight-strip-headline{font-size:15.5px;font-weight:600;line-height:1.5;color:var(--ink)}
+.dash-insight-strip + .dash-stat-hd{margin-top:1.1rem}
+
+/* Shared by This week and This month — both switch between the same two
+   signals, so one tab control/style covers both (see renderSignalSubtabs). */
+.signal-subtabs{display:flex;gap:4px;padding:3px;background:var(--s3);border-radius:999px;margin-top:1.4rem;margin-bottom:1.5rem}
+.signal-subtab{flex:1;min-height:38px;padding:8px 4px;border:none;border-radius:999px;background:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
+.signal-subtab[aria-selected="true"]{background:var(--s1);color:var(--blue)}
+.month-week-block{margin-top:1.4rem;padding:1rem 1.05rem 1.2rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg)}
+.month-week-block:first-child{margin-top:0}
+.month-week-block .dash-matrix-hd{margin-top:.9rem}
+.month-week-label{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink)}
+.dash-stat-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.dash-stat-n{font-family:var(--fm);font-size:11.5px;color:var(--ink3);white-space:nowrap}
+.dash-stat-big{display:flex;align-items:baseline;gap:9px;margin-top:10px}
+.dash-stat-pct{font-family:var(--fd);font-size:32px;font-weight:600;letter-spacing:-.8px;color:var(--ink)}
+.dash-stat-pct .u{font-size:18px;color:var(--ink2);font-weight:500}
+.dash-stat-desc{font-size:13px;color:var(--ink2)}
+.tri-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--s4);margin-top:9px}
+.tri-bar span{display:block;height:100%}
+.dash-counts{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--fm);font-size:12px;color:var(--ink2);margin-top:8px}
+.dash-counts b{font-weight:600}
+
+.dash-matrix-hd{display:flex;align-items:baseline;gap:12px;margin-top:1.6rem}
+.dash-matrix-rule{flex:1;height:1px;background:var(--bd)}
+.dash-matrix-sub{font-family:var(--fm);font-size:11.5px;color:var(--ink3)}
+.dash-grid{display:grid;grid-template-columns:52px repeat(7,1fr);gap:5px;margin-top:.7rem;align-items:center}
+.dash-grid-day{font-family:var(--fm);font-size:10.5px;color:var(--ink3);text-align:center}
+.dash-grid-disc{font-size:12.5px;color:var(--ink2)}
+.dash-cell{height:16px;border-radius:4px;background:var(--s4);box-sizing:border-box}
+.dash-cell.na{background:transparent;border:1px solid var(--bd2)}
+.dash-cell.good{background:var(--dash-good)}
+.dash-cell.mid{background:var(--dash-mid)}
+.dash-cell.bad{background:var(--dash-bad)}
+
+.dash-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:1.6rem;padding-top:1rem;border-top:0.5px solid var(--bd)}
+.dash-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)}
+.dash-legend-sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;box-sizing:border-box}
+
+/* ── Training phase — moved to the top of the dashboard. Shows the full
+   season progression (Base/Taper → Build 1 → Build 2 → Peak) with the
+   week's chosen phase highlighted, rather than a fabricated week-over-week
+   trend. ── */
+.dash-phase-track{display:flex;gap:7px}
+.dash-phase-card{flex:1;display:flex;align-items:center;justify-content:center;min-height:52px;padding:10px 6px;border-radius:var(--rmd);background:var(--s1);border:0.5px solid var(--bd2)}
+.dash-phase-card.is-current{border-color:var(--blue);background:var(--blue-l)}
+.dash-phase-ph{font-family:var(--fd);font-size:12.5px;font-weight:600;color:var(--ink);text-align:center;line-height:1.25}
+.dash-phase-card.is-current .dash-phase-ph{color:var(--blue)}
+.dash-phase-note{font-size:12.5px;color:var(--ink3);margin-top:.8rem;line-height:1.5}
+
+/* ═══════════════════════════════════════════════════════════════
+   Below the fold — prototype apparatus, not app chrome
+   ═══════════════════════════════════════════════════════════════ */
+.aside{margin-top:1.75rem}
+.divider-label{
+  font-family:var(--fm);font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink3);margin:0 0 .6rem;
+}
+.map-note{color:var(--ink2);font-size:14px;line-height:1.55;margin-bottom:.8rem}
+.map{list-style:none;display:flex;flex-direction:column;gap:4px}
+.map-item{
+  display:flex;width:100%;align-items:center;gap:10px;
+  min-height:48px;padding:9px 11px;
+  background:transparent;border:1px solid transparent;border-radius:8px;
+  text-align:left;font-family:var(--fb);
+}
+button.map-item{cursor:pointer}
+button.map-item:hover{background:var(--s3)}
+.map-item.is-now{background:var(--blue-l);border-color:var(--blue)}
+.map-n{font-family:var(--fm);font-size:14px;color:var(--ink3);width:24px;flex:none}
+.map-q{flex:1;font-size:14px;color:var(--ink2);line-height:1.35}
+.map-item.is-now .map-q{color:var(--blue);font-weight:600}
+.map-item.answered .map-q{color:var(--ink)}
+.map-a{font-family:var(--fm);font-size:14px;color:var(--ink3);white-space:nowrap;padding-left:6px}
+.map-item.answered .map-a{color:var(--ink2)}
+.map-item.is-now .map-a{color:var(--blue)}
+
+.toggle{
+  display:flex;align-items:center;gap:12px;min-height:52px;
+  padding:11px 13px;margin-top:.9rem;
+  background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rmd);
+  font-size:14px;color:var(--ink);cursor:pointer;
+}
+.toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue);cursor:pointer}
+.toggle .sub{display:block;color:var(--ink2);font-size:14px;line-height:1.5;margin-top:3px}
+
+details.instr{margin-top:1rem;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--s1)}
+details.instr summary{padding:14px;font-family:var(--fd);font-weight:600;font-size:15px;cursor:pointer;color:var(--ink);min-height:52px}
+details.instr[open] summary{border-bottom:0.5px solid var(--bd)}
+details.instr .body{padding:4px 14px 14px;font-size:14px;color:var(--ink2);line-height:1.65}
+details.instr .body p{margin-top:.7rem}
+details.instr .body ul{margin:.5rem 0 .3rem 1.1rem}
+details.instr .body li{margin:.35rem 0}
+details.instr .body code{font-family:var(--fm);font-size:14px;color:var(--ink)}
+.provenance-note{font-size:14px;color:var(--ink3);margin-top:1.4rem;line-height:1.55}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+@media (prefers-reduced-motion: no-preference){
+  .btn,.choice,.opt input:checked + .choice{transition:background .15s, border-color .15s, color .15s}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ STARTING SPLASH ══════════ -->
+  <!-- Shown once, on load. Auto-dismisses after 1.5s — well under the 5s
+       SC 2.2.2 threshold for automatically-moving content — but tapping the
+       screen, tapping Continue, or pressing any key skips it immediately, so
+       nobody is stuck waiting on a brand mark to read a form. -->
+  <section class="splash" id="view-splash" aria-labelledby="splash-h">
+    <div class="splash-logo" aria-hidden="true">
+      <div class="splash-badges">
+        <span class="splash-badge">T</span>
+        <span class="splash-badge">R</span>
+        <span class="splash-badge">I</span>
+      </div>
+      <span class="splash-word">Momentum</span>
+    </div>
+    <h1 class="visually-hidden" id="splash-h" tabindex="-1">TRI Momentum</h1>
+    <div class="splash-divider" aria-hidden="true"></div>
+    <p class="splash-tag">Helping Triathletes shift gear</p>
+    <p class="hint splash-hint">Starts automatically in a moment — tap anywhere on this screen, or press any key, to skip ahead.</p>
+  </section>
+
+  <!-- ══════════ TRAINING PHASE — asked once, right after the splash ══════════ -->
+  <!-- A single tap, no auto-advance needed — four large targets, picked once
+       per visit. Sets the context "This week" reviews trends against. -->
+  <section class="period" id="view-period" hidden aria-labelledby="period-h">
+    <p class="eyebrow">Week 6 · 21–27 Jul</p>
+    <h1 id="period-h" tabindex="-1">What phase is this training week?</h1>
+    <p class="hint">Sets the context the weekly dashboard reviews trends against — change it any time from there.</p>
+    <div class="choices-wrap">
+      <div class="choices grid2" id="period-choices"></div>
+    </div>
+  </section>
+
+  <!-- ══════════ VIEW TABS ══════════ -->
+  <!-- Persistent base nav — present from the training-phase screen onward,
+       never hidden again. "Check-in" is disabled until a phase is picked
+       (there's no view-flow to land on yet); "This week" and "Month" are
+       always clickable — both render sensibly with no phase set and no
+       sessions saved yet (an empty week, an unhighlighted phase track). -->
+  <div class="view-tabs" id="view-tabs" role="tablist" aria-label="Sections" hidden>
+    <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-flow" disabled>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1Z"></path><path d="m9 13 2.2 2.2L15.5 11"></path></svg>
+      <span>Check-in</span>
+    </button>
+    <button type="button" class="view-tab" id="tab-dash" role="tab" aria-selected="false" aria-controls="view-dashboard">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+      <span>This week</span>
+    </button>
+    <button type="button" class="view-tab" id="tab-trends" role="tab" aria-selected="false" aria-controls="view-trends">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
+      <span>Month</span>
+    </button>
+  </div>
+
+  <div id="app-main" hidden>
+
+  <div id="view-flow">
+
+  <!-- ══════════ THE STEPPED FLOW ══════════ -->
+  <section class="flow" aria-label="After-session check-in">
+
+    <div class="flow-hdr">
+      <div class="hdr-row">
+        <p class="eyebrow" id="eyebrow">Just finished</p>
+        <p class="counter" id="counter">1 / 9</p>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="bar-fill"></i></div>
+    </div>
+
+    <!-- Rendered per step by renderStep() -->
+    <div class="flow-body" id="flow-body"></div>
+
+    <div class="flow-foot" id="flow-foot">
+      <button type="button" class="btn btn-ghost" id="btn-back">Back</button>
+      <button type="button" class="btn btn-primary" id="btn-next">Next</button>
+    </div>
+
+    <p class="visually-hidden" aria-live="polite" id="live"></p>
+  </section>
+
+  <!-- ══════════ FLOW MAP ══════════ -->
+  <section class="aside" aria-labelledby="map-h">
+    <p class="divider-label" id="map-h">Flow map</p>
+    <p class="map-note">Jump to any step. The fuelling question only appears once you log a session over 45&nbsp;minutes.</p>
+    <ul class="map" id="map"></ul>
+
+    <label class="toggle" for="auto-advance">
+      <input type="checkbox" id="auto-advance" checked>
+      <span>Auto-advance
+        <span class="sub">On: picking an answer moves to the next question after a short pause. Off: nothing moves until you tap Next.</span>
+      </span>
+    </label>
+
+    <!-- Same action as the saved screen. It also lives here because a run that
+         is abandoned never reaches the saved screen, and abandonment is one of
+         the things this build exists to measure. -->
+    <div id="export-aside"></div>
+  </section>
+
+  </div>
+
+  <!-- ══════════ WEEKLY DASHBOARD ══════════ -->
+  <!-- Rebuilt from Weekly Performance Dashboard.dc.html option 2b (Claude
+       Design handoff), restyled onto this app's own light tokens instead of
+       the source mock's dark Linear palette, and computed from real session
+       data (see driftCat/fuelCat) instead of the mock's fixed demo numbers. -->
+  <div class="dash" id="view-dashboard" role="tabpanel" aria-labelledby="tab-dash" hidden></div>
+
+  <!-- ══════════ TRENDS ══════════ -->
+  <!-- Multi-week review of the two signals — reached by tapping "See every
+       week" on either signal in This week, or the Trends tab directly.
+       Never gated: it's the one view meant to be checked any time. -->
+  <div class="dash" id="view-trends" role="tabpanel" aria-labelledby="tab-trends" hidden></div>
+
+  </div>
+  <!-- /#app-main -->
+
+  <!-- ══════════ RATIONALE ══════════ -->
+  <details class="instr">
+    <summary>Why this shape</summary>
+    <div class="body">
+      <p>One decision per screen matches the moment of use — driveway, heart rate still up, one thumb. Options get large because nothing competes for the space, and the count replaces scroll length as the signal of how much is left.</p>
+      <p>The niggle question is asked third, not eighth. It is the one answer that can force a caution for the whole week, so it is the one answer a stepped flow can least afford to lose to someone closing the app halfway. Everything behind it is refinement; that question is the floor.</p>
+      <p>This build is the full-only variant: every question is asked as its own step, every time, so the telemetry below measures the cost of the complete flow rather than a shortened one. A sibling build with a Fast alternative — TrainingPeaks' shorter post-workout ask, run against the same full flow on the same athletes — lives in <code>after-session-checkin-stepped-prototype.html</code>.</p>
+      <p>Saving does not end on a receipt. The last screen is the week: the session drops into today and the count moves toward the five-session floor the roll-up needs. Seeing the week become computable is the argument for logging the next one.</p>
+      <p>The captured values use the same vocabulary as Prototype&nbsp;02, so a session logged here feeds the identical D/E/F/N/S computation at week's end — this changes the shape of the capture, not what gets captured.</p>
+    </div>
+  </details>
+
+  <details class="instr">
+    <summary>Accessibility notes</summary>
+    <div class="body">
+      <ul>
+        <li>Auto-advance carries a 260&nbsp;ms delay, a live-region announcement, focus moved to the new heading, and Back that keeps your answer selected — 3.2.2 / 2.2.1. Turn it off with the <strong>Auto-advance</strong> switch above.</li>
+        <li>Progress is stated as text as well as drawn as a bar; the bar is <code>aria-hidden</code> so it is not announced twice.</li>
+        <li>Targets are 56&nbsp;px, single column — past 2.5.5 at AAA. Text floor is 14&nbsp;px throughout, matching the app.</li>
+        <li>The review step is the commit point: nothing is saved until you tap Save (3.3.4). Unanswered questions send you back to the first gap rather than failing silently.</li>
+        <li>The week screen states progress as text, and the logged row carries <code>aria-current</code> plus the words “just logged” — never colour alone (1.4.1).</li>
+        <li>Header and footer are sticky within the flow rather than fixed to the viewport, so the page still reflows and scrolls at 200%&nbsp;zoom (1.4.4 / 1.4.10).</li>
+        <li>Copying the test data announces success or falls back to a selectable text box if the clipboard is unavailable.</li>
+        <li>The starting splash auto-dismisses after 3&nbsp;seconds — under the 5&nbsp;second threshold SC&nbsp;2.2.2 exempts — but a tap anywhere, or any key press, skips it immediately, and focus lands on it first so it isn't silently missed.</li>
+        <li>The training-phase question that follows is a single tap on one of four 56&nbsp;px targets, asked once per visit — matching the check-in flow's own target size, with focus landing on its heading the same way.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="instr">
+    <summary>For testers — how this works</summary>
+    <div class="body">
+      <p>This is the stepped-flow alternative to Prototype&nbsp;02's single scrolling form — the full nine-question version, with no Fast shortcut. In the shipped app it fires when a session ends and pulls discipline, intended intensity and duration from your plan; here you declare them so there is something to compute from.</p>
+      <ul>
+        <li>Opens on a branded splash for about 3&nbsp;seconds. Tap it, or press any key, to skip straight to the flow — this only shows once per page load, not on <strong>Log another</strong>.</li>
+        <li>Then pick this week's training phase — Base/Taper, Build&nbsp;1, Build&nbsp;2 or Peak. One tap, shown once per visit, and it's what "This week" reviews as a trend once you've saved a session.</li>
+        <li>Answer end to end. Duration over 45&nbsp;minutes inserts the fuelling question, so the count in the header changes from 8 to 9 as you go.</li>
+        <li>Three sessions are pre-seeded into the week (Mon–Wed) so the final screen has something to sit in. Your logged session lands on the next open day.</li>
+        <li><strong>Log another</strong> starts a fresh session and fills the next day forward.</li>
+        <li><strong>Copy test data</strong> puts every timing and answer from this visit on your clipboard as JSON. It sits on the last screen and again under the flow map, so a check-in you gave up on part-way can still be sent in. Do it before you close the tab — reloading clears everything.</li>
+        <li>State resets when you reload — nothing is saved anywhere.</li>
+      </ul>
+    </div>
+  </details>
+
+  <p class="provenance-note">Prototype only — no accounts, no browser storage, no analytics service. Sessions and step timings live in memory for this visit and clear on reload. Nothing is transmitted anywhere; the one way data leaves this page is <strong>Copy test data</strong>, which you tap yourself and which puts the JSON on your own clipboard.</p>
+
+</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ═══════════════════════════════════════════════════════════════
+  // QUESTIONS
+  //
+  // Values are deliberately identical to Prototype 02's vocabulary
+  // (disc / duration / intensity / a1 / a2 / a3 / rpe / b2 / b3) so a
+  // session captured through this flow feeds the same D/E/F/N/S
+  // computation without translation.
+  //
+  // ORDER IS LOAD-BEARING, twice over:
+  //   · b3 (pain / niggle) sits third rather than eighth. It is the single
+  //     answer that can force a caution for the whole week, so it is the one
+  //     that must not be lost to someone abandoning halfway down a nine-step
+  //     flow. Everything after it degrades gracefully; this one does not.
+  //   · duration must be answered before a3, because a3 is conditional on it
+  //     (onlyLong). Keep duration ahead of a3 if this array is reordered again.
+  //
+  // This build is the full-only variant: every question is asked as a step,
+  // every visit. The Fast/Full comparison build lives alongside this one in
+  // after-session-checkin-stepped-prototype.html.
+  // ═══════════════════════════════════════════════════════════════
+  var QUESTIONS = [
+    {
+      k:'disc', map:'Which session', layout:'grid3',
+      legend:'Which session was it?',
+      hint:'In the shipped app this comes from your plan — declared here so there is something to compute from.',
+      opts:[
+        {v:'swim', label:'Swim'}, {v:'bike', label:'Bike'}, {v:'run', label:'Run'},
+        {v:'brick', label:'Brick'}, {v:'strength', label:'Strength'}
+      ]
+    },
+    {
+      k:'b3', map:'Body', layout:'list',
+      legend:'Any pain, tightness or niggle?',
+      hint:'Not tiredness — something physical. Asked early because this one answer can force a caution for the whole week.',
+      opts:[
+        {v:'nothing', label:'Nothing', chip:'nothing', sev:'sev-1'},
+        {v:'warmed',  label:'A niggle that warmed up and went', chip:'warmed up', sev:'sev-2'},
+        {v:'end',     label:'Still there at the end', chip:'at the end', sev:'sev-3'},
+        {v:'changed', label:'Changed how I moved, or made me stop', chip:'changed me', sev:'sev-4'}
+      ]
+    },
+    {
+      k:'duration', map:'Duration', layout:'grid3', mono:true,
+      legend:'Roughly how long?',
+      hint:'Decides whether we ask about fuelling, and which sessions count as your long ones.',
+      opts:[
+        {v:'30', label:'≤ 45 min', chip:'≤45'},
+        {v:'60', label:'45–90 min', chip:'45–90'},
+        {v:'120', label:'90 min +', chip:'90+'}
+      ]
+    },
+    {
+      k:'intensity', map:'Intent', layout:'list', tick:true,
+      legend:'Was it meant to be easy or hard?',
+      hint:'Drift is only measured on the sessions you intended to keep easy.',
+      opts:[
+        {v:'easy', label:'Easy / steady', chip:'easy'},
+        {v:'hard', label:'Hard / quality', chip:'hard'}
+      ]
+    },
+    {
+      // Relative to expectation rather than an absolute 1–10 rating. Captured
+      // as a bucket the same way duration is — the stored value is that
+      // bucket's representative RPE, so session.rpe stays numeric downstream.
+      k:'rpe', map:'Effort felt', layout:'grid3',
+      legend:'How hard was it?',
+      hint:'What it actually felt like against what you expected — not what the plan said. Against your answer above, this is what catches a session that quietly ran hotter than intended.',
+      opts:[
+        {v:'4', label:'Easy', chip:'easy'},
+        {v:'6', label:'As expected', chip:'as expected'},
+        {v:'9', label:'Harder than expected', chip:'harder'}
+      ]
+    },
+    {
+      k:'a1', map:'Vs intent', layout:'list', tick:true,
+      legend:'Did it finish at the effort you intended?',
+      hint:'You set a ceiling this morning — did you stop at it?',
+      opts:[
+        {v:'intent', label:'At intent', chip:'at intent'},
+        {v:'slight', label:'Slightly over', chip:'slight'},
+        {v:'well', label:'Well over', chip:'well over'},
+        {v:'none', label:'I hadn’t set one', chip:'none set'}
+      ]
+    },
+    {
+      k:'a2', map:'Vs plan', layout:'list', tick:true,
+      legend:'Did you do it as planned?',
+      hint:'Shortened and substituted both still count as completed — they are flagged, not penalised.',
+      opts:[
+        {v:'planned', label:'As planned', chip:'as planned'},
+        {v:'short', label:'Shortened, same structure', chip:'shortened'},
+        {v:'sub', label:'Substituted', chip:'substituted'},
+        {v:'didnt', label:'Didn’t do it', chip:'missed'}
+      ]
+    },
+    {
+      k:'a3', map:'Fuelling', layout:'list', tick:true, onlyLong:true,
+      legend:'Did you fuel during it?',
+      hint:'Asked because you logged a session over 45 minutes.',
+      opts:[
+        {v:'race', label:'At race concentration', chip:'race conc.'},
+        {v:'lighter', label:'Lighter than race', chip:'lighter'},
+        {v:'no', label:'No', chip:'no'}
+      ]
+    },
+    {
+      k:'b2', map:'How it felt', layout:'list',
+      legend:'How did it feel?',
+      hint:'Affect, not effort. Three flat or rough sessions is what moves your state.',
+      opts:[
+        {v:'strong', label:'Strong', sev:'sev-strong'},
+        {v:'solid',  label:'Solid',  sev:'sev-solid'},
+        {v:'flat',   label:'Flat',   sev:'sev-flat'},
+        {v:'rough',  label:'Rough',  sev:'sev-rough'}
+      ]
+    }
+  ];
+
+  // ── Week model ────────────────────────────────────────────────
+  // Three sessions are pre-seeded so the closing screen has a week to sit in.
+  // PLANNED_SESSIONS_PER_WEEK and the fraction gating it are Prototype 02's;
+  // the floor the closing screen counts toward is the same number.
+  var PLANNED_SESSIONS_PER_WEEK = 8;
+
+  // UNTESTED. 0.6 is the fraction of a planned week that has to be logged
+  // before the roll-up computes rather than degrades to recall. It was chosen
+  // by feel, not from data — nothing has yet established that a week with 5 of
+  // 8 sessions logged is meaningfully more computable than one with 4. The
+  // telemetry this build collects (logging cadence across real weeks) is what
+  // should move it. Treat the number as a placeholder with a name, not a
+  // finding; when real cadence is in, set it from that and delete this comment.
+  var WEEK_FLOOR_FRACTION = 0.6;
+  var WEEK_FLOOR = Math.ceil(WEEK_FLOOR_FRACTION * PLANNED_SESSIONS_PER_WEEK);
+  var SEEDED = 3;
+
+  // 'what' is only ever the athlete's own logged detail — a day that hasn't
+  // been checked in for doesn't get a fabricated session description, just
+  // the day and its state (open / planned / rest).
+  //
+  // 'session' carries the same shape save() builds (disc/intensity/duration/
+  // a1/a2/a3/rpe/b2/b3/note) for any day that has one — it's what the weekly
+  // dashboard's drift and fuelling matrices read. Days without a session
+  // (open/rest/planned) carry session:null; nothing is invented for them.
+  var WEEK = [
+    {day:'Mon', what:'Swim · easy · RPE 3', state:'logged', session:{disc:'swim', intensity:'easy', duration:30, a1:'intent', a2:'planned', a3:null, rpe:3, b2:'solid', b3:'nothing', note:''}},
+    {day:'Tue', what:'Bike · hard · RPE 7', state:'logged', session:{disc:'bike', intensity:'hard', duration:60, a1:'well', a2:'planned', a3:'no', rpe:7, b2:'rough', b3:'nothing', note:''}},
+    {day:'Wed', what:'Strength · RPE 5',    state:'logged', session:{disc:'strength', intensity:'hard', duration:30, a1:'intent', a2:'planned', a3:null, rpe:5, b2:'solid', b3:'nothing', note:''}},
+    {day:'Thu', what:'',                    state:'open',    session:null},
+    {day:'Fri', what:'',                    state:'rest',    session:null},
+    {day:'Sat', what:'',                    state:'planned', session:null},
+    {day:'Sun', what:'',                    state:'planned', session:null}
+  ];
+
+  var DISC_LABEL = {swim:'Swim',bike:'Bike',run:'Run',brick:'Brick',strength:'Strength'};
+
+  // ── Periodisation ─────────────────────────────────────────────
+  // Asked once per visit, right after the splash. Frames the week the same
+  // way discipline/intensity frame a session — declared context, not a guess.
+  var PERIOD = [
+    {v:'base',   label:'Base / Taper'},
+    {v:'build1', label:'Build 1'},
+    {v:'build2', label:'Build 2'},
+    {v:'peak',   label:'Peak'}
+  ];
+  var PERIOD_LABEL = {};
+  PERIOD.forEach(function(p){ PERIOD_LABEL[p.v] = p.label; });
+
+  // ── State ─────────────────────────────────────────────────────
+  var state = {
+    ans: {},           // k -> value
+    step: 0,
+    mode: 'ask',       // 'ask' | 'review' | 'saved'
+    note: '',
+    logs: [],          // sessions saved this visit
+    autoAdvance: true,
+    periodisation: null, // 'base' | 'build1' | 'build2' | 'peak' — picked once per visit, right after splash
+    monthSignal: 'intensity', // 'intensity' | 'fuelling' — which signal the Month view is showing
+    weekSignal: 'intensity',  // 'intensity' | 'fuelling' — which signal the This week view is showing
+    telemetry: null    // set below
+  };
+  var advanceTimer = null;
+
+  // ═══════════════════════════════════════════════════════════════
+  // TELEMETRY
+  //
+  // Everything here lives in memory for this visit and is never sent
+  // anywhere. It exists to answer questions this design cannot answer by
+  // argument: how long the full nine-step flow actually takes, where people
+  // stop, and whether the intent / plan / feel / pain answers ever diverge
+  // from each other in practice.
+  //
+  // The only way any of it leaves the browser is "Copy test data" — a
+  // visible action the tester takes themselves.
+  // ═══════════════════════════════════════════════════════════════
+  var TELEMETRY_VERSION = 1;
+
+  state.telemetry = {
+    version: TELEMETRY_VERSION,
+    pageOpenedAt: Date.now(),
+    runs: []          // one entry per pass through the flow, saved or not
+  };
+
+  // How the athlete left the step they were on. Set immediately before the
+  // go() that performs the move, then consumed and reset by go().
+  var navVia = 'manual';
+
+  function currentRun(){
+    var r = state.telemetry.runs;
+    return r.length ? r[r.length - 1] : null;
+  }
+  function openVisit(){
+    var r = currentRun();
+    if(!r){ return null; }
+    for(var i = r.visits.length - 1; i >= 0; i--){
+      if(r.visits[i].leftAt === null){ return r.visits[i]; }
+    }
+    return null;
+  }
+
+  function telStartRun(){
+    state.telemetry.runs.push({
+      mode: 'full',                // kept for schema parity with the Fast/Full build
+      autoAdvanceAtStart: state.autoAdvance,
+      autoAdvanceToggles: 0,
+      startedAt: Date.now(),      // the moment the page loaded / a new run began
+      visits: [],                 // one per arrival at a step (revisits included)
+      backCount: 0,               // running count of backward moves
+      saved: false,
+      savedAt: null,
+      totalMs: null,              // start → save
+      interruptions: [],          // backgrounded / unloaded mid-flow
+      abandonedAt: null,          // last step reached with no save; null once saved
+      session: null               // the saved answer set, attached on save
+    });
+  }
+
+  // Called on arrival at a step. `k` is the question key, or '__review' for
+  // the review screen — review time is part of time-to-save and would
+  // otherwise vanish from the total.
+  function telEnter(k, position){
+    var r = currentRun();
+    if(!r){ return; }
+    r.visits.push({
+      k: k,
+      position: position,          // 1-based index within this mode's step list
+      enteredAt: Date.now(),
+      answeredAt: null,
+      answerMs: null,              // enter → answer, i.e. decision time
+      value: null,
+      leftAt: null,
+      dwellMs: null,               // enter → leave, i.e. total time on screen
+      via: null,                   // how the athlete left: auto | manual | back | map | review-row | save-gap
+      answered: false
+    });
+  }
+
+  function telLeave(via){
+    var v = openVisit();
+    if(!v){ return; }
+    v.leftAt = Date.now();
+    v.dwellMs = v.leftAt - v.enteredAt;
+    v.via = via;
+  }
+
+  function telAnswer(k, value){
+    var r = currentRun();
+    if(!r){ return; }
+    var v = openVisit();
+    if(!v || v.k !== k){ return; }
+    // First answer on this visit is the decision; a change of mind keeps the
+    // original decision time and records the value that was actually left.
+    if(v.answeredAt === null){
+      v.answeredAt = Date.now();
+      v.answerMs = v.answeredAt - v.enteredAt;
+    }
+    v.value = value;
+    v.answered = true;
+  }
+
+  function telBack(){
+    var r = currentRun();
+    if(r){ r.backCount++; }
+  }
+
+  // No save by the time the page goes away or into the background. On mobile
+  // 'unload' often never fires, so visibilitychange is the one that matters —
+  // it also fires for someone who just switched apps and will come back, which
+  // is why returning and saving clears the flag rather than leaving it set.
+  function telInterrupt(reason){
+    var r = currentRun();
+    var at = Date.now();
+    var v = r ? openVisit() : null;
+    var where = {
+      reason: reason,
+      at: at,
+      mode: 'full',
+      screen: state.mode,
+      step: v ? v.k : null,
+      position: v ? v.position : null,
+      msSinceStart: r ? (at - r.startedAt) : null
+    };
+    if(!r){
+      // Left before ever starting a run.
+      state.telemetry.abandonedBeforeStart = where;
+      return;
+    }
+    if(r.saved){ return; }
+    r.interruptions.push(where);
+    r.abandonedAt = where;
+  }
+
+  function telSave(session){
+    var r = currentRun();
+    if(!r){ return; }
+    r.saved = true;
+    r.savedAt = Date.now();
+    r.totalMs = r.savedAt - r.startedAt;
+    r.abandonedAt = null;     // it completed; interruptions[] keeps the history
+    r.session = session;      // the answer set, alongside the timings
+  }
+
+  function telExport(){
+    return {
+      prototype: 'after-session-checkin-stepped',
+      telemetryVersion: TELEMETRY_VERSION,
+      exportedAt: new Date().toISOString(),
+      pageOpenedAt: new Date(state.telemetry.pageOpenedAt).toISOString(),
+      viewport: window.innerWidth + '×' + window.innerHeight,
+      userAgent: navigator.userAgent,
+      plannedSessionsPerWeek: PLANNED_SESSIONS_PER_WEEK,
+      weekFloorFraction: WEEK_FLOOR_FRACTION,
+      abandonedBeforeStart: state.telemetry.abandonedBeforeStart || null,
+      runs: state.telemetry.runs
+    };
+  }
+
+  var els = {
+    eyebrow: document.getElementById('eyebrow'),
+    counter: document.getElementById('counter'),
+    barFill: document.getElementById('bar-fill'),
+    body:    document.getElementById('flow-body'),
+    foot:    document.getElementById('flow-foot'),
+    back:    document.getElementById('btn-back'),
+    next:    document.getElementById('btn-next'),
+    live:    document.getElementById('live'),
+    map:     document.getElementById('map'),
+    auto:    document.getElementById('auto-advance'),
+    exportAside: document.getElementById('export-aside'),
+    tabFlow: document.getElementById('tab-flow'),
+    tabDash: document.getElementById('tab-dash'),
+    tabTrends: document.getElementById('tab-trends'),
+    viewFlow: document.getElementById('view-flow'),
+    viewDash: document.getElementById('view-dashboard'),
+    viewTrends: document.getElementById('view-trends'),
+    viewTabs: document.getElementById('view-tabs'),
+    splash: document.getElementById('view-splash'),
+    appMain: document.getElementById('app-main'),
+    periodScreen: document.getElementById('view-period'),
+    periodChoices: document.getElementById('period-choices')
+  };
+  var asideExport = null;   // built once at init; its note text is refreshed per render
+
+  // ── Derived ───────────────────────────────────────────────────
+  // Anything over 45 min gets the fuelling question. Duration is captured as
+  // a bucket; the stored value is the bucket's representative minute count.
+  function isLong(v){ return v !== null && v !== undefined && parseInt(v,10) > 45; }
+  function asked(q){ return !q.onlyLong || isLong(state.ans.duration); }
+
+  // The steps the athlete walks through, in order — every question, every run.
+  function steps(){
+    return QUESTIONS.filter(asked);
+  }
+  function missing(){
+    return steps().filter(function(q){ return !state.ans[q.k]; });
+  }
+  function optionFor(q, v){
+    for(var i=0;i<q.opts.length;i++){ if(q.opts[i].v === v){ return q.opts[i]; } }
+    return null;
+  }
+  function chipFor(q){
+    var o = optionFor(q, state.ans[q.k]);
+    return o ? (o.chip || o.label) : '';
+  }
+  function loggedCount(){ return SEEDED + state.logs.length; }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WEEKLY DASHBOARD — drift and fuelling, rolled up across the week
+  //
+  // Reads the exact same a1/a3 fields save() already writes into WEEK[].session
+  // (see reset/save below). Nothing here is a separate data model — it's the
+  // week's sessions read back and bucketed.
+  // ═══════════════════════════════════════════════════════════════
+  var DASH_DISCIPLINES = ['swim','bike','run','brick','strength'];
+  var DRIFT_CAT = {intent:'good', slight:'mid', well:'bad'};  // a1 -> signal; 'none' (no intent set) has nothing to read
+  var FUEL_CAT  = {race:'good', lighter:'mid', no:'bad'};     // a3 -> signal; only ever set past 45 min
+
+  // Below this sample size a proportional bar/percentage implies precision
+  // the data doesn't have (one session = 25% of a 4-session week). Week view
+  // is basically always under this; month view is basically always over it —
+  // so this one constant is what splits "grid + counts only" from "grid +
+  // counts + bar + %" between the two timeframes.
+  var STAT_MIN_N = 8;
+
+  // Headlines read better spelled out below ten — "Three sessions" not "3 sessions".
+  var NUMBER_WORDS = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine'];
+  function numWord(n){ return (n >= 0 && n < 10) ? NUMBER_WORDS[n] : String(n); }
+
+  function driftCat(session){ return session ? (DRIFT_CAT[session.a1] || null) : null; }
+  function fuelCat(session){
+    if(!session || !isLong(session.duration)) return null;
+    return FUEL_CAT[session.a3] || null;
+  }
+  function weekSessions(){
+    return WEEK.filter(function(d){ return d.session; }).map(function(d){ return d.session; });
+  }
+  function dashTally(catFn){
+    var t = {good:0, mid:0, bad:0, total:0};
+    weekSessions().forEach(function(s){
+      var c = catFn(s);
+      if(c){ t[c]++; t.total++; }
+    });
+    return t;
+  }
+  function dashPct(t){ return t.total ? Math.round(t.good / t.total * 100) : 0; }
+
+  // Which cell class a given day/discipline pair gets in a matrix: no session
+  // that day for that discipline, session but signal not asked, or a colour.
+  function dashCellClass(dayEntry, disc, catFn){
+    if(!dayEntry.session || dayEntry.session.disc !== disc){ return 'dash-cell'; }
+    var c = catFn(dayEntry.session);
+    return c ? ('dash-cell ' + c) : 'dash-cell na';
+  }
+
+  function dashMatrix(sub, catFn, days){
+    days = days || WEEK;
+    var frag = document.createDocumentFragment();
+    var hd = el('div', 'dash-matrix-hd');
+    hd.appendChild(el('div', 'dash-matrix-rule'));
+    hd.appendChild(el('div', 'dash-matrix-sub', sub));
+    frag.appendChild(hd);
+
+    var grid = el('div', 'dash-grid');
+    grid.appendChild(el('div'));
+    days.forEach(function(d){ grid.appendChild(el('div', 'dash-grid-day', d.day.charAt(0))); });
+    DASH_DISCIPLINES.forEach(function(disc){
+      grid.appendChild(el('div', 'dash-grid-disc', DISC_LABEL[disc]));
+      days.forEach(function(d){ grid.appendChild(el('div', dashCellClass(d, disc, catFn))); });
+    });
+    frag.appendChild(grid);
+    return frag;
+  }
+
+  // The big % numeral + proportional bar — only meaningful once total is
+  // large enough that a percentage isn't just one session wearing a costume.
+  // Shared between the weekly signal section and the monthly aggregate so
+  // week and month don't drift into two different bar implementations.
+  function renderStatBar(t, bigDesc){
+    var frag = document.createDocumentFragment();
+
+    var big = el('div', 'dash-stat-big');
+    var pctEl = el('div', 'dash-stat-pct', String(dashPct(t)));
+    pctEl.appendChild(el('span', 'u', '%'));
+    big.appendChild(pctEl);
+    big.appendChild(el('div', 'dash-stat-desc', bigDesc));
+    frag.appendChild(big);
+
+    var bar = el('div', 'tri-bar');
+    var barColors = {good:'var(--dash-good)', mid:'var(--dash-mid)', bad:'var(--dash-bad)'};
+    ['good','mid','bad'].forEach(function(k){
+      if(!t[k]){ return; }
+      var seg = document.createElement('span');
+      seg.style.flex = String(t[k]);
+      seg.style.background = barColors[k];
+      bar.appendChild(seg);
+    });
+    frag.appendChild(bar);
+
+    return frag;
+  }
+
+  // Insight strip, stat header, optional bar, good/mid/bad counts and the
+  // day-by-discipline matrix for one signal on one week of days — the
+  // content every "this week" reading of drift or fuelling is built from.
+  //
+  // `insight` ({severity, headline}) is the resolved DRIFT_INSIGHT_RULES /
+  // FUEL_INSIGHT_RULES match — it used to render as its own standalone
+  // signal-insight-c card sitting above this section, with this section's
+  // own plain-tally opts.headline as an h2 right below it. Same fact, two
+  // sentences saying it. They're merged into the one insight-strip here;
+  // the plain n-count (opts.nText) is the only thing that survives from
+  // the old h2 row.
+  //
+  // Shared by dashSignalSection (This week — wraps this in a labelled
+  // .dash-section plus a "See this month" link) and renderMonthSection
+  // (This month — wraps this in a .month-week-block per week, with its own
+  // week label and no link). One signal's content reads the same whether
+  // the week in question is this one or three weeks back.
+  function renderSignalBody(wrap, t, catFn, insight, opts, days){
+    var strip = el('div', 'dash-insight-strip');
+    strip.style.borderLeftColor = 'var(--dash-' + insight.severity + ')';
+    strip.style.background = 'color-mix(in srgb, var(--dash-' + insight.severity + ') 12%, var(--s1))';
+    strip.appendChild(el('p', 'dash-insight-strip-headline', insight.headline));
+    wrap.appendChild(strip);
+
+    var hd = el('div', 'dash-stat-hd');
+    hd.appendChild(el('div', 'dash-stat-n', opts.nText));
+    wrap.appendChild(hd);
+
+    // Below STAT_MIN_N the % + bar overstate a handful of sessions as a
+    // distribution — a week is almost never big enough to earn one, so this
+    // is the "no bar/% at low n" fix from the Intensity Drift critique.
+    if(t.total >= STAT_MIN_N){
+      wrap.appendChild(renderStatBar(t, opts.bigDesc));
+    }
+
+    var counts = el('div', 'dash-counts');
+    function countEl(n, label2, color){
+      var s = document.createElement('span');
+      var b = document.createElement('b');
+      b.style.color = color;
+      b.textContent = String(n);
+      s.appendChild(b);
+      s.appendChild(document.createTextNode(' ' + label2));
+      return s;
+    }
+    counts.appendChild(countEl(t.good, opts.goodLabel, 'var(--dash-good)'));
+    counts.appendChild(countEl(t.mid, opts.midLabel, 'var(--dash-mid)'));
+    counts.appendChild(countEl(t.bad, opts.badLabel, 'var(--dash-bad)'));
+    wrap.appendChild(counts);
+
+    wrap.appendChild(dashMatrix(opts.matrixSub, catFn, days));
+  }
+
+  function dashSignalSection(label, t, catFn, insight, opts){
+    var wrap = el('div', 'dash-section dash-signal');
+    wrap.setAttribute('data-label', label);
+
+    renderSignalBody(wrap, t, catFn, insight, opts, WEEK);
+
+    // Click through to the same signal reviewed across every week.
+    var link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'dash-signal-link';
+    link.textContent = 'See this month \u2192';
+    link.addEventListener('click', function(){ goToMonth(opts.signal); });
+    wrap.appendChild(link);
+
+    return wrap;
+  }
+
+  function dashLegendItem(color, label, hairline){
+    var it = el('div', 'dash-legend-item');
+    var sw = document.createElement('span');
+    sw.className = 'dash-legend-sw';
+    if(hairline){ sw.style.border = '1px solid var(--bd2)'; }
+    else{ sw.style.background = color; }
+    it.appendChild(sw);
+    it.appendChild(document.createTextNode(label));
+    return it;
+  }
+
+  // Same legend for week and month grids — 'not asked' (hairline, session
+  // logged but no signal) and 'no session' (filled grey, nothing logged)
+  // read identically at a glance otherwise, which is exactly the encoding
+  // ambiguity flagged in the Intensity Drift critique. Previously this only
+  // rendered on the weekly dashboard; the month view's grids had no legend
+  // explaining that distinction at all.
+  function dashLegend(){
+    var legend = el('div', 'dash-legend');
+    legend.appendChild(dashLegendItem('var(--dash-good)', 'on plan'));
+    legend.appendChild(dashLegendItem('var(--dash-mid)', 'slightly off'));
+    legend.appendChild(dashLegendItem('var(--dash-bad)', 'well off'));
+    legend.appendChild(dashLegendItem(null, 'not asked', true));
+    legend.appendChild(dashLegendItem('var(--s4)', 'no session'));
+    return legend;
+  }
+
+  // Moved to the top of the dashboard: the full season progression, not a
+  // fabricated week-over-week trend. All four phases always show, in
+  // order, with the one picked at the splash highlighted.
+  function dashPhaseSection(){
+    var wrap = el('div', 'dash-section dash-phase');
+    wrap.setAttribute('data-label', 'Training phase');
+
+    var track = el('div', 'dash-phase-track');
+    PERIOD.forEach(function(p){
+      var card = el('div', 'dash-phase-card' + (state.periodisation === p.v ? ' is-current' : ''));
+      card.appendChild(el('div', 'dash-phase-ph', p.label));
+      track.appendChild(card);
+    });
+    wrap.appendChild(track);
+    wrap.appendChild(el('p', 'dash-phase-note', 'Set once per visit, from the splash \u2014 change it any time. It\u2019s the context drift and fuelling review against.'));
+    return wrap;
+  }
+
+  // Mocked history for weeks before this one — this build only ever holds
+  // one real week of sessions, so the first three weeks shown are
+  // illustrative context for the click-through review, not derived data.
+  // Replace once weeks persist.
+  //
+  // Each entry's `phase` is illustrative too — a believable base → base →
+  // build1 progression leading into this week's own phase (state.
+  // periodisation, defaulting to 'build2' — see monthWeeks() below), not
+  // derived from any real block_config.
+  var MONTH_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  function monthDay(i, session){ return {day:MONTH_DAYS[i], session:session}; }
+  var MONTH_HISTORY = [
+    {phase:'base', days:[
+      monthDay(0, {disc:'swim', a1:'intent', duration:30, a3:null}),
+      monthDay(1, {disc:'bike', a1:'well', duration:70, a3:'no'}),
+      monthDay(2, null),
+      monthDay(3, {disc:'run', a1:'slight', duration:50, a3:'lighter'}),
+      monthDay(4, null),
+      monthDay(5, {disc:'strength', a1:'intent', duration:30, a3:null}),
+      monthDay(6, null)
+    ]},
+    {phase:'base', days:[
+      monthDay(0, {disc:'swim', a1:'intent', duration:30, a3:null}),
+      monthDay(1, null),
+      monthDay(2, {disc:'bike', a1:'slight', duration:60, a3:'race'}),
+      monthDay(3, null),
+      monthDay(4, {disc:'run', a1:'well', duration:90, a3:'no'}),
+      monthDay(5, null),
+      monthDay(6, {disc:'strength', a1:'intent', duration:30, a3:null})
+    ]},
+    {phase:'build1', days:[
+      monthDay(0, null),
+      monthDay(1, {disc:'swim', a1:'well', duration:40, a3:null}),
+      monthDay(2, {disc:'bike', a1:'intent', duration:55, a3:'lighter'}),
+      monthDay(3, {disc:'brick', a1:'slight', duration:70, a3:'no'}),
+      monthDay(4, null),
+      monthDay(5, {disc:'strength', a1:'intent', duration:30, a3:null}),
+      monthDay(6, null)
+    ]}
+  ];
+
+  // Week number is the real ISO-8601 week-of-year (Monday start), not a
+  // training-block-relative counter \u2014 "Week 3/4/5/6" only ever meant
+  // anything relative to each other and went stale the moment this static
+  // file was reopened on a different real week. Computed fresh from the
+  // actual current date on every render, walking back 7 days per historical
+  // entry from "this week", so the numbers are always correct for whenever
+  // the prototype is actually being viewed \u2014 no manual updating required.
+  function isoWeekNumber(d){
+    var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    var dayNum = (date.getUTCDay() + 6) % 7; // 0 = Monday
+    date.setUTCDate(date.getUTCDate() - dayNum + 3); // nearest Thursday
+    var firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+    var diff = date - firstThursday;
+    return 1 + Math.round(diff / (7 * 86400000));
+  }
+
+  // phaseKey is either a MONTH_HISTORY entry's mocked `phase`, or this
+  // week's real state.periodisation (with the same 'build2' fallback used
+  // elsewhere for an unset phase \u2014 see renderChrome's saved-screen eyebrow).
+  function monthWeekLabel(weekNum, phaseKey, isCurrent){
+    var parts = ['Week ' + weekNum, PERIOD_LABEL[phaseKey] || phaseKey];
+    if(isCurrent){ parts.push('this week'); }
+    return parts.join(' \u00b7 ');
+  }
+
+  function monthWeeks(){
+    var today = new Date();
+    var histCount = MONTH_HISTORY.length;
+    var weeks = MONTH_HISTORY.map(function(w, i){
+      var weeksAgo = histCount - i;
+      var d = new Date(today);
+      d.setDate(d.getDate() - 7 * weeksAgo);
+      return {wk: monthWeekLabel(isoWeekNumber(d), w.phase, false), days: w.days};
+    });
+    weeks.push({wk: monthWeekLabel(isoWeekNumber(today), state.periodisation || 'build2', true), days: WEEK});
+    return weeks;
+  }
+
+  // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+  // WEEK INSIGHT \u2014 rules-based headline for compounding overexertion
+  //
+  // Was "month insight" \u2014 moved to the weekly dashboard, then back to a
+  // per-week reading inside the month view too (see renderMonthSection): a
+  // rule naming one specific pair ("your Run on Fri, the Strength on Sun")
+  // is the right grain for a week, whether that week is this one or three
+  // back, and This month now reads as four stacked This-week cards rather
+  // than a different, flatter treatment. The by-discipline breakdown
+  // further down (renderDisciplineInsights) is the one claim this per-week
+  // rule table still can't make \u2014 "all your Thursday runs" spans every
+  // week at once, a different grain than any single week's insight.
+  // computeSignalFacts takes a `weeks` array (a single week is just
+  // `[{wk, days}]`) specifically so the same function drives both.
+  //
+  // Only this rule-based reading (not a plain tally) ever says "X led to
+  // poor Y afterwards" \u2014 that claim needs the sequence across sessions.
+  // This is that: one facts computation, generic over which signal (drift
+  // or fuelling) it's reading, feeding a static, ordered rule table per
+  // signal \u2014 same shape tips.js / tipResolver.js already use for tip
+  // content. Kept inline here because this file has no module system, but
+  // computeSignalFacts() and the two rule tables/resolvers below don't
+  // touch local state \u2014 lift as-is into
+  // frontend/src/data/insightRules.js + frontend/src/lib/insightResolver.js
+  // on migration.
+  //
+  // "Overexertion"/"not fuelled" = catFn 'bad'. "...afterwards" = proxied
+  // as the very next *logged* session (skipping rest days, and for
+  // fuelling, skipping sessions under 45 min) also landing in 'bad'. That's
+  // the one signal already captured unambiguously for both \u2014 a
+  // skipped-session proxy was considered and rejected: a skip can't be
+  // attributed to the prior session without a field this app doesn't have
+  // yet, so it's left out rather than guessed at.
+  //
+  // Also tracks the mirror image \u2014 goodStreak (longest run of consecutive
+  // 'good' sessions) and bounceBackPairs (a 'bad' session immediately
+  // followed by a 'good' one). Rules previously only had material to build
+  // a headline out of what went wrong; these two give them something to
+  // showcase when the athlete's own recovery is the story \u2014 either a clean
+  // stretch worth naming, or a miss that didn't repeat.
+  // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+  function computeSignalFacts(weeks, catFn){
+    var badCount = 0;
+    var goodCount = 0;
+    var total = 0;
+    var compoundPairs = 0;
+    var firstPair = null;
+    var bounceBackPairs = 0;
+    var firstBounceBack = null;
+    var prevBad = null; // carries across week boundaries \u2014 the log is one continuous sequence
+    var curStreak = 0;
+    var goodStreak = 0;
+
+    weeks.forEach(function(w){
+      w.days.forEach(function(d){
+        if(!d.session){ return; }
+        var cat = catFn(d.session);
+        if(cat === null){ return; } // no signal on this session \u2014 doesn't break or extend the chain, doesn't count toward total
+        total++;
+        if(cat === 'good'){
+          goodCount++;
+          curStreak++;
+          if(curStreak > goodStreak){ goodStreak = curStreak; }
+          if(prevBad){
+            bounceBackPairs++;
+            if(!firstBounceBack){
+              firstBounceBack = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: d.day, disc2: DISC_LABEL[d.session.disc]};
+            }
+          }
+          prevBad = null;
+        } else if(cat === 'bad'){
+          curStreak = 0;
+          badCount++;
+          if(prevBad){
+            compoundPairs++;
+            if(!firstPair){
+              firstPair = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: d.day, disc2: DISC_LABEL[d.session.disc]};
+            }
+          }
+          prevBad = {day: d.day, disc: d.session.disc};
+        } else {
+          curStreak = 0;
+          prevBad = null;
+        }
+      });
+    });
+
+    return {
+      badCount: badCount, goodCount: goodCount, total: total,
+      compoundPairs: compoundPairs, firstPair: firstPair,
+      bounceBackPairs: bounceBackPairs, firstBounceBack: firstBounceBack,
+      goodStreak: goodStreak
+    };
+  }
+
+  // Ordered rule table \u2014 first match wins by priority. Data, not logic:
+  // editing the athlete-facing claim here never touches computeSignalFacts.
+  var DRIFT_INSIGHT_RULES = [
+    {
+      id: 'compound_drift_2plus',
+      match: function(f){ return f.compoundPairs >= 2; },
+      priority: 10,
+      severity: 'bad',
+      headline: function(f){
+        return numWord(f.compoundPairs) + ' times this week, a session that ran well over intent was followed by another one running well over intent \u2014 that\u2019s the pattern that turns into a niggle or a missed session, so check whether recovery between them is long enough.';
+      }
+    },
+    {
+      id: 'compound_drift_1',
+      match: function(f){ return f.compoundPairs === 1; },
+      priority: 20,
+      severity: 'bad',
+      headline: function(f){
+        return 'Your ' + f.firstPair.disc1 + ' on ' + f.firstPair.day1 + ' ran well over intent, and the ' + f.firstPair.disc2 + ' on ' + f.firstPair.day2 + ' that followed did too \u2014 one data point, worth watching before it becomes a pattern.';
+      }
+    },
+    {
+      // Same badCount>0, compoundPairs===0 state as isolated_drift_no_compound
+      // below, but with a concrete recovery to point to instead of just the
+      // absence of a repeat \u2014 the positive counterpart to compound_drift_1:
+      // same shape of evidence, opposite story. Lower priority number wins
+      // when both match, so this fires first whenever there's a real pair to name.
+      id: 'bounce_back_drift',
+      match: function(f){ return f.badCount > 0 && f.compoundPairs === 0 && f.bounceBackPairs > 0; },
+      priority: 25,
+      severity: 'mid',
+      headline: function(f){
+        return 'Your ' + f.firstBounceBack.disc1 + ' on ' + f.firstBounceBack.day1 + ' ran well over intent, but the ' + f.firstBounceBack.disc2 + ' on ' + f.firstBounceBack.day2 + ' right after landed back at intent \u2014 recovery did its job.';
+      }
+    },
+    {
+      id: 'isolated_drift_no_compound',
+      match: function(f){ return f.badCount > 0 && f.compoundPairs === 0; },
+      priority: 30,
+      severity: 'mid',
+      headline: function(f){
+        return numWord(f.badCount) + (f.badCount === 1 ? ' session ran' : ' sessions ran') + ' well over intent this week, but recovery held \u2014 no back-to-back pattern.';
+      }
+    },
+    {
+      id: 'clean_month',
+      match: function(f){ return f.badCount === 0; },
+      priority: 40,
+      severity: 'good',
+      headline: function(f){
+        if(f.goodStreak >= 5){
+          return 'Every session this week finished at the effort you intended \u2014 ' + numWord(f.goodStreak) + ' in a row, pacing held from first session to last.';
+        }
+        return 'Every session this week finished at the effort you intended.';
+      }
+    }
+  ];
+
+  function resolveDriftInsight(facts){
+    var matches = DRIFT_INSIGHT_RULES.filter(function(r){ return r.match(facts); });
+    matches.sort(function(a, b){ return a.priority - b.priority; });
+    return matches[0];
+  }
+
+  // Fuelling's equivalent rule table. One extra rule versus drift's — a
+  // dedicated no-data state — because a1 is asked on every session so
+  // total is effectively always >0 for drift, but fuelling only has a
+  // signal past 45 min, so "no long sessions logged yet" is a real,
+  // frequent state that "every session was fuelled" would misrepresent.
+  var FUEL_INSIGHT_RULES = [
+    {
+      id: 'compound_fuel_2plus',
+      match: function(f){ return f.compoundPairs >= 2; },
+      priority: 10,
+      severity: 'bad',
+      headline: function(f){
+        return numWord(f.compoundPairs) + ' times this week, a long session that wasn’t fuelled was followed by another unfuelled long session — that’s the pattern that shows up as a bonk on race day, so check whether that first miss is carrying into the next one.';
+      }
+    },
+    {
+      id: 'compound_fuel_1',
+      match: function(f){ return f.compoundPairs === 1; },
+      priority: 20,
+      severity: 'bad',
+      headline: function(f){
+        return 'Your ' + f.firstPair.disc1 + ' on ' + f.firstPair.day1 + ' wasn’t fuelled, and the ' + f.firstPair.disc2 + ' on ' + f.firstPair.day2 + ' that followed wasn’t either — one data point, worth watching before under-fuelling becomes the default.';
+      }
+    },
+    {
+      // Positive counterpart to compound_fuel_1 — same evidence shape (a
+      // named pair), opposite outcome. See bounce_back_drift above for why
+      // this sits ahead of the generic isolated rule.
+      id: 'bounce_back_fuel',
+      match: function(f){ return f.badCount > 0 && f.compoundPairs === 0 && f.bounceBackPairs > 0; },
+      priority: 25,
+      severity: 'mid',
+      headline: function(f){
+        return 'Your ' + f.firstBounceBack.disc1 + ' on ' + f.firstBounceBack.day1 + ' wasn’t fuelled, but the ' + f.firstBounceBack.disc2 + ' on ' + f.firstBounceBack.day2 + ' right after went back to race concentration — the miss didn’t repeat.';
+      }
+    },
+    {
+      id: 'isolated_fuel_no_compound',
+      match: function(f){ return f.badCount > 0 && f.compoundPairs === 0; },
+      priority: 30,
+      severity: 'mid',
+      headline: function(f){
+        return numWord(f.badCount) + (f.badCount === 1 ? ' long session wasn’t fuelled' : ' long sessions weren’t fuelled') + ' this week, but it didn’t carry into the next one.';
+      }
+    },
+    {
+      id: 'clean_month_fuel',
+      match: function(f){ return f.total > 0 && f.badCount === 0; },
+      priority: 40,
+      severity: 'good',
+      headline: function(f){
+        if(f.goodStreak >= 5){
+          return 'Every long session this week was fuelled at race concentration — ' + numWord(f.goodStreak) + ' in a row, the habit is holding.';
+        }
+        return 'Every long session this week was fuelled at race concentration.';
+      }
+    },
+    {
+      id: 'no_long_sessions',
+      match: function(f){ return f.total === 0; },
+      priority: 50,
+      severity: 'good',
+      headline: function(){ return 'No sessions over 45 min yet this week.'; }
+    }
+  ];
+
+  function resolveFuelInsight(facts){
+    var matches = FUEL_INSIGHT_RULES.filter(function(r){ return r.match(facts); });
+    matches.sort(function(a, b){ return a.priority - b.priority; });
+    return matches[0];
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MONTH INSIGHT — by discipline
+  //
+  // The rules-based headline above now lives on the weekly dashboard (see
+  // the note above .dash-insight-strip). What a month of sessions actually
+  // supports is a per-slot trend, not one named pair — "all your Thursday
+  // runs" rather than one Tuesday. calendar_sessions binds a session_type
+  // to a fixed day_of_week for the whole block (see CLAUDE.md), so a
+  // discipline and its weekday are the same recurring slot in the real
+  // app. disciplineWeekday() reads that weekday back off the logged
+  // sessions rather than hardcoding it, so this still degrades gracefully
+  // if a discipline's day is ever inconsistent — which is exactly what
+  // MONTH_HISTORY's mocked weeks do, since they vary session/day pairings
+  // for grid-visual variety rather than modelling a real fixed calendar.
+  // ═══════════════════════════════════════════════════════════════
+  var WEEKDAY_FULL = {Mon:'Monday', Tue:'Tuesday', Wed:'Wednesday', Thu:'Thursday', Fri:'Friday', Sat:'Saturday', Sun:'Sunday'};
+  var DISC_SINGULAR_NOUN = {swim:'swim', bike:'bike', run:'run', brick:'brick', strength:'strength session'};
+  var DISC_PLURAL_NOUN   = {swim:'swims', bike:'bikes', run:'runs', brick:'bricks', strength:'strength sessions'};
+
+  // The day every logged instance of this discipline fell on, or null if it
+  // moved around this month — reads the athlete's calendar slot back off
+  // the log rather than assuming one, so "Thursday" is never asserted
+  // without evidence for it in every single occurrence.
+  function disciplineWeekday(disc){
+    var day = null, consistent = true;
+    monthWeeks().forEach(function(w){
+      w.days.forEach(function(d){
+        if(!d.session || d.session.disc !== disc){ return; }
+        if(day === null){ day = d.day; }
+        else if(day !== d.day){ consistent = false; }
+      });
+    });
+    return consistent ? day : null;
+  }
+
+  // Same shape as tallyDays/monthTally, scoped to one discipline.
+  function disciplineTally(disc, catFn){
+    var t = {good:0, mid:0, bad:0, total:0};
+    monthWeeks().forEach(function(w){
+      w.days.forEach(function(d){
+        if(!d.session || d.session.disc !== disc){ return; }
+        var c = catFn(d.session);
+        if(c){ t[c]++; t.total++; }
+      });
+    });
+    return t;
+  }
+
+  function disciplineSeverity(t){ return t.bad ? 'bad' : (t.mid ? 'mid' : 'good'); }
+
+  // numWord(t.total) is lowercased for the "N of M" branches — it lands
+  // mid-sentence there ("two of four bikes"), not sentence-initial like
+  // every other numWord() call in this file. And the fraction phrasing only
+  // ever fires when the numerator is a strict subset of total (checked
+  // against both bad and mid before falling through) — at total 1, bad or
+  // mid is necessarily the whole month's worth, so that case reads as
+  // "Every ..." same as a clean or fully-bad month, not "One of one".
+  function disciplineDriftHeadline(disc, t, weekday){
+    var one  = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_SINGULAR_NOUN[disc]) : DISC_SINGULAR_NOUN[disc];
+    var many = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_PLURAL_NOUN[disc])   : DISC_PLURAL_NOUN[disc];
+    if(t.bad === t.total){ return 'Every ' + one + ' this month ran well over intent.'; }
+    if(t.mid === t.total){ return 'Every ' + one + ' this month ran slightly over intent.'; }
+    if(t.bad){ return numWord(t.bad) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' ran well over intent this month.'; }
+    if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' ran slightly over intent this month.'; }
+    return 'Every ' + one + ' this month finished at the effort you intended.';
+  }
+
+  function disciplineFuelHeadline(disc, t, weekday){
+    var one  = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_SINGULAR_NOUN[disc]) : DISC_SINGULAR_NOUN[disc];
+    var many = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_PLURAL_NOUN[disc])   : DISC_PLURAL_NOUN[disc];
+    if(t.bad === t.total){ return 'Every ' + one + ' over 45 min this month wasn’t fuelled.'; }
+    if(t.mid === t.total){ return 'Every ' + one + ' over 45 min this month ran lighter than race concentration.'; }
+    if(t.bad){ return numWord(t.bad) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' over 45 min weren’t fuelled this month.'; }
+    if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' over 45 min ran lighter than race concentration this month.'; }
+    return 'Every ' + one + ' over 45 min this month was fuelled at race concentration.';
+  }
+
+  // One severity-coded strip per discipline with any signal this month —
+  // disciplines with nothing logged (no brick this block, say) don't get an
+  // empty strip. Same .dash-insight-strip primitive the weekly dashboard
+  // uses, stacked up to five deep, each carrying its own
+  // .dash-insight-strip-label since nothing else on screen distinguishes
+  // one discipline's strip from the next (see the CSS note above
+  // .dash-insight-strip for why the weekly strips skip that label).
+  function renderDisciplineInsights(catFn, headlineFn){
+    var wrap = el('div', 'dash-section');
+    wrap.setAttribute('data-label', 'By discipline');
+    var any = false;
+    DASH_DISCIPLINES.forEach(function(disc){
+      var t = disciplineTally(disc, catFn);
+      if(!t.total){ return; }
+      any = true;
+      var weekday = disciplineWeekday(disc);
+      var label = weekday ? (DISC_LABEL[disc] + ' · ' + WEEKDAY_FULL[weekday] + 's') : DISC_LABEL[disc];
+      var severity = disciplineSeverity(t);
+
+      var strip = el('div', 'dash-insight-strip');
+      strip.style.borderLeftColor = 'var(--dash-' + severity + ')';
+      strip.style.background = 'color-mix(in srgb, var(--dash-' + severity + ') 12%, var(--s1))';
+      strip.appendChild(el('div', 'dash-insight-strip-label', label));
+      strip.appendChild(el('p', 'dash-insight-strip-headline', headlineFn(disc, t, weekday)));
+      wrap.appendChild(strip);
+    });
+    if(!any){ wrap.appendChild(el('p', 'dash-phase-note', 'No sessions with a signal logged yet this month.')); }
+    return wrap;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // GOOGLE SHEET SYNC — testing only, off by default
+  //
+  // Lets headline/severity be edited in a spreadsheet and reviewed here
+  // without touching code — for trying copy variants fast, not for
+  // shipping. match()/priority stay in code; only `headline` and
+  // `severity` get overridden, by id, from two tabs named "drift" and
+  // "fuel" (columns: id | headline | severity). Opt in with
+  // ?sheet=1 in the URL — off otherwise, so the file still works
+  // completely standalone with no network call. This directly
+  // contradicts CLAUDE.md's "tips are bundled, never fetched" rule for
+  // the shipped app — do not wire anything like this into the real
+  // frontend, it's here purely so headline copy can be test-driven from
+  // a sheet before being hand-copied back into DRIFT_INSIGHT_RULES /
+  // FUEL_INSIGHT_RULES.
+  //
+  // Uses the public gviz endpoint via a JSONP <script> tag rather than
+  // fetch() — gviz doesn't send CORS headers, so a cross-origin fetch()
+  // would be blocked; a script tag isn't subject to that restriction,
+  // and JSONP is the endpoint's own intended integration path.
+  // ═══════════════════════════════════════════════════════════════
+  var SHEET_TEST_ID = '1JeLtTIWUeSmnU-4qbOSIKfiH06O3i6eDePnAyIVwRFw';
+  var sheetTestMode = /[?&]sheet=1(&|$)/.test(window.location.search);
+
+  function fillSheetTemplate(str, facts){
+    return str.replace(/\{\{\s*([\w.]+)\s*\}\}/g, function(_, path){
+      var val = facts;
+      path.split('.').forEach(function(k){ val = (val == null) ? null : val[k]; });
+      return val == null ? '' : String(val);
+    });
+  }
+
+  // gviz rarely detects a header row when every column is plain text (its
+  // heuristic looks for a type change between row 1 and row 2, and id/
+  // headline/severity are all strings) — so this reads labels off the
+  // column metadata first, and falls back to treating row 0 as the header
+  // itself when that metadata comes back blank.
+  function parseSheetRows(res){
+    if(!res || !res.table){ return []; }
+    var cols = res.table.cols || [];
+    var rows = res.table.rows || [];
+    var idx = {id: -1, headline: -1, severity: -1};
+    cols.forEach(function(c, i){
+      var label = (c.label || '').trim().toLowerCase();
+      if(idx.hasOwnProperty(label)){ idx[label] = i; }
+    });
+    var dataRows = rows;
+    if(idx.id === -1 && idx.headline === -1 && idx.severity === -1 && rows.length){
+      var first = rows[0].c || [];
+      first.forEach(function(cell, i){
+        var label = (cell && cell.v != null ? String(cell.v) : '').trim().toLowerCase();
+        if(idx.hasOwnProperty(label)){ idx[label] = i; }
+      });
+      dataRows = rows.slice(1);
+    }
+    if(idx.id === -1){ idx.id = 0; }
+    if(idx.headline === -1){ idx.headline = 1; }
+    if(idx.severity === -1){ idx.severity = 2; }
+
+    return dataRows.map(function(r){
+      var c = (r && r.c) || [];
+      function cell(i){ return (c[i] && c[i].v != null) ? String(c[i].v) : ''; }
+      return {id: cell(idx.id).trim(), headline: cell(idx.headline), severity: cell(idx.severity).trim().toLowerCase()};
+    }).filter(function(row){ return row.id; });
+  }
+
+  function applySheetOverrides(rules, sheetRows){
+    var byId = {};
+    sheetRows.forEach(function(r){ byId[r.id] = r; });
+    rules.forEach(function(rule){
+      var override = byId[rule.id];
+      if(!override){ return; }
+      if(override.severity){ rule.severity = override.severity; }
+      if(override.headline){
+        rule.headline = function(f){ return fillSheetTemplate(override.headline, f); };
+      }
+    });
+  }
+
+  function loadSheetTab(tabName, cb){
+    var cbName = '__sheetCb_' + tabName + '_' + Date.now();
+    var script = document.createElement('script');
+    window[cbName] = function(res){
+      delete window[cbName];
+      if(script.parentNode){ script.parentNode.removeChild(script); }
+      cb(parseSheetRows(res));
+    };
+    script.onerror = function(){
+      delete window[cbName];
+      if(script.parentNode){ script.parentNode.removeChild(script); }
+      cb([]);
+    };
+    script.src = 'https://docs.google.com/spreadsheets/d/' + SHEET_TEST_ID +
+      '/gviz/tq?tqx=out:json;responseHandler:' + cbName + '&sheet=' + encodeURIComponent(tabName);
+    document.body.appendChild(script);
+  }
+
+  function initSheetTestMode(){
+    if(!sheetTestMode){ return; }
+    say('Loading headline copy from test sheet…');
+    loadSheetTab('drift', function(rows){
+      applySheetOverrides(DRIFT_INSIGHT_RULES, rows);
+      if(!els.viewTrends.hidden){ renderTrends(); }
+    });
+    loadSheetTab('fuel', function(rows){
+      applySheetOverrides(FUEL_INSIGHT_RULES, rows);
+      if(!els.viewTrends.hidden){ renderTrends(); }
+    });
+  }
+
+
+  function tallyDays(days, catFn){
+    var t = {good:0, mid:0, bad:0, total:0};
+    days.forEach(function(d){
+      if(!d.session){ return; }
+      var c = catFn(d.session);
+      if(c){ t[c]++; t.total++; }
+    });
+    return t;
+  }
+
+  // Whole-month tally, same shape as dashTally's weekly one — this is what
+  // makes the month view's total comfortably clear STAT_MIN_N even when a
+  // single week never would, so the bar/% earn their place here specifically.
+  function monthTally(catFn){
+    var t = {good:0, mid:0, bad:0, total:0};
+    monthWeeks().forEach(function(w){
+      var wt = tallyDays(w.days, catFn);
+      t.good += wt.good; t.mid += wt.mid; t.bad += wt.bad; t.total += wt.total;
+    });
+    return t;
+  }
+
+  // One signal's content, once per week in the month — the same insight
+  // strip, stat row, counts and matrix This week renders for the current
+  // week (see renderSignalBody), stacked once per week in the month, each
+  // with its own rule-based read of just that week's sessions.
+  function renderMonthSection(label, catFn, opts, resolveInsight){
+    var wrap = el('div', 'dash-section');
+    wrap.setAttribute('data-label', label);
+    monthWeeks().forEach(function(w){
+      var block = el('div', 'month-week-block');
+      block.appendChild(el('p', 'month-week-label', w.wk));
+
+      var t = tallyDays(w.days, catFn);
+      var facts = computeSignalFacts([{wk: w.wk, days: w.days}], catFn);
+      var rule = resolveInsight(facts);
+      renderSignalBody(block, t, catFn,
+        {severity: rule.severity, headline: rule.headline(facts)},
+        {
+          nText: opts.nText(t), bigDesc: opts.bigDesc,
+          goodLabel: opts.goodLabel, midLabel: opts.midLabel, badLabel: opts.badLabel,
+          matrixSub: opts.matrixSub
+        },
+        w.days
+      );
+
+      wrap.appendChild(block);
+    });
+    return wrap;
+  }
+
+  // Shared by This week and This month — both switch between the same two
+  // signals via an identical tab control, so the markup/wiring lives once
+  // here rather than twice. `current` is whichever state field the caller
+  // is driving (state.weekSignal / state.monthSignal); `onSelect` writes
+  // the new value back and re-renders that view.
+  function renderSignalSubtabs(current, onSelect){
+    var tabs = el('div', 'signal-subtabs');
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', 'Signal');
+    [['intensity','Intensity'], ['fuelling','Fuelling']].forEach(function(pair){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'signal-subtab';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', String(current === pair[0]));
+      btn.textContent = pair[1];
+      btn.addEventListener('click', function(){ onSelect(pair[0]); });
+      tabs.appendChild(btn);
+    });
+    return tabs;
+  }
+
+  // Only one signal shows at a time — sub-tabs switch between Intensity and
+  // Fuelling rather than stacking both. Reached any time via the Month tab,
+  // or by clicking through from either signal in This week.
+  function renderTrends(){
+    var root = els.viewTrends;
+    clear(root);
+
+    var h = el('h1', 'dash-eyebrow', 'This month');
+    h.id = 'trends-h';
+    h.tabIndex = -1;
+    root.appendChild(h);
+
+    root.appendChild(renderSignalSubtabs(state.monthSignal, function(v){
+      state.monthSignal = v;
+      renderTrends();
+    }));
+
+    // Aggregate % + bar lives here, not in the weekly section \u2014 a month of
+    // sessions is the sample size that makes a proportional bar meaningful
+    // (see STAT_MIN_N). Fuelling keeps it \u2014 race-concentration rate is the
+    // one number athletes asked to see at a glance. Intensity drift dropped
+    // it: "finished at intent" as a single percentage read as a target to
+    // hit rather than a signal to watch, so that section goes straight from
+    // the by-discipline breakdown into the per-week grid + counts.
+    if(state.monthSignal === 'fuelling'){
+      var fuelT = monthTally(fuelCat);
+      root.appendChild(renderDisciplineInsights(fuelCat, disciplineFuelHeadline));
+      if(fuelT.total >= STAT_MIN_N){ root.appendChild(renderStatBar(fuelT, 'at race concentration')); }
+      root.appendChild(renderMonthSection('Fuelling', fuelCat, {
+        nText: function(t){ return t.total + ' over 45 min'; },
+        bigDesc: 'at race concentration',
+        goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none',
+        matrixSub: 'over 45 min only'
+      }, resolveFuelInsight));
+    } else {
+      root.appendChild(renderDisciplineInsights(driftCat, disciplineDriftHeadline));
+      root.appendChild(renderMonthSection('Intensity drift', driftCat, {
+        nText: function(t){ return t.total + ' session' + (t.total === 1 ? '' : 's'); },
+        bigDesc: 'finished at intent',
+        goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over',
+        matrixSub: 'by session'
+      }, resolveDriftInsight));
+    }
+
+    root.appendChild(dashLegend());
+    root.appendChild(el('p', 'dash-phase-note', 'The first three weeks shown are illustrative \u2014 this build only carries this week\u2019s real sessions.'));
+  }
+
+  // Only one signal shows at a time here too now — same sub-tabs, same
+  // reason as This month (see the note above renderSignalSubtabs): stacking
+  // both Intensity and Fuelling made This week a much longer scroll than
+  // either signal needed on its own, and the two were never read together.
+  function renderDashboard(){
+    var root = els.viewDash;
+    clear(root);
+
+    var h = el('h1', 'dash-eyebrow', 'This week');
+    h.id = 'dash-h';
+    h.tabIndex = -1;
+    root.appendChild(h);
+
+    root.appendChild(dashPhaseSection());
+
+    root.appendChild(renderSignalSubtabs(state.weekSignal, function(v){
+      state.weekSignal = v;
+      renderDashboard();
+    }));
+
+    // The rules-based insight — reads WEEK as a single-element weeks array
+    // since computeSignalFacts is generic over how many weeks it's handed.
+    // Resolved here and handed into dashSignalSection, which renders it as
+    // the section's insight-strip (see the note there for why this
+    // replaced both the old standalone card and the plain-tally h2).
+    if(state.weekSignal === 'fuelling'){
+      var fuelT = dashTally(fuelCat);
+      var fuelFacts = computeSignalFacts([{wk:'This week', days:WEEK}], fuelCat);
+      var fuelRule = resolveFuelInsight(fuelFacts);
+      root.appendChild(dashSignalSection('Fuelling', fuelT, fuelCat,
+        {severity: fuelRule.severity, headline: fuelRule.headline(fuelFacts)},
+        {
+          nText: fuelT.total + ' over 45 min',
+          bigDesc: 'at race concentration',
+          goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none',
+          matrixSub: 'over 45 min only',
+          signal: 'fuelling'
+        }
+      ));
+    } else {
+      var driftT = dashTally(driftCat);
+      var driftFacts = computeSignalFacts([{wk:'This week', days:WEEK}], driftCat);
+      var driftRule = resolveDriftInsight(driftFacts);
+      root.appendChild(dashSignalSection('Intensity drift', driftT, driftCat,
+        {severity: driftRule.severity, headline: driftRule.headline(driftFacts)},
+        {
+          nText: driftT.total + ' session' + (driftT.total === 1 ? '' : 's'),
+          bigDesc: 'finished at intent',
+          goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over',
+          matrixSub: 'by session',
+          signal: 'intensity'
+        }
+      ));
+    }
+
+    root.appendChild(dashLegend());
+  }
+
+  function say(msg){
+    // Re-set to '' first so repeated identical messages still announce.
+    els.live.textContent = '';
+    window.setTimeout(function(){ els.live.textContent = msg; }, 20);
+  }
+
+  function clear(node){ while(node.firstChild){ node.removeChild(node.firstChild); } }
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if(cls){ n.className = cls; }
+    if(text !== undefined && text !== null){ n.textContent = text; }
+    return n;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // NAVIGATION
+  // ═══════════════════════════════════════════════════════════════
+  function cancelAdvance(){
+    if(advanceTimer){ window.clearTimeout(advanceTimer); advanceTimer = null; }
+  }
+
+  // Every move between steps re-renders and then lands focus on the new
+  // heading — including the auto-advance path, which is the one that would
+  // otherwise strand a keyboard or screen-reader user on <body> (2.4.3).
+  function go(i, announce){
+    cancelAdvance();
+    var list = steps();
+    var target = Math.max(0, i);
+    // Backward moves are counted before the visit closes, so the count and the
+    // visit that produced it line up in the export.
+    if(state.mode === 'ask' && target < state.step){ telBack(); }
+    if(state.mode === 'review' && i < list.length){ telBack(); }
+    telLeave(navVia);
+    navVia = 'manual';
+
+    if(i >= list.length){
+      state.mode = 'review';
+      telEnter('__review', 'review');
+      render();
+      focusHeading();
+      if(announce){ say('Review and save. ' + list.length + ' question' + (list.length===1?'':'s') + ' in this check-in.'); }
+      return;
+    }
+    state.step = target;
+    state.mode = 'ask';
+    telEnter(list[state.step].k, state.step + 1);
+    render();
+    focusHeading();
+    if(announce){
+      say('Question ' + (state.step + 1) + ' of ' + list.length + '. ' + list[state.step].legend);
+    }
+  }
+
+  function focusHeading(){
+    var h = document.getElementById('step-h');
+    if(h){ h.focus({preventScroll:true}); }
+    // The flow's own header is sticky, so scrolling the page to the top keeps
+    // the question heading clear of it rather than tucked underneath.
+    window.scrollTo(0, 0);
+  }
+
+  function pick(q, value){
+    state.ans[q.k] = value;
+    telAnswer(q.k, value);
+    // Dropping below 45 min removes the fuelling question — drop its answer too,
+    // so the counter and the review list stay honest.
+    if(q.k === 'duration' && !isLong(value)){ delete state.ans.a3; }
+    // Chrome only: rebuilding the question body here would tear the just-clicked
+    // radio out from under the user's focus. The chips already show their checked
+    // state through CSS, so nothing in the body needs redrawing.
+    renderChrome();
+    if(!state.autoAdvance){ return; }
+    cancelAdvance();
+    advanceTimer = window.setTimeout(function(){
+      advanceTimer = null;
+      navVia = 'auto';
+      go(state.step + 1, true);
+    }, 260);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER — header, body, footer, flow map
+  // ═══════════════════════════════════════════════════════════════
+  // Header, footer and flow map — everything outside the question itself.
+  function renderChrome(){
+    var list = steps();
+    var idx = Math.min(state.step, list.length - 1);
+
+    // ── Header ──
+    if(state.mode === 'saved'){
+      els.eyebrow.textContent = (PERIOD_LABEL[state.periodisation] || 'Build 2') + ' · week 6';
+      els.counter.textContent = 'logged';
+      els.barFill.style.width = '100%';
+    } else if(state.mode === 'review'){
+      var gaps = missing().length;
+      els.eyebrow.textContent = 'Just finished';
+      // Says how many are actually answered, not how many exist — the count stays honest.
+      els.counter.textContent = 'review · ' + (list.length - gaps) + '/' + list.length;
+      els.barFill.style.width = '100%';
+    } else {
+      els.eyebrow.textContent = 'Just finished';
+      els.counter.textContent = (idx + 1) + ' / ' + list.length;
+      els.barFill.style.width = Math.round(idx / list.length * 100) + '%';
+    }
+
+    // ── Footer ──
+    renderFoot(list, idx);
+
+    // ── Flow map ──
+    renderMap(list, idx);
+
+    // ── Apparatus export ── (rebuilt never, only re-labelled — a fallback
+    // textarea the tester is mid-copy of must not vanish under them)
+    if(asideExport){ asideExport.refresh(); }
+
+    return {list: list, idx: idx};
+  }
+
+  function render(){
+    var c = renderChrome();
+    clear(els.body);
+    if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
+    else if(state.mode === 'review'){ renderReview(c.list); }
+    else { renderSaved(); }
+  }
+
+  // The radio group for one question.
+  function choiceGroup(q, idPrefix){
+    var wrap = el('div', 'choices-wrap');
+    var cls = 'choices';
+    if(q.layout === 'scale'){ cls += ' scale'; }
+    else if(q.layout === 'grid3'){ cls += ' grid3'; }
+    else if(q.layout === 'grid2'){ cls += ' grid2'; }
+    var group = el('div', cls);
+
+    q.opts.forEach(function(o){
+      var id = idPrefix + '-' + q.k + '-' + o.v;
+      var opt = el('div', 'opt');
+
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = idPrefix + '-q-' + q.k;
+      input.id = id;
+      input.value = o.v;
+      input.checked = state.ans[q.k] === o.v;
+      input.addEventListener('change', function(){ pick(q, o.v); });
+      opt.appendChild(input);
+
+      var label = el('label', 'choice');
+      label.htmlFor = id;
+      if(q.tick){
+        var tick = el('span', 'tick', '✓');
+        tick.setAttribute('aria-hidden', 'true');
+        label.appendChild(tick);
+      }
+      if(o.sev){
+        var sev = el('span', 'sev ' + o.sev);
+        sev.setAttribute('aria-hidden', 'true');
+        label.appendChild(sev);
+      }
+      label.appendChild(document.createTextNode(o.label));
+      opt.appendChild(label);
+
+      group.appendChild(opt);
+    });
+
+    wrap.appendChild(group);
+    return wrap;
+  }
+
+  function renderAsk(q){
+    var fs = el('fieldset', 'q-set');
+    fs.setAttribute('aria-describedby', 'step-hint');
+
+    var lg = document.createElement('legend');
+    var h = el('h1', null, q.legend);
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    lg.appendChild(h);
+    fs.appendChild(lg);
+
+    var hint = el('p', 'hint', q.hint);
+    hint.id = 'step-hint';
+    fs.appendChild(hint);
+
+    var wrap = choiceGroup(q, 'o');
+    if(q.ends){
+      // What 1 and 10 mean is information, not decoration — it joins the
+      // group's description rather than being hidden from assistive tech.
+      var ends = el('div', 'scale-ends');
+      ends.id = 'step-ends';
+      ends.appendChild(el('span', null, q.ends[0]));
+      ends.appendChild(el('span', null, q.ends[1]));
+      wrap.appendChild(ends);
+      fs.setAttribute('aria-describedby', 'step-hint step-ends');
+    }
+    fs.appendChild(wrap);
+    els.body.appendChild(fs);
+  }
+
+  function renderReview(list){
+    var h = el('h1', null, 'Check and save');
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    els.body.appendChild(h);
+    els.body.appendChild(el('p', 'hint', 'Tap any line to change it. Nothing is saved until you save.'));
+
+    var rows = el('div', 'choices-wrap');
+    list.forEach(function(q, i){
+      var btn = el('button', 'review-row');
+      btn.type = 'button';
+      btn.appendChild(el('span', 'review-q', q.legend.replace(/\?$/, '')));
+      var o = optionFor(q, state.ans[q.k]);
+      var a = el('span', 'review-a' + (o ? '' : ' none'), o ? o.label : 'Not answered');
+      btn.appendChild(a);
+      btn.addEventListener('click', function(){ navVia = 'review-row'; go(i, true); });
+      rows.appendChild(btn);
+    });
+
+    els.body.appendChild(rows);
+    rows.appendChild(noteBlock());
+  }
+
+  function noteBlock(){
+    var frag = document.createDocumentFragment();
+    var lbl = el('label', 'note-lbl');
+    lbl.htmlFor = 'note';
+    lbl.appendChild(document.createTextNode('Anything to add? '));
+    lbl.appendChild(el('span', 'sub', 'Optional — not scored, just surfaced back to you at week’s end.'));
+    frag.appendChild(lbl);
+
+    var ta = document.createElement('textarea');
+    ta.id = 'note';
+    ta.rows = 2;
+    ta.maxLength = 140;
+    ta.placeholder = 'e.g. left calf tight from 20 min · gut off after gel 4';
+    ta.value = state.note;
+    ta.addEventListener('input', function(){ state.note = ta.value; });
+    frag.appendChild(ta);
+    return frag;
+  }
+
+  function renderSaved(){
+    var flag = el('p', 'saved-flag');
+    var g = el('span', 'g', '✓');
+    g.setAttribute('aria-hidden', 'true');
+    flag.appendChild(g);
+    flag.appendChild(document.createTextNode('Session logged'));
+    els.body.appendChild(flag);
+
+    var h = el('h1', null, 'Your week so far');
+    h.id = 'step-h';
+    h.tabIndex = -1;
+    h.style.marginTop = '10px';
+    els.body.appendChild(h);
+
+    var n = loggedCount();
+    var lead = n >= WEEK_FLOOR
+      ? 'That is ' + n + ' logged — the week computes on Sunday night.'
+      : 'This one is number ' + n + '. ' + (WEEK_FLOOR - n) + ' more and the week computes rather than gets recalled.';
+    els.body.appendChild(el('p', 'week-lead', lead));
+
+    var ul = el('ul', 'week-list');
+    ul.setAttribute('aria-label', 'Your week');
+    WEEK.forEach(function(d){
+      var li = el('li', 'week-row' + (d.state === 'just' ? ' is-now' : ''));
+      if(d.state === 'just'){ li.setAttribute('aria-current', 'true'); }
+      li.appendChild(el('span', 'week-day', d.day));
+      // Only a logged day carries a description — nothing is invented for a
+      // day the athlete hasn't checked in for.
+      if(d.what){ li.appendChild(el('span', 'week-what', d.what)); }
+      var stateText = '';
+      var stateCls = 'week-state';
+      if(d.state === 'just'){ stateText = '✓ just logged'; stateCls += ' done'; }
+      else if(d.state === 'logged'){ stateText = '✓ logged'; stateCls += ' done'; }
+      else if(d.state === 'open'){ stateText = 'not logged yet'; }
+      else if(d.state === 'planned'){ stateText = 'planned'; }
+      else if(d.state === 'rest'){ stateText = 'rest day'; }
+      if(stateText){ li.appendChild(el('span', stateCls, stateText)); }
+      ul.appendChild(li);
+    });
+    els.body.appendChild(ul);
+
+    var card = el('div', 'floor-card');
+    var top = el('div', 'floor-top');
+    top.appendChild(el('p', 'floor-title', 'Toward a computed week'));
+    top.appendChild(el('p', 'floor-count', n + ' / ' + WEEK_FLOOR + ' sessions'));
+    card.appendChild(top);
+
+    var bar = el('div', 'bar');
+    bar.setAttribute('aria-hidden', 'true');
+    var fill = document.createElement('i');
+    fill.style.width = Math.min(100, Math.round(n / WEEK_FLOOR * 100)) + '%';
+    bar.appendChild(fill);
+    card.appendChild(bar);
+
+    card.appendChild(el('p', 'floor-note', n >= WEEK_FLOOR
+      ? 'Drift, execution, fuelling, structure and state all have enough to run on.'
+      : WEEK_FLOOR + ' logged sessions is the floor for a computed week — ' +
+        Math.round(WEEK_FLOOR_FRACTION * 100) + '% of a notional ' +
+        PLANNED_SESSIONS_PER_WEEK + '-session week. Under that, the roll-up degrades to recall.'));
+    els.body.appendChild(card);
+
+    els.body.appendChild(buildExport('saved').node);
+  }
+
+  // ── Test-data export ──────────────────────────────────────────
+  // The only route out of the page, and deliberately a visible tap rather
+  // than anything automatic. Clipboard first; where that is unavailable —
+  // file:// on some browsers, older iOS Safari — a selectable box instead,
+  // because a test on a borrowed phone cannot fall back to a console.
+  //
+  // Mounted twice: on the saved screen, where a completed run ends, and in
+  // the apparatus section below the flow, which is the only place a run that
+  // never reaches Save can still be got at.
+  function buildExport(where){
+    var box = el('div', 'export');
+    var outId = 'export-out-' + where;
+
+    var btn = el('button', 'btn btn-ghost btn-block', 'Copy test data');
+    btn.type = 'button';
+    box.appendChild(btn);
+
+    var note = el('p', 'export-note', '');
+    box.appendChild(note);
+
+    function refresh(){
+      var n = state.telemetry.runs.length;
+      var open = n && !state.telemetry.runs[n-1].saved ? ', including the one in progress' : '';
+      note.textContent = 'Puts every step timing and saved session from this visit on your clipboard as JSON — ' +
+        n + ' run' + (n === 1 ? '' : 's') + ' so far' + open +
+        '. Nothing is sent anywhere; reloading clears it.';
+    }
+    refresh();
+
+    function fallback(json, reason){
+      var existing = box.querySelector('#' + outId);
+      if(existing){ existing.value = json; existing.focus(); existing.select(); return; }
+      var lbl = el('label', 'note-lbl');
+      lbl.htmlFor = outId;
+      lbl.appendChild(document.createTextNode('Copy this instead '));
+      lbl.appendChild(el('span', 'sub', reason));
+      box.appendChild(lbl);
+      var ta = document.createElement('textarea');
+      ta.id = outId;
+      ta.className = 'export-out';
+      ta.rows = 6;
+      ta.readOnly = true;
+      ta.value = json;
+      box.appendChild(ta);
+      ta.focus();
+      ta.select();
+    }
+
+    btn.addEventListener('click', function(){
+      var json = JSON.stringify(telExport(), null, 2);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(json).then(function(){
+          btn.textContent = 'Copied ✓';
+          say('Test data copied to the clipboard. ' + json.length + ' characters.');
+        }, function(){
+          fallback(json, 'The clipboard was refused — select all of this and copy it by hand.');
+          say('Clipboard unavailable. The data is in a text box below — select all and copy.');
+        });
+      } else {
+        fallback(json, 'This browser has no clipboard access here — select all of this and copy it by hand.');
+        say('Clipboard unavailable. The data is in a text box below — select all and copy.');
+      }
+    });
+
+    return {node: box, refresh: refresh};
+  }
+
+  function renderFoot(list, idx){
+    if(state.mode === 'saved'){
+      els.back.textContent = 'Log another';
+      els.back.disabled = false;
+      els.next.textContent = 'Done';
+      return;
+    }
+    els.back.textContent = 'Back';
+    els.back.disabled = (state.mode === 'ask' && idx === 0);
+    if(state.mode === 'review'){
+      els.next.textContent = 'Save session';
+    } else {
+      els.next.textContent = state.ans[list[idx].k] ? 'Next' : 'Skip for now';
+    }
+  }
+
+  function renderMap(list, idx){
+    clear(els.map);
+    list.forEach(function(q, i){
+      var here = state.mode === 'ask' && i === idx;
+      var answered = !!state.ans[q.k];
+      var cls = 'map-item' + (here ? ' is-now' : '') + (answered ? ' answered' : '');
+      var li = document.createElement('li');
+      // Once saved, the flow is closed — the map reports rather than navigates.
+      var inert = state.mode === 'saved';
+      var node = inert ? el('div', cls) : el('button', cls);
+      if(!inert){
+        node.type = 'button';
+        node.addEventListener('click', function(){ navVia = 'map'; go(i, true); });
+      }
+      node.appendChild(el('span', 'map-n', String(i + 1).padStart(2, '0')));
+      node.appendChild(el('span', 'map-q', q.map));
+      node.appendChild(el('span', 'map-a', chipFor(q)));
+      if(here){
+        node.setAttribute('aria-current', 'step');
+      }
+      li.appendChild(node);
+      els.map.appendChild(li);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SAVE
+  // ═══════════════════════════════════════════════════════════════
+  function save(){
+    var gaps = missing();
+    if(gaps.length){
+      var list = steps();
+      var first = 0;
+      for(var i=0;i<list.length;i++){ if(list[i].k === gaps[0].k){ first = i; break; } }
+      navVia = 'save-gap';
+      go(first, false);
+      say('Cannot save yet — ' + gaps.length + ' question' + (gaps.length===1?'':'s') + ' unanswered. Taken to the first one.');
+      return;
+    }
+
+    var a = state.ans;
+    var dur = parseInt(a.duration, 10);
+    // Same shape as Prototype 02's session object — feeds computeD/E/F/N/S unchanged.
+    var session = {
+      disc: a.disc,
+      intensity: a.intensity,
+      duration: dur,
+      a1: a.a1,
+      a2: a.a2,
+      a3: dur > 45 ? a.a3 : null,
+      rpe: parseInt(a.rpe, 10),
+      b2: a.b2,
+      b3: a.b3,
+      note: state.note.trim()
+    };
+    state.logs.push(session);
+    telLeave('save');
+    telSave(session);
+
+    // Drop it into the next open day, and demote any previous "just logged" row.
+    var line = (DISC_LABEL[session.disc] || 'Session') + ' · ' +
+               (session.intensity === 'hard' ? 'hard' : 'easy') + ' · RPE ' + session.rpe;
+    for(var j=0;j<WEEK.length;j++){ if(WEEK[j].state === 'just'){ WEEK[j].state = 'logged'; } }
+    for(var d=0;d<WEEK.length;d++){
+      if(WEEK[d].state === 'open' || WEEK[d].state === 'planned'){
+        WEEK[d].what = line;
+        WEEK[d].session = session;
+        WEEK[d].state = 'just';
+        break;
+      }
+    }
+
+    state.mode = 'saved';
+    render();  // keeps the flow's own "Your week so far" screen ready for when they tap back to Check-in
+    var n = loggedCount();
+    var r = currentRun();
+    showView('dashboard', 'Session saved in ' + Math.round((r ? r.totalMs : 0) / 1000) + ' seconds. ' +
+        n + ' of ' + WEEK_FLOOR + ' sessions logged this week. Showing this week’s dashboard.');
+  }
+
+  function reset(){
+    cancelAdvance();
+    state.ans = {};
+    state.note = '';
+    state.step = 0;
+    state.mode = 'ask';
+    telStartRun();
+    var list = steps();
+    telEnter(list[0].k, 1);
+    render();
+    focusHeading();
+    say('New session started. Question 1 of ' + list.length + '.');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // VIEW SWITCHING — Check-in ⇄ This week
+  // ═══════════════════════════════════════════════════════════════
+  // `announceMsg` is only passed by the auto-switch after save — a manual tap
+  // on either tab doesn't need a live-region announcement, the view change is
+  // already visible.
+  function showView(view, announceMsg){
+    var isDash = view === 'dashboard';
+    var isTrends = view === 'trends';
+    els.viewFlow.hidden = isDash || isTrends;
+    els.viewDash.hidden = !isDash;
+    els.viewTrends.hidden = !isTrends;
+    els.tabFlow.setAttribute('aria-selected', String(!isDash && !isTrends));
+    els.tabDash.setAttribute('aria-selected', String(isDash));
+    els.tabTrends.setAttribute('aria-selected', String(isTrends));
+    if(isDash){ renderDashboard(); }
+    if(isTrends){ renderTrends(); }
+    window.scrollTo(0, 0);
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : 'step-h'));
+    if(h){ h.focus({preventScroll:true}); }
+    if(announceMsg){ say(announceMsg); }
+  }
+  // "This week" and "Month" are reachable before a phase is picked — if the
+  // athlete taps straight past the phase question, reveal the app shell the
+  // same way choosePeriod() does, just without a phase set (both views
+  // degrade gracefully with periodisation:null — see renderDashboard/eyebrow).
+  function revealAppIfNeeded(){
+    if(els.appMain.hidden){
+      els.tabFlow.disabled = false;
+      els.periodScreen.hidden = true;
+      els.appMain.hidden = false;
+    }
+  }
+  els.tabFlow.addEventListener('click', function(){ showView('flow'); });
+  els.tabDash.addEventListener('click', function(){ revealAppIfNeeded(); showView('dashboard'); });
+  els.tabTrends.addEventListener('click', function(){ revealAppIfNeeded(); showView('trends'); });
+
+  // Click-through from a signal in This week to the same signal in Month.
+  function goToMonth(signal){
+    state.monthSignal = signal;
+    showView('trends');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRAINING PHASE — asked once, right after the splash
+  // ═══════════════════════════════════════════════════════════════
+  function buildPeriodChoices(){
+    PERIOD.forEach(function(p){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'choice';
+      btn.textContent = p.label;
+      btn.addEventListener('click', function(){ choosePeriod(p.v); });
+      els.periodChoices.appendChild(btn);
+    });
+  }
+
+  function showPeriod(){
+    els.viewTabs.hidden = false;
+    els.periodScreen.hidden = false;
+    var h = document.getElementById('period-h');
+    if(h){ h.focus({preventScroll:true}); }
+  }
+
+  function choosePeriod(v){
+    state.periodisation = v;
+    els.tabFlow.disabled = false;
+    els.periodScreen.hidden = true;
+    els.appMain.hidden = false;
+    focusHeading();
+    say('Training phase set to ' + PERIOD_LABEL[v] + '.');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // STARTING SPLASH
+  //
+  // Brand mark only — no state depends on it. The flow underneath is already
+  // rendered by the time this is visible, so dismissing it is just a swap of
+  // which section is hidden, the same idiom the Check-in ⇄ This week tabs use.
+  // ═══════════════════════════════════════════════════════════════
+  var splashDismissed = false;
+  var splashTimer = null;
+
+  function dismissSplash(){
+    if(splashDismissed){ return; }
+    splashDismissed = true;
+    if(splashTimer){ window.clearTimeout(splashTimer); splashTimer = null; }
+    document.removeEventListener('keydown', onSplashKey);
+    document.removeEventListener('click', onSplashClick, true);
+    els.splash.hidden = true;
+    showPeriod();
+  }
+  function onSplashKey(){ dismissSplash(); }
+  // Delegated on `document`, capture phase — fires on the way down to
+  // whatever was tapped, so it can never be starved by a listener on the
+  // button itself missing its window (e.g. a host page's own capture-phase
+  // handlers, or the button being mid-transition). Any click that lands
+  // anywhere inside the splash section dismisses it.
+  function onSplashClick(e){
+    if(e.target && e.target.closest && e.target.closest('#view-splash')){ dismissSplash(); }
+  }
+
+  document.addEventListener('click', onSplashClick, true);
+  document.addEventListener('keydown', onSplashKey);
+  splashTimer = window.setTimeout(dismissSplash, 3000);
+  window.setTimeout(function(){ var h = document.getElementById('splash-h'); if(h){ h.focus({preventScroll:true}); } }, 0);
+
+  // ═══════════════════════════════════════════════════════════════
+  // WIRING
+  // ═══════════════════════════════════════════════════════════════
+  els.back.addEventListener('click', function(){
+    if(state.mode === 'saved'){ reset(); return; }
+    navVia = 'back';
+    var list = steps();
+    if(state.mode === 'review'){ go(list.length - 1, true); }
+    else { go(state.step - 1, true); }
+  });
+
+  els.next.addEventListener('click', function(){
+    if(state.mode === 'saved'){
+      // Hand-off point. In the app this returns to Today; here it starts a fresh session.
+      reset();
+      return;
+    }
+    if(state.mode === 'review'){ save(); return; }
+    navVia = 'next';
+    go(state.step + 1, true);
+  });
+
+  els.auto.addEventListener('change', function(){
+    state.autoAdvance = els.auto.checked;
+    cancelAdvance();
+    var r = currentRun();
+    if(r && !r.saved){ r.autoAdvanceToggles++; }
+    say(state.autoAdvance
+      ? 'Auto-advance on. Picking an answer moves to the next question.'
+      : 'Auto-advance off. Use Next to move between questions.');
+  });
+
+  // ── Abandonment ───────────────────────────────────────────────
+  // A run that never reaches Save is the finding this prototype most needs.
+  // beforeunload misses most mobile exits, so visibilitychange does the work;
+  // both are recorded, and both are cleared if the athlete comes back and saves.
+  window.addEventListener('beforeunload', function(){ telInterrupt('unload'); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){ telInterrupt('hidden'); }
+  });
+  window.addEventListener('pagehide', function(){ telInterrupt('pagehide'); });
+
+  // init
+  state.autoAdvance = els.auto.checked;
+  buildPeriodChoices();
+  asideExport = buildExport('aside');
+  els.exportAside.appendChild(asideExport.node);
+  telStartRun();
+  telEnter(steps()[0].k, 1);
+  render();
+  initSheetTestMode();
+})();
+</script>
+</body>
+</html>

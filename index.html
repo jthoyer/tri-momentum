@@ -24,7 +24,7 @@
   --strength:#854F0B;--strength-l:#FAEEDA;
   --rest:#8B93B8;--rest-l:#F0F2F8;
   --phase-base:#0F6E56;--phase-base-l:#E1F5EE;
-  --phase-build:#D9660B;--phase-build-l:#FFF1E0;
+  --phase-build:#A64C09;--phase-build-l:#FFF1E0; /* darkened from #D9660B — original failed WCAG AA (3.23:1 on --phase-build-l); this clears 5.17:1 */
   --phase-peak:#993C1D;--phase-peak-l:#FAECE7;
   --done:#0F6E56;--done-l:#E1F5EE;
   --skipped:#993C1D;--skipped-l:#FAECE7;
@@ -133,9 +133,9 @@ textarea::placeholder{color:var(--ink3)}
 .splash{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--blue)}
 .splash[hidden]{display:none}
 .splash-logo{width:192px;height:192px;border-radius:var(--rxl)}
-.splash-headline{margin-top:36px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
+.splash-headline{margin-top:12px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
 .splash-headline:focus,.splash-headline:focus-visible{outline:none}
-.splash-countdown{margin-top:28px;padding:14px 18px;max-width:300px;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+.splash-countdown{margin-top:56px;padding:14px 18px;max-width:300px;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
 .splash-countdown[hidden]{display:none}
 .splash-countdown-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
 .splash-countdown-race{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
@@ -237,25 +237,27 @@ textarea::placeholder{color:var(--ink3)}
 /* Soft two-layer shadow instead of a flat border — same "lifted card"
    treatment as the Strength apps' exercise rows, recoloured from their ink
    (24,37,66) to ours (14,16,32) rather than reusing their palette. */
-.race-card{padding:18px 16px;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);transition:background .2s ease,box-shadow .2s ease}
-.race-card.is-next{background:var(--blue-l);box-shadow:0 0 0 1.5px var(--blue),0 10px 24px -10px rgba(0,34,255,.22)}
-.race-card summary{cursor:pointer;list-style:none}
+/* Banner headline + grey date/countdown section — echoes the reference
+   club-calendar app's race card (a coloured header row, facts underneath),
+   adapted to this app's own tokens rather than its colours. */
+.race-card{background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);transition:box-shadow .2s ease;overflow:hidden}
+.race-card.is-next{box-shadow:0 0 0 1.5px var(--blue),0 10px 24px -10px rgba(0,34,255,.22)}
+.race-card summary{cursor:pointer;list-style:none;display:block}
 .race-card summary::-webkit-details-marker{display:none}
 .race-card summary::marker{display:none}
-.race-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.race-card-date{font-family:var(--fm);font-size:12.5px;color:var(--ink3)}
-.race-card.is-next .race-card-date{color:var(--blue)}
-.race-card-countdown{font-family:var(--fm);font-size:12.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
-.race-card.is-next .race-card-countdown{color:var(--blue);font-weight:600}
-.race-card-name-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:10px}
-.race-card-name{font-family:var(--fd);font-size:16px;font-weight:600;color:var(--ink);line-height:1.35}
-.race-card-chevron{flex:none;width:16px;height:16px;color:var(--ink3);transition:transform .15s ease}
+.race-card-banner{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 16px 14px;background:var(--bd2)}
+.race-card-banner-main{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}
+.race-card-headline{font-family:var(--fd);font-size:17px;font-weight:600;line-height:1.32;color:var(--ink)}
+.race-card-chevron{flex:none;width:18px;height:18px;margin-top:1px;color:var(--ink);transition:transform .15s ease}
 .race-card[open] .race-card-chevron{transform:rotate(180deg)}
-.race-status-pill{display:inline-flex;align-items:center;margin-top:12px;padding:3px 10px;border-radius:999px;font-family:var(--fd);font-size:11.5px;font-weight:600}
+.race-card-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--s3)}
+.race-card-date{font-family:var(--fm);font-size:12.5px;color:var(--ink2)}
+.race-card-countdown{font-family:var(--fm);font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap}
+.race-status-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-family:var(--fd);font-size:11.5px;font-weight:600}
 .race-status-pill.locked{background:var(--done);color:var(--done-l)}
-.race-status-pill.considering{background:var(--modified);color:var(--modified-l)}
-.race-card-body{margin-top:12px}
-.race-card-notes{margin-top:10px;font-size:13.5px;color:var(--ink2);line-height:1.5}
+.race-status-pill.considering{background:var(--phase-build);color:var(--phase-build-l)}
+.race-card-body{padding:12px 16px 16px}
+.race-card-notes{font-size:13.5px;color:var(--ink2);line-height:1.5}
 .race-card-section-label{margin-top:16px;font-family:var(--fm);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
 .race-card-website{margin-top:6px}
 .race-card-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:16px}
@@ -873,7 +875,7 @@ if(window.caches && caches.keys){
       .sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
   }
   function nextRace(){
-    var up = upcomingRaces();
+    var up = upcomingRaces().filter(function(r){ return r.status === 'locked'; });
     return up.length ? up[0] : null;
   }
 
@@ -1507,21 +1509,23 @@ if(window.caches && caches.keys){
     root.appendChild(form);
   }
   // A native <details> disclosure — collapsed by default, so the list stays
-  // scannable. The date/countdown/name/pill header (inside <summary>) is
-  // always visible even collapsed, so "how far out is this race" never
-  // needs an extra tap; only notes, the website, and remove are tucked
-  // behind the expand.
+  // scannable. The banner/meta/pill header (inside <summary>) is always
+  // visible even collapsed, so "how far out is this race" never needs an
+  // extra tap; only notes, the website, and remove are tucked behind the
+  // expand. Banner + grey meta section echo the reference club-calendar
+  // app's race card (coloured headline row, facts underneath), adapted to
+  // this app's own tokens rather than its colours.
   function raceCard(race, isNext){
     var card = document.createElement('details');
     card.className = 'race-card' + (isNext ? ' is-next' : '');
     var summary = document.createElement('summary');
-    var top = el('div', 'race-card-top');
-    top.appendChild(el('span', 'race-card-date', formatRaceDateLabel(race.date)));
-    var days = daysUntil(race.date);
-    if(days >= 0){ top.appendChild(el('span', 'race-card-countdown', raceCountdownLabel(days))); }
-    summary.appendChild(top);
-    var nameRow = el('div', 'race-card-name-row');
-    nameRow.appendChild(el('span', 'race-card-name', race.name));
+
+    var banner = el('div', 'race-card-banner');
+    var bannerMain = el('div', 'race-card-banner-main');
+    bannerMain.appendChild(el('span', 'race-card-headline', race.name));
+    var statusCls = race.status === 'locked' ? 'locked' : 'considering';
+    bannerMain.appendChild(el('span', 'race-status-pill ' + statusCls, RACE_STATUS_LABEL[statusCls]));
+    banner.appendChild(bannerMain);
     var chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     chevron.setAttribute('class', 'race-card-chevron');
     chevron.setAttribute('viewBox', '0 0 24 24');
@@ -1534,10 +1538,14 @@ if(window.caches && caches.keys){
     var chevronPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     chevronPath.setAttribute('d', 'M6 9l6 6 6-6');
     chevron.appendChild(chevronPath);
-    nameRow.appendChild(chevron);
-    summary.appendChild(nameRow);
-    var statusCls = race.status === 'locked' ? 'locked' : 'considering';
-    summary.appendChild(el('span', 'race-status-pill ' + statusCls, RACE_STATUS_LABEL[statusCls]));
+    banner.appendChild(chevron);
+    summary.appendChild(banner);
+
+    var meta = el('div', 'race-card-meta');
+    meta.appendChild(el('span', 'race-card-date', formatRaceDateLabel(race.date)));
+    var days = daysUntil(race.date);
+    if(days >= 0){ meta.appendChild(el('span', 'race-card-countdown', raceCountdownLabel(days))); }
+    summary.appendChild(meta);
     card.appendChild(summary);
 
     var body = el('div', 'race-card-body');

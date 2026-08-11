@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRI Momentum</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1650C8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TRI Momentum">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<meta name="description" content="Decision-support coaching for age-group triathletes. Olympic and 70.3 distance.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════ ONBOARDING SCREEN ══════════════ -->
+<div class="screen active" id="screen-ob-mode">
+  <div id="ob-mode">
+    <div class="ob-logo">
+      <div class="ob-logo-boxes">
+        <div class="ob-logo-box">T</div>
+        <div class="ob-logo-box">R</div>
+        <div class="ob-logo-box">I</div>
+      </div>
+      <div>
+        <div class="ob-logo-name">Momentum</div>
+        <div class="ob-logo-tag">Helping Triathletes shift gear</div>
+      </div>
+    </div>
+    <div>
+      <div class="ob-title">Better decisions.<br>Faster over time.</div>
+      <div class="ob-sub" style="margin-top:6px">For intermediate age-group triathletes who train consistently and want to progress without burnout.</div>
+    </div>
+
+    <div class="ob-section">
+      <div class="ob-label">How do you want to train this season?</div>
+      <div class="mode-cards" id="mode-cards">
+        <div class="mode-card" onclick="selectMode('race',this)">
+          <div class="mode-card-icon">🏁</div>
+          <div>
+            <div class="mode-card-title">Race day target</div>
+            <div class="mode-card-desc">Set your race date. Training builds toward it — base, build, peak, and taper auto-structured around your deadline.</div>
+          </div>
+        </div>
+        <div class="mode-card" onclick="selectMode('general',this)">
+          <div class="mode-card-icon">📈</div>
+          <div>
+            <div class="mode-card-title">General training</div>
+            <div class="mode-card-desc">No race target yet. Track trend and consistency across 9 months. Set your week cadence manually each week.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ob-section" id="race-date-section" style="display:none">
+      <div class="ob-label">Race date</div>
+      <div class="date-row">
+        <input type="date" class="date-inp" id="ob-race-date" onchange="updateRaceWeeks()">
+        <div class="weeks-badge" id="race-weeks-badge" style="display:none">— wks</div>
+      </div>
+    </div>
+
+    <button class="cta-btn" id="ob-mode-next" disabled onclick="goToCalendarSetup()">Set up your week →</button>
+  </div>
+</div>
+
+<!-- ══════════════ ONBOARDING: CALENDAR ══════════════ -->
+<div class="screen" id="screen-ob-cal">
+  <div id="ob-calendar">
+    <div class="ob-title">Build your typical training week</div>
+    <div class="ob-sub">Tap a session type, then tap a day slot to assign it. Up to 4 sessions per day.</div>
+
+    <div class="ob-section">
+      <div class="ob-label">Session type</div>
+      <div class="type-strip" id="type-strip">
+        <button class="type-chip active-swim" data-type="swim" onclick="selectType('swim',this)">🏊 Swim</button>
+        <button class="type-chip" data-type="bike" onclick="selectType('bike',this)">🚴 Bike</button>
+        <button class="type-chip" data-type="run" onclick="selectType('run',this)">🏃 Run</button>
+        <button class="type-chip" data-type="brick" onclick="selectType('brick',this)">⚡ Brick</button>
+        <button class="type-chip" data-type="strength" onclick="selectType('strength',this)">💪 Strength</button>
+        <button class="type-chip" data-type="rest" onclick="selectType('rest',this)">😴 Rest</button>
+      </div>
+    </div>
+
+    <div class="ob-section">
+      <div class="ob-label">Typical week</div>
+      <div class="cal-grid" id="ob-cal-grid"></div>
+    </div>
+
+    <button class="cta-btn" onclick="finishSetup()">Start my season →</button>
+    <button class="ghost-btn" onclick="finishSetup()">Skip for now</button>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div class="screen" id="screen-main">
+
+  <!-- TAB 1: TODAY -->
+  <div class="tab-content" id="tab-today" style="display:none">
+    <div class="page-hdr">
+      <div class="today-date" id="today-date-lbl"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+        <div class="page-title">Today</div>
+        <div class="week-phase-pill" id="phase-pill">Base</div>
+      </div>
+    </div>
+    <div class="tab-scroll">
+      <div class="insight-card" id="today-insight">
+        <div class="insight-label">This week's key reminder</div>
+        <div class="insight-text" id="insight-text"></div>
+      </div>
+
+      <div id="today-sessions-container"></div>
+
+      <div class="cadence-section" id="cadence-section">
+        <div class="cadence-title">This week's training cadence</div>
+        <div class="cadence-grid">
+          <button class="cadence-btn" onclick="setCadence('base',this)">
+            <span class="c-name">Base</span>
+            <span class="c-desc">Aerobic foundation. High volume, low intensity. Z2 dominant.</span>
+          </button>
+          <button class="cadence-btn" onclick="setCadence('build',this)">
+            <span class="c-name">Build</span>
+            <span class="c-desc">Adding threshold work. Sweetspot sessions introduced.</span>
+          </button>
+          <button class="cadence-btn" onclick="setCadence('peak',this)">
+            <span class="c-name">Peak</span>
+            <span class="c-desc">Race-specific intensity. Brick sessions at race pace.</span>
+          </button>
+          <button class="cadence-btn" onclick="setCadence('taper',this)">
+            <span class="c-name">Taper</span>
+            <span class="c-desc">Reduce volume. Maintain intensity. Trust the process.</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: WEEK -->
+  <div class="tab-content" id="tab-week" style="display:none">
+    <div class="page-hdr">
+      <div class="page-eyebrow" id="week-eyebrow">Week 1 · Base</div>
+      <div class="page-title" id="week-title">This week</div>
+    </div>
+    <div class="tab-scroll">
+      <div class="week-cards" id="week-cards"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: TIPS -->
+  <div class="tab-content" id="tab-tips" style="display:none">
+    <div class="page-hdr">
+      <div class="page-title">Season tips</div>
+      <div class="page-sub">39 weeks of thinking prompts. Tap any week to expand.</div>
+    </div>
+    <div class="tips-filter">
+      <button class="tf-btn active" onclick="filterTips('all',this)">All weeks</button>
+      <button class="tf-btn" onclick="filterTips('p1',this)">Foundations</button>
+      <button class="tf-btn" onclick="filterTips('p2',this)">Technique</button>
+      <button class="tf-btn" onclick="filterTips('p3',this)">Durability</button>
+      <button class="tf-btn" onclick="filterTips('p4',this)">Intensity</button>
+      <button class="tf-btn" onclick="filterTips('p5',this)">Race craft</button>
+      <button class="tf-btn" onclick="filterTips('p6',this)">Integration</button>
+    </div>
+    <div class="tab-scroll">
+      <div class="trend-section">
+        <div class="trend-card">
+          <div class="trend-title">Training trend — last 12 weeks</div>
+          <div class="trend-bars" id="trend-bars"></div>
+          <div class="trend-legend">
+            <div class="tl-item"><div class="tl-dot" style="background:var(--swim)"></div>Base</div>
+            <div class="tl-item"><div class="tl-dot" style="background:var(--bike)"></div>Build</div>
+            <div class="tl-item"><div class="tl-dot" style="background:var(--run)"></div>Peak</div>
+            <div class="tl-item"><div class="tl-dot" style="background:var(--brick)"></div>Taper</div>
+          </div>
+          <div class="trend-stats" id="trend-stats"></div>
+        </div>
+      </div>
+      <div class="week-tip-group" id="tips-list"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: CALENDAR -->
+  <div class="tab-content" id="tab-cal" style="display:none">
+    <div class="page-hdr">
+      <div class="page-title">Calendar</div>
+      <div class="page-sub">Your typical training week. Edit anytime.</div>
+    </div>
+    <div class="tab-scroll">
+      <div class="cal-edit-wrap">
+        <div class="cur-cal-card" id="cal-preview-card"></div>
+
+        <div class="ob-section">
+          <div class="ob-label">Session type</div>
+          <div class="type-strip" id="cal-type-strip">
+            <button class="type-chip active-swim" data-type="swim" onclick="selectTypeEdit('swim',this)">🏊 Swim</button>
+            <button class="type-chip" data-type="bike" onclick="selectTypeEdit('bike',this)">🚴 Bike</button>
+            <button class="type-chip" data-type="run" onclick="selectTypeEdit('run',this)">🏃 Run</button>
+            <button class="type-chip" data-type="brick" onclick="selectTypeEdit('brick',this)">⚡ Brick</button>
+            <button class="type-chip" data-type="strength" onclick="selectTypeEdit('strength',this)">💪 Strength</button>
+            <button class="type-chip" data-type="rest" onclick="selectTypeEdit('rest',this)">😴 Rest</button>
+          </div>
+        </div>
+
+        <div class="ob-section">
+          <div class="ob-label">Tap a day to add sessions</div>
+          <div class="cal-grid" id="edit-cal-grid"></div>
+        </div>
+
+        <button class="cta-btn" onclick="saveCalEdit()">Save changes</button>
+
+        <div style="height:1rem"></div>
+        <div class="divider"></div>
+        <div class="ob-section" style="margin-top:.75rem">
+          <div class="ob-label">Training mode</div>
+          <div class="mode-cards" id="edit-mode-cards">
+            <div class="mode-card" onclick="selectModeEdit('race',this)">
+              <div class="mode-card-icon">🏁</div>
+              <div><div class="mode-card-title">Race day target</div></div>
+            </div>
+            <div class="mode-card" onclick="selectModeEdit('general',this)">
+              <div class="mode-card-icon">📈</div>
+              <div><div class="mode-card-title">General training</div></div>
+            </div>
+          </div>
+          <div style="margin-top:10px" id="edit-race-date-row">
+            <div class="ob-label">Race date</div>
+            <div class="date-row">
+              <input type="date" class="date-inp" id="edit-race-date" onchange="updateEditRaceWeeks()">
+              <div class="weeks-badge" id="edit-weeks-badge" style="display:none">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('today',this)">
+      <span class="nav-icon">◎</span>
+      <span>Today</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('week',this)">
+      <span class="nav-icon">⬡</span>
+      <span>Week</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('tips',this)">
+      <span class="nav-icon">⬢</span>
+      <span>Tips</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('cal',this)">
+      <span class="nav-icon">▦</span>
+      <span>Calendar</span>
+    </button>
+  </nav>
+
+</div><!-- /screen-main -->
+</div><!-- /app -->
+
+<script src="app.js"></script>
+</body>
+</html>

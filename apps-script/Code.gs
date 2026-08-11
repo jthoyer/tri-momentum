@@ -263,8 +263,23 @@ function getRacesSheet_() {
   } else {
     var existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     if (existing.length < RACE_HEADERS.length) {
-      sheet.getRange(1, existing.length + 1, 1, RACE_HEADERS.length - existing.length)
+      var addedCols = RACE_HEADERS.length - existing.length;
+      sheet.getRange(1, existing.length + 1, 1, addedCols)
         .setValues([RACE_HEADERS.slice(existing.length)]);
+      // Backfill existing race rows with an explicit 'considering' in any
+      // newly-added column rather than leaving them blank — this sheet is
+      // meant to be hand-edited (see Status below), so a visible default
+      // beats an empty cell the athlete has to guess the valid values for.
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        var statusColIndex = RACE_HEADERS.indexOf('Status') + 1;
+        if (statusColIndex > existing.length && statusColIndex <= RACE_HEADERS.length) {
+          var statusRange = sheet.getRange(2, statusColIndex, lastRow - 1, 1);
+          var current = statusRange.getValues();
+          var filled = current.map(function (row) { return [row[0] || 'considering']; });
+          statusRange.setValues(filled);
+        }
+      }
     }
   }
   return sheet;
@@ -288,13 +303,23 @@ function listRaces_() {
         date: formatWhen_(r[2]),
         url: r[3] || '',
         notes: r[4] || '',
-        status: r[6] || 'considering'
+        status: normalizeRaceStatus_(r[6])
       });
     }
   }
   return ContentService
     .createTextOutput(JSON.stringify({ ok: true, races: races }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// The Status column is meant to be hand-edited directly in the sheet (see
+// RACE_HEADERS comment above), so this normalizes whatever a human actually
+// types there — "Locked in", "locked", "LOCKED", etc. — down to the two
+// exact enum values ('considering' | 'locked') the app's status===checks
+// rely on, rather than requiring the athlete to type the raw enum string.
+function normalizeRaceStatus_(raw) {
+  var s = String(raw || '').trim().toLowerCase();
+  return s.indexOf('lock') === 0 ? 'locked' : 'considering';
 }
 
 // action: 'add' | 'delete'. The race id is generated client-side (see
