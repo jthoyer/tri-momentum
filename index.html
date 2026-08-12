@@ -173,12 +173,12 @@ textarea::placeholder{color:var(--ink3)}
 .month-week-block:first-child{margin-top:0}
 .month-week-block .dash-matrix-hd{margin-top:.9rem}
 .month-week-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.month-week-label{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink)}
+.month-week-label{font-family:var(--fm);font-size:23px;font-weight:600;color:var(--ink2)}
 .month-week-pill{font-family:var(--fd);font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--s3);color:var(--ink2)}
 .month-week-pill.phase-base{background:var(--phase-base);color:var(--phase-base-l)}
 .month-week-pill.phase-build{background:var(--phase-build);color:var(--phase-build-l)}
 .month-week-pill.phase-peak{background:var(--phase-peak);color:var(--phase-peak-l)}
-.month-week-current{font-family:var(--fm);font-size:11.5px;color:var(--ink3)}
+.month-week-current{font-family:var(--fd);font-size:11.5px;font-weight:600;color:var(--blue);background:var(--blue-l);padding:3px 10px;border-radius:999px}
 .dash-stat-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .dash-stat-n{font-family:var(--fm);font-size:11.5px;color:var(--ink3);white-space:nowrap}
 .dash-stat-big{display:flex;align-items:baseline;gap:9px;margin-top:10px}
@@ -189,8 +189,8 @@ textarea::placeholder{color:var(--ink3)}
 .tri-bar span{display:block;height:100%}
 .dash-counts{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--fm);font-size:12px;color:var(--ink2);margin-top:8px}
 .dash-counts b{font-weight:600}
-.dash-matrix-hd{display:flex;align-items:baseline;gap:12px;margin-top:1.6rem}
-.dash-matrix-week{font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.dash-matrix-hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:1.6rem}
+.dash-matrix-week{font-family:var(--fm);font-size:23px;font-weight:600;color:var(--ink2);white-space:nowrap}
 .dash-matrix-rule{flex:1;height:1px;background:var(--bd)}
 .dash-matrix-sub{font-family:var(--fm);font-size:11.5px;color:var(--ink3)}
 .dash-grid{display:grid;grid-template-columns:52px repeat(7,1fr);gap:5px;margin-top:.7rem;align-items:center}
@@ -204,11 +204,7 @@ textarea::placeholder{color:var(--ink3)}
 .dash-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:1.6rem;padding-top:1rem;border-top:0.5px solid var(--bd)}
 .dash-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)}
 .dash-legend-sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;box-sizing:border-box}
-.dash-phase-pills{display:flex;gap:3px;padding:3px;background:var(--s3);border-radius:999px}
-.dash-phase-pill{flex:1;min-height:38px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border-radius:999px;font-family:var(--fd);font-size:12.5px;font-weight:600;color:var(--ink2);text-align:center;line-height:1.25}
-.dash-phase-pill.is-current{background:var(--blue);color:#fff}
-.dash-phase-note{font-size:12.5px;color:var(--ink3);margin-top:.8rem;line-height:1.5}
-.dash-phase-change{display:block;margin-top:.6rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+.dash-phase-change{display:block;margin-top:.6rem;margin-bottom:1rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
 /* ── Race calendar ── */
 .text-input{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1)}
@@ -564,6 +560,15 @@ if(window.caches && caches.keys){
   var PERIOD_LABEL = {};
   PERIOD.forEach(function(p){ PERIOD_LABEL[p.v] = p.label; });
   var PERIOD_PILL_CLASS = {base:'phase-base', build1:'phase-build', build2:'phase-build', peak:'phase-peak'};
+  // Some Sheet rows predate the app writing the raw phase key (e.g. 'base') and
+  // instead hold the picker's label text (e.g. 'base / taper') — normalise those
+  // back to a known key so Month's phase pill still resolves instead of falling
+  // back to the grey "Unset phase" pill.
+  var PHASE_ALIASES = {'base / taper':'base', 'base/taper':'base'};
+  function normalizePhaseKey(raw){
+    var k = String(raw).trim().toLowerCase();
+    return PHASE_ALIASES[k] || k;
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // WARM UP — dryland mobility routines, one per discipline. Content
@@ -921,7 +926,7 @@ if(window.caches && caches.keys){
       var isCurrent = i === 0;
       if(!hasAny && !isCurrent){ continue; }
       var phaseCounts = {};
-      days.forEach(function(d){ d.entries.forEach(function(e){ if(e.phase){ phaseCounts[e.phase] = (phaseCounts[e.phase]||0)+1; } }); });
+      days.forEach(function(d){ d.entries.forEach(function(e){ if(e.phase){ var pk = normalizePhaseKey(e.phase); phaseCounts[pk] = (phaseCounts[pk]||0)+1; } }); });
       var topPhase = null, topN = 0;
       Object.keys(phaseCounts).forEach(function(p){ if(phaseCounts[p] > topN){ topN = phaseCounts[p]; topPhase = p; } });
       var weekNum = isoWeekNumber(monday);
@@ -1016,6 +1021,27 @@ if(window.caches && caches.keys){
     }
     return hd;
   }
+  // "This week" version of the header — same week-number row as Month's own
+  // week blocks, but with the current training phase as a pill right next to
+  // it (Month gets its pill from each week's logged sessions; here there's
+  // only ever one "this week" so it reads straight off state.periodisation),
+  // plus a "Change phase" link directly under the row so it doesn't have to
+  // be chased back up to the Training phase section above.
+  function dashWeekPhaseHeader(weekLabel){
+    var frag = document.createDocumentFragment();
+    var hd = el('div', 'dash-matrix-hd');
+    hd.appendChild(el('div', 'dash-matrix-week', weekLabel));
+    var pillClass = PERIOD_PILL_CLASS[state.periodisation];
+    hd.appendChild(el('span', 'month-week-pill' + (pillClass ? ' ' + pillClass : ''), PERIOD_LABEL[state.periodisation] || 'Unset phase'));
+    frag.appendChild(hd);
+    var change = document.createElement('button');
+    change.type = 'button';
+    change.className = 'dash-phase-change';
+    change.textContent = 'Change phase →';
+    change.addEventListener('click', function(){ openPhasePicker(); });
+    frag.appendChild(change);
+    return frag;
+  }
   function dashMatrixGrid(catFn, days){
     var grid = el('div', 'dash-grid');
     grid.appendChild(el('div'));
@@ -1057,7 +1083,7 @@ if(window.caches && caches.keys){
     // rendered via ::before) and above everything else, "this week" only —
     // month blocks already carry their own per-week heading, so they keep
     // the matrix in its usual spot right before the grid.
-    if(opts.weekLabel){ wrap.appendChild(dashMatrixHeader(null, opts.weekLabel)); }
+    if(opts.weekLabel){ wrap.appendChild(dashWeekPhaseHeader(opts.weekLabel)); }
     var strip = el('div', 'dash-insight-strip');
     strip.style.borderLeftColor = 'var(--dash-' + insight.severity + ')';
     strip.style.background = 'color-mix(in srgb, var(--dash-' + insight.severity + ') 12%, var(--s1))';
@@ -1091,7 +1117,9 @@ if(window.caches && caches.keys){
   function dashSignalSection(label, t, catFn, insight, opts, days){
     var wrap = el('div', 'dash-section dash-signal');
     wrap.setAttribute('data-label', label);
-    renderSignalBody(wrap, t, catFn, insight, opts, days);
+    var block = el('div', 'month-week-block');
+    renderSignalBody(block, t, catFn, insight, opts, days);
+    wrap.appendChild(block);
     var link = document.createElement('button');
     link.type = 'button';
     link.className = 'dash-signal-link';
@@ -1119,23 +1147,6 @@ if(window.caches && caches.keys){
     legend.appendChild(dashLegendItem('var(--s4)', 'no session'));
     return legend;
   }
-  function dashPhaseSection(){
-    var wrap = el('div', 'dash-section dash-phase');
-    wrap.setAttribute('data-label', 'Training phase');
-    var pills = el('div', 'dash-phase-pills');
-    PERIOD.forEach(function(p){
-      pills.appendChild(el('div', 'dash-phase-pill' + (state.periodisation === p.v ? ' is-current' : ''), p.label));
-    });
-    wrap.appendChild(pills);
-    var change = document.createElement('button');
-    change.type = 'button';
-    change.className = 'dash-phase-change';
-    change.textContent = 'Change phase →';
-    change.addEventListener('click', function(){ openPhasePicker(); });
-    wrap.appendChild(change);
-    return wrap;
-  }
-
   function computeSignalFacts(weeks, catFn){
     var badCount = 0, goodCount = 0, total = 0, compoundPairs = 0, firstPair = null;
     var bounceBackPairs = 0, firstBounceBack = null, prevBad = null, curStreak = 0, goodStreak = 0;
@@ -1374,7 +1385,6 @@ if(window.caches && caches.keys){
     var h = el('h1', 'dash-eyebrow', 'Review');
     h.id = 'dash-h'; h.tabIndex = -1;
     root.appendChild(h);
-    root.appendChild(dashPhaseSection());
     root.appendChild(renderSignalSubtabs(state.weekSignal, function(v){ state.weekSignal = v; renderDashboard(); }));
     var days = currentWeekDays();
     var weekLabel = 'Week ' + isoWeekNumber(mondayOf(new Date()));
