@@ -51,7 +51,6 @@ a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);ou
 .bar > i{display:block;height:100%;width:0;background:var(--blue);border-radius:2px;transition:width .2s ease}
 .flow-phase-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
 .flow-phase-row[hidden]{display:none}
-#flow-phase-label{font-family:var(--fm);font-size:12px;color:var(--ink3)}
 .flow-phase-change{padding:0;background:none;border:none;font-family:var(--fd);font-size:12px;font-weight:600;color:var(--blue);cursor:pointer}
 .flow-body{flex:1;padding:1.5rem 1.25rem 6rem;min-height:0}
 .q-set{border:none;padding:0;margin:0;display:block;min-width:0}
@@ -373,7 +372,7 @@ textarea::placeholder{color:var(--ink3)}
       </div>
       <div class="bar" aria-hidden="true"><i id="bar-fill"></i></div>
       <div class="flow-phase-row" id="flow-phase-row">
-        <span id="flow-phase-label"></span>
+        <span id="flow-phase-label" class="month-week-pill"></span>
         <button type="button" class="flow-phase-change" id="flow-phase-change">Change phase</button>
       </div>
     </div>
@@ -1971,6 +1970,12 @@ if(window.caches && caches.keys){
     renderChrome();
   }
 
+  function setFlowPhaseLabel(){
+    els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
+    var pillClass = PERIOD_PILL_CLASS[state.periodisation];
+    els.phaseLabel.className = 'month-week-pill' + (pillClass ? ' ' + pillClass : '');
+  }
+
   function renderChrome(){
     var list = steps();
     var idx = Math.min(state.step, list.length - 1);
@@ -1986,13 +1991,13 @@ if(window.caches && caches.keys){
       els.counter.textContent = 'review · ' + (totalQuestions - gaps) + '/' + totalQuestions;
       els.barFill.style.width = '100%';
       els.phaseRow.hidden = false;
-      els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
+      setFlowPhaseLabel();
     } else {
       els.eyebrow.textContent = 'Just finished';
       els.counter.textContent = (idx + 1) + ' / ' + list.length;
       els.barFill.style.width = Math.round(idx / list.length * 100) + '%';
       els.phaseRow.hidden = false;
-      els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
+      setFlowPhaseLabel();
     }
     renderFoot(list, idx);
     return {list: list, idx: idx};
