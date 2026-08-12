@@ -207,22 +207,33 @@ textarea::placeholder{color:var(--ink3)}
 .dash-phase-change{display:block;margin-top:.6rem;margin-bottom:1rem;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 
 /* ── Race calendar ── */
+/* Hero banner echoing the reference club-calendar app's dark "Find your
+   next start line" header — same dark-card/headline/stat-line shape, but
+   with no club logo and recoloured to this app's own tokens (--ink for the
+   dark fill rather than a literal navy, --blue-m for the accent rather than
+   the reference's orange), and the stat line swapped for this app's own
+   commitment counts (locked in / considering) instead of "club events". */
+.race-hero{margin-top:0;padding:1.5rem 1.3rem 1.6rem;background:var(--ink);border-radius:var(--rlg);color:#fff}
+.race-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-m)}
+.race-hero-headline{margin-top:.6rem;font-family:var(--fd);font-size:23px;font-weight:600;line-height:1.3;color:#fff}
+.race-hero-headline .accent{color:var(--blue-m)}
+.race-hero-sub{margin-top:.7rem;font-size:14px;line-height:1.55;color:rgba(255,255,255,.68)}
+.race-hero-stats{display:flex;flex-wrap:wrap;gap:20px;margin-top:1.3rem;padding-top:1.1rem;border-top:1px solid rgba(255,255,255,.14)}
+.race-hero-stat{font-family:var(--fd);font-size:13.5px;color:rgba(255,255,255,.68)}
+.race-hero-stat b{font-size:18px;font-weight:600;margin-right:5px}
+.race-hero-stat.locked b{color:var(--done-l)}
+.race-hero-stat.considering b{color:var(--phase-build-l)}
 .text-input{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1)}
 .text-input::placeholder{color:var(--ink3)}
-.race-add-toggle{width:100%;min-height:52px;margin-top:1.1rem;padding:14px;border-radius:999px;border:1px solid transparent;background:var(--blue);color:#fff;font-family:var(--fd);font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.race-add-toggle{width:100%;min-height:52px;margin-top:1.3rem;padding:14px;border-radius:999px;border:1px solid transparent;background:var(--blue);color:#fff;font-family:var(--fd);font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 .race-add-toggle:hover{background:#1246ad}
-/* A transparent fill here read as a disabled/unpressable button — the page
-   background (--bg) is almost the same tone as transparent-on-page, so
-   there was nothing to signal "this is a button." Solid white + border
-   reads as a real, tappable secondary button instead. */
-.race-add-toggle.is-open{background:var(--s1);color:var(--ink);border-color:var(--bd2)}
-.race-add-toggle.is-open:hover{background:var(--s3)}
 .race-form-wrap[hidden]{display:none}
 .race-form{margin-top:1.1rem;padding:1rem 1.05rem 1.1rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);display:flex;flex-direction:column;gap:14px}
 .race-field .field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:12px}
 .race-field .sub{font-weight:400;font-size:12.5px;color:var(--ink2)}
 .race-field textarea{min-height:48px}
-.race-form .btn-primary{margin-top:2px;border-radius:999px}
+.race-form-actions{display:flex;gap:10px;margin-top:2px}
+.race-form-actions .btn{border-radius:999px}
 .race-section{margin-top:2.3rem;padding-top:1.1rem;border-top:1px solid var(--bd)}
 .race-section-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .race-section-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
@@ -1449,7 +1460,7 @@ if(window.caches && caches.keys){
     wrap.appendChild(inputEl);
     return wrap;
   }
-  function renderRaceForm(root){
+  function renderRaceForm(root, onCancel){
     var form = document.createElement('form');
     form.className = 'race-form';
     form.setAttribute('aria-label', 'Add a race');
@@ -1499,9 +1510,15 @@ if(window.caches && caches.keys){
     notesInput.placeholder = 'e.g. A-race, club focus race';
     form.appendChild(raceField('Notes', 'optional', notesInput));
 
+    var actions = el('div', 'race-form-actions');
     var submitBtn = el('button', 'btn btn-primary', 'Add race');
     submitBtn.type = 'submit';
-    form.appendChild(submitBtn);
+    actions.appendChild(submitBtn);
+    var cancelBtn = el('button', 'btn btn-ghost', 'Cancel');
+    cancelBtn.type = 'button';
+    cancelBtn.addEventListener('click', onCancel);
+    actions.appendChild(cancelBtn);
+    form.appendChild(actions);
 
     form.addEventListener('submit', function(ev){
       ev.preventDefault();
@@ -1631,46 +1648,72 @@ if(window.caches && caches.keys){
     });
     return wrap;
   }
+  function raceHeroStat(cls, n, label){
+    var stat = el('div', 'race-hero-stat ' + cls);
+    var b = document.createElement('b');
+    b.textContent = String(n);
+    stat.appendChild(b);
+    stat.appendChild(document.createTextNode(label));
+    return stat;
+  }
+  // The "Add a race" toggle lives inside the hero now (was its own
+  // full-width button below it) — but only while the form is closed, since
+  // once it's open the form carries its own Add race / Cancel pair instead.
+  function raceHero(onAddRace){
+    var wrap = el('div', 'race-hero');
+    wrap.appendChild(el('div', 'race-hero-eyebrow', 'Race calendar'));
+    var h = document.createElement('h1');
+    h.className = 'race-hero-headline';
+    h.id = 'races-h'; h.tabIndex = -1;
+    h.appendChild(document.createTextNode('View '));
+    h.appendChild(el('span', 'accent', 'your season'));
+    h.appendChild(document.createTextNode('.'));
+    wrap.appendChild(h);
+    wrap.appendChild(el('p', 'race-hero-sub', 'Add a race and see how many weeks out it is. Synced to your training log Sheet, so it shows on every device.'));
+    var lockedCount = races.filter(function(r){ return r.status === 'locked'; }).length;
+    var consideringCount = races.length - lockedCount;
+    var stats = el('div', 'race-hero-stats');
+    stats.appendChild(raceHeroStat('locked', lockedCount, 'locked in'));
+    stats.appendChild(raceHeroStat('considering', consideringCount, 'considering'));
+    wrap.appendChild(stats);
+    if(!raceFormOpen){
+      var toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'race-add-toggle';
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      toggleBtn.setAttribute('aria-controls', 'race-form-wrap');
+      toggleBtn.textContent = 'Add a race';
+      toggleBtn.addEventListener('click', onAddRace);
+      wrap.appendChild(toggleBtn);
+    }
+    return wrap;
+  }
   // Whether the Add a race form is open — module state rather than derived
   // from the DOM, since renderRaces() fully rebuilds the view (including on
   // a background Sheet refresh) and a mid-fill-in form shouldn't silently
   // snap shut because of that.
   var raceFormOpen = false;
+  function closeRaceForm(){
+    raceFormOpen = false;
+    renderRaces();
+    var freshBtn = document.querySelector('.race-add-toggle');
+    if(freshBtn){ freshBtn.focus(); }
+  }
   function renderRaces(){
     var root = els.viewRaces;
     clear(root);
-    var h = el('h1', 'dash-eyebrow', 'Races');
-    h.id = 'races-h'; h.tabIndex = -1;
-    root.appendChild(h);
-    root.appendChild(el('p', 'hint', 'Add a race and see how many weeks out it is. Synced to your training log Sheet, so it shows on every device.'));
-
-    var toggleBtn = document.createElement('button');
-    toggleBtn.type = 'button';
-    toggleBtn.className = 'race-add-toggle' + (raceFormOpen ? ' is-open' : '');
-    toggleBtn.setAttribute('aria-expanded', String(raceFormOpen));
-    toggleBtn.setAttribute('aria-controls', 'race-form-wrap');
-    toggleBtn.appendChild(document.createTextNode(raceFormOpen ? 'Cancel' : 'Add a race'));
-    root.appendChild(toggleBtn);
+    root.appendChild(raceHero(function(){
+      raceFormOpen = true;
+      renderRaces();
+      var nameInput = document.getElementById('race-name');
+      if(nameInput){ nameInput.focus(); }
+    }));
 
     var formWrap = el('div', 'race-form-wrap');
     formWrap.id = 'race-form-wrap';
     formWrap.hidden = !raceFormOpen;
-    renderRaceForm(formWrap);
+    renderRaceForm(formWrap, closeRaceForm);
     root.appendChild(formWrap);
-
-    toggleBtn.addEventListener('click', function(){
-      raceFormOpen = !raceFormOpen;
-      renderRaces();
-      // renderRaces() just rebuilt the whole view, so toggleBtn above is now
-      // a detached node — re-find the live one for focus.
-      if(raceFormOpen){
-        var nameInput = document.getElementById('race-name');
-        if(nameInput){ nameInput.focus(); }
-      } else {
-        var freshBtn = root.querySelector('.race-add-toggle');
-        if(freshBtn){ freshBtn.focus(); }
-      }
-    });
 
     root.appendChild(raceListSection('Upcoming', upcomingRaces(), {
       emptyText: 'No upcoming races yet — add one above.', markFirstAsNext: true
