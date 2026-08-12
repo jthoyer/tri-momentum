@@ -2307,20 +2307,27 @@ if(window.caches && caches.keys){
     var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : 'step-h')))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
-    // This week / Month reflect logged sessions from any device, so pull
-    // the current source of truth every time either tab is opened, then
-    // silently redraw in place if it changed anything (no scroll/focus
-    // jump — the user is already looking at this view).
-    if(isDash || isTrends){
+    refreshVisibleViewFromSheet();
+  }
+  // This week / Month / Races all reflect state that can change on another
+  // device, so pull the current source of truth every time the relevant
+  // view is opened, then silently redraw in place if it changed anything
+  // (no scroll/focus jump — the user is already looking at this view).
+  // Also called on visibilitychange (see Init below): an installed PWA can
+  // be resumed from a frozen background state on iOS rather than doing a
+  // fresh page load, so neither the tab-click handler nor the app-boot
+  // fetch fires — without this, a phone left sitting on Races (or This
+  // week/Month) would keep showing whatever was cached from before another
+  // device added or removed something.
+  function refreshVisibleViewFromSheet(){
+    if(!els.viewDash.hidden || !els.viewTrends.hidden){
       refreshLogFromSheet().then(function(changed){
         if(!changed){ return; }
-        if(isDash && !els.viewDash.hidden){ renderDashboard(); }
-        if(isTrends && !els.viewTrends.hidden){ renderTrends(); }
+        if(!els.viewDash.hidden){ renderDashboard(); }
+        if(!els.viewTrends.hidden){ renderTrends(); }
       });
     }
-    // Races can change on another device too (add/remove), so refresh the
-    // same way whenever the tab is opened.
-    if(isRaces){
+    if(!els.viewRaces.hidden){
       refreshRacesFromSheet().then(function(changed){
         if(changed && !els.viewRaces.hidden){ renderRaces(); }
         renderSplashCountdown();
@@ -2471,6 +2478,14 @@ if(window.caches && caches.keys){
   // immediately, then refresh from the Sheet and repaint if it changed.
   renderSplashCountdown();
   refreshRacesFromSheet().then(function(changed){ if(changed){ renderSplashCountdown(); } });
+  // An installed PWA (iOS "Add to Home Screen") can resume from a frozen
+  // background state instead of a real page load, so a phone left sitting
+  // on This week/Month/Races would otherwise never re-check the Sheet after
+  // another device changes something. Re-sync whichever view is on screen
+  // whenever the app regains foreground.
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden){ refreshVisibleViewFromSheet(); }
+  });
 })();
 </script>
 </body>
