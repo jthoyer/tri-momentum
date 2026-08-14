@@ -196,11 +196,12 @@ textarea::placeholder{color:var(--ink3)}
 .dash-grid{display:grid;grid-template-columns:52px repeat(7,1fr);gap:5px;margin-top:.7rem;align-items:center}
 .dash-grid-day{font-family:var(--fm);font-size:10.5px;color:var(--ink3);text-align:center}
 .dash-grid-disc{font-size:12.5px;color:var(--ink2)}
-.dash-cell{height:16px;border-radius:4px;background:var(--s4);box-sizing:border-box}
-.dash-cell.na{background:transparent;border:1px solid var(--bd2)}
-.dash-cell.good{background:var(--dash-good)}
-.dash-cell.mid{background:var(--dash-mid)}
-.dash-cell.bad{background:var(--dash-bad)}
+.dash-cell{height:16px;border-radius:4px;background:var(--s4);box-sizing:border-box;display:flex;gap:2px;overflow:hidden}
+.dash-cell-seg{flex:1;border-radius:3px}
+.dash-cell-seg.na{background:transparent;border:1px solid var(--bd2)}
+.dash-cell-seg.good{background:var(--dash-good)}
+.dash-cell-seg.mid{background:var(--dash-mid)}
+.dash-cell-seg.bad{background:var(--dash-bad)}
 .dash-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:1.6rem;padding-top:1rem;border-top:0.5px solid var(--bd)}
 .dash-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)}
 .dash-legend-sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;box-sizing:border-box}
@@ -1018,10 +1019,17 @@ if(window.caches && caches.keys){
     return t;
   }
   function dashPct(t){ return t.total ? Math.round(t.good / t.total * 100) : 0; }
-  function dashCellClass(dayEntry, disc, catFn){
-    if(!dayEntry.session || dayEntry.session.disc !== disc){ return 'dash-cell'; }
-    var c = catFn(dayEntry.session);
-    return c ? ('dash-cell ' + c) : 'dash-cell na';
+  // A day can have more than one session in the same discipline (e.g. two
+  // swim sets), so a grid cell renders one coloured segment per matching
+  // entry rather than collapsing to just the day's last-logged session.
+  function dashCell(dayEntry, disc, catFn){
+    var entries = dayEntry.entries.filter(function(e){ return e.disc === disc; });
+    var cell = el('div', 'dash-cell' + (entries.length > 1 ? ' multi' : ''));
+    entries.forEach(function(e){
+      var c = catFn(e);
+      cell.appendChild(el('div', 'dash-cell-seg' + (c ? ' ' + c : ' na')));
+    });
+    return cell;
   }
   function dashMatrixHeader(sub, weekLabel){
     var hd = el('div', 'dash-matrix-hd');
@@ -1059,7 +1067,7 @@ if(window.caches && caches.keys){
     days.forEach(function(d){ grid.appendChild(el('div', 'dash-grid-day', d.day.charAt(0))); });
     DASH_DISCIPLINES.forEach(function(disc){
       grid.appendChild(el('div', 'dash-grid-disc', DISC_LABEL[disc]));
-      days.forEach(function(d){ grid.appendChild(el('div', dashCellClass(d, disc, catFn))); });
+      days.forEach(function(d){ grid.appendChild(dashCell(d, disc, catFn)); });
     });
     return grid;
   }
