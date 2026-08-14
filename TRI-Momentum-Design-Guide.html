@@ -201,12 +201,22 @@ section.doc:last-of-type{border-bottom:none}
 .pv-insight-strip.mid{border-left-color:var(--dash-mid); background:color-mix(in srgb, var(--dash-mid) 12%, var(--s1))}
 .pv-insight-strip.bad{border-left-color:var(--dash-bad); background:color-mix(in srgb, var(--dash-bad) 12%, var(--s1))}
 .pv-month-hd{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-.pv-month-label{font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--ink)}
+.pv-month-label{font-family:'Outfit',sans-serif; font-size:23px; font-weight:600; color:var(--ink2)}
 .pv-month-pill{font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:999px}
 .pv-month-pill.phase-base{background:var(--phase-base); color:var(--phase-base-l)}
 .pv-month-pill.phase-build{background:var(--phase-build); color:var(--phase-build-l)}
 .pv-month-pill.phase-peak{background:var(--phase-peak); color:var(--phase-peak-l)}
-.pv-month-current{font-family:'Outfit',sans-serif; font-size:11.5px; color:var(--ink3)}
+.pv-month-current{font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600; color:var(--blue); background:var(--blue-l); padding:3px 10px; border-radius:999px}
+
+.pv-grid{display:grid; grid-template-columns:52px repeat(7,1fr); gap:5px; align-items:center}
+.pv-grid-day{font-family:'Outfit',sans-serif; font-size:10.5px; color:var(--ink3); text-align:center}
+.pv-grid-disc{font-family:'Outfit',sans-serif; font-size:12.5px; color:var(--ink2)}
+.pv-cell{height:16px; border-radius:4px; background:var(--s4); box-sizing:border-box; display:flex; gap:2px; overflow:hidden}
+.pv-cell-seg{flex:1; border-radius:3px}
+.pv-cell-seg.na{background:transparent; border:1px solid var(--bd2)}
+.pv-cell-seg.good{background:var(--dash-good)}
+.pv-cell-seg.mid{background:var(--dash-mid)}
+.pv-cell-seg.bad{background:var(--dash-bad)}
 
 .pv-splash{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; background:var(--blue); border-radius:14px; padding:40px 20px}
 .pv-splash-logo{width:192px; height:192px; border-radius:22px}
@@ -240,7 +250,9 @@ section.doc:last-of-type{border-bottom:none}
 .pv-race-link{display:block; margin-top:3px; font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; color:var(--blue); text-decoration:none}
 .pv-race-remove{margin-left:auto; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--ink3)}
 .pv-add-toggle{width:100%; min-height:52px; padding:14px; border-radius:999px; border:1px solid transparent; background:var(--blue); color:#fff; font-family:'Outfit',sans-serif; font-size:16px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer}
-.pv-add-toggle.is-open{background:var(--s1); color:var(--ink); border-color:var(--bd2)}
+.pv-race-form-preview{margin-top:0; padding:1rem 1.05rem 1.1rem; background:var(--s1); border:0.5px solid var(--bd2); border-radius:14px; display:flex; flex-direction:column; gap:10px}
+.pv-race-form-actions{display:flex; gap:10px}
+.pv-btn-ghost{flex:1; min-height:52px; padding:14px; border-radius:999px; background:transparent; color:var(--ink); border:1px solid var(--bd2); font-family:'Outfit',sans-serif; font-size:17px; font-weight:600; cursor:pointer}
 
 .pv-tabbar{display:flex; gap:0; max-width:430px; margin:0 auto; background:#002DFF; border-radius:14px; overflow:hidden}
 .pv-tab{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:84px; padding:8px 4px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.6); cursor:pointer}
@@ -295,6 +307,29 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
 }
 .flag .dot{width:6px;height:6px;border-radius:50%;background:var(--run)}
 
+.a11y-rule{
+  background:var(--card); border:1px solid var(--page-line); border-radius:14px; padding:18px 20px;
+  font-size:13.5px; line-height:1.65; color:var(--page-ink2); margin-bottom:32px;
+}
+.a11y-rule b{color:var(--page-ink)}
+.a11y-compare{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:34px}
+.a11y-tile{border-radius:14px; overflow:hidden; border:1px solid var(--page-line); background:var(--card)}
+.a11y-tile-fill{
+  height:88px; display:flex; align-items:center; justify-content:center; position:relative;
+}
+.a11y-tile-fill .Aa{font-family:'Outfit',sans-serif; font-size:26px; font-weight:600}
+.a11y-badge{
+  position:absolute; top:10px; right:10px; font-family:'Outfit',sans-serif; font-size:10.5px; font-weight:600;
+  letter-spacing:.04em; text-transform:uppercase; padding:4px 9px; border-radius:999px;
+}
+.a11y-badge.fail{background:#fff; color:#C81E1E}
+.a11y-badge.pass{background:#fff; color:#0E9A5C}
+.a11y-tile-meta{padding:12px 14px}
+.a11y-tile-meta .hex{font-family:'Outfit',sans-serif; font-size:12px; color:var(--page-ink2)}
+.a11y-tile-meta .ratio{font-family:'Outfit',sans-serif; font-size:11.5px; color:var(--page-ink3); margin-top:3px}
+.a11y-compare-label{grid-column:1 / -1; font-family:'Outfit',sans-serif; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--page-ink3); margin:0 0 -2px}
+.a11y-compare-title{grid-column:1 / -1; font-size:13.5px; font-weight:600; color:var(--page-ink); margin:0 0 2px}
+
 @media (max-width:760px){
   .hero{padding:40px 0 32px} .hero h1{font-size:30px}
   section.doc{padding:40px 0}
@@ -315,6 +350,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
       <a href="#type">Type</a>
       <a href="#layout">Layout</a>
       <a href="#components">Components</a>
+      <a href="#a11y">Accessibility</a>
       <a href="#voice">Voice</a>
     </div>
   </div>
@@ -323,7 +359,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
 <div class="shell">
 
   <header class="hero">
-    <p class="eyebrow">Reference · v1</p>
+    <p class="eyebrow">Reference · v1.1</p>
     <h1>The design system, laid out.</h1>
     <p class="lede">Every colour, type size, spacing rule and component pattern TRI Momentum ships with — compiled from <a href="style-guide.md" style="color:inherit; text-decoration-color:rgba(255,255,255,.4)">style-guide.md</a> so there's one place to check before a screen gets built. Click any hex or token to copy it.</p>
     <div class="hero-meta">
@@ -414,12 +450,13 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
           </div>
           <div class="f-nav">
             <div><span class="dot"></span>Warm up</div>
+            <div><span class="dot"></span>Strength</div>
             <div class="on"><span class="dot"></span>Check-in</div>
             <div><span class="dot"></span>This week</div>
-            <div><span class="dot"></span>Strength</div>
+            <div><span class="dot"></span>Races</div>
           </div>
         </div>
-        <p class="frame-cap">Sticky header (0.5px border-bottom) → scrolling body (20px side padding) → fixed 4-tab bar, 84px tall as built / 64px per spec.</p>
+        <p class="frame-cap">Sticky header (0.5px border-bottom) → scrolling body (20px side padding) → fixed 5-tab bar, 84px tall.</p>
       </div>
 
       <div style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:14px">
@@ -517,7 +554,41 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
             <span class="pv-month-current">this week</span>
           </div>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Sits inline next to the "Week N" label at the top of each Month-view week card, replacing what used to be one plain-text string ("Week 31 · Peak"). Pill shape, 999px radius, 3px/10px padding, Outfit 11.5px weight 600, reversed out of the solid phase colour. The current week additionally gets a "this week" tag in the same uppercase mono-label style, matching the app's own <span class="mono">.month-week-pill</span> in <span class="mono">index.html</span>.</p>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Sits inline next to the "Week N" label (Outfit 23px/600, <span class="mono">--ink2</span>, matching the page-title spec) at the top of each Month-view week card, replacing what used to be one plain-text string ("Week 31 · Peak"). Pill shape, 999px radius, 3px/10px padding, Outfit 11.5px weight 600, reversed out of the solid phase colour. The current week additionally gets a "this week" tag in the same pill shape — <span class="mono">--blue</span> text on a <span class="mono">--blue-l</span> fill, not the plain mono-label style originally documented here — matching the app's own <span class="mono">.month-week-pill</span>/<span class="mono">.month-week-current</span> in <span class="mono">index.html</span>.</p>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">By session grid</span><span class="spec mono">one segment per logged entry</span></div>
+        <div class="comp-stage">
+          <div class="pv-grid">
+            <div></div>
+            <div class="pv-grid-day">M</div><div class="pv-grid-day">T</div><div class="pv-grid-day">W</div><div class="pv-grid-day">T</div><div class="pv-grid-day">F</div><div class="pv-grid-day">S</div><div class="pv-grid-day">S</div>
+            <div class="pv-grid-disc">Swim</div>
+            <div class="pv-cell"><div class="pv-cell-seg good"></div></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"><div class="pv-cell-seg mid"></div></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-grid-disc">Bike</div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"><div class="pv-cell-seg good"></div></div>
+            <div class="pv-cell"><div class="pv-cell-seg good"></div><div class="pv-cell-seg bad"></div></div>
+            <div class="pv-cell"><div class="pv-cell-seg good"></div></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-grid-disc">Run</div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"><div class="pv-cell-seg bad"></div></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+            <div class="pv-cell"></div>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Each grid cell (16px tall, 4px radius, <span class="mono">--s4</span> fill when nothing's logged) renders one coloured bar per session logged that day in the row's discipline, rather than colouring the whole cell off the day's last-logged entry. A second same-discipline session on the same day — shown here as Thursday's Bike cell — splits into narrower side-by-side bars (2px gap, 3px radius each) instead of silently overwriting the first one. A logged session with no category still gets its own segment, drawn transparent with a <span class="mono">--bd2</span> border rather than a solid colour. <span class="mono">.dash-cell</span>/<span class="mono">.dash-cell-seg</span> in <span class="mono">index.html</span>.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Well-done banner</span><span class="spec mono">--done-l fill · auto-fires on last check</span></div>
@@ -560,12 +631,21 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
         <div class="flag"><span class="dot"></span>Fills with a hardcoded #002DFF rather than the --blue token — a pre-existing, separately-flagged discrepancy, unrelated to the Races tab addition.</div>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
-        <div class="comp-hd"><span class="name">Add a race toggle</span><span class="spec mono">--blue pill · flips to solid-white "Cancel" when open</span></div>
-        <div class="comp-stage" style="max-width:400px; margin:0 auto; display:flex; flex-direction:column; gap:10px">
-          <button class="pv-add-toggle" type="button">Add a race</button>
-          <button class="pv-add-toggle is-open" type="button">Cancel</button>
+        <div class="comp-hd"><span class="name">Add a race toggle</span><span class="spec mono">--blue pill, hidden while form is open · in-form Cancel is --btn-ghost</span></div>
+        <div class="comp-stage" style="max-width:400px; margin:0 auto; display:flex; flex-direction:column; gap:16px">
+          <div>
+            <button class="pv-add-toggle" type="button">Add a race</button>
+          </div>
+          <div class="pv-race-form-preview">
+            <div style="height:14px; border-radius:6px; background:var(--page-line); width:60%"></div>
+            <div style="height:14px; border-radius:6px; background:var(--page-line); width:40%"></div>
+            <div class="pv-race-form-actions">
+              <button class="pv-btn pv-btn-primary" style="flex:1" type="button">Add race</button>
+              <button class="pv-btn-ghost" type="button">Cancel</button>
+            </div>
+          </div>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Sits above the add-race form on the Races tab, which is collapsed by default. Tapping it reveals the form and the button itself flips to "Cancel" — a solid white (--s1) fill with a --bd2 border, not transparent. A transparent fill on the page's --bg background read as a disabled/unpressable button in testing; white + border reads as a real, tappable secondary button. The form auto-collapses back behind this button the moment a race is successfully added. Mirrors the toggle-a-hidden-form pattern from the athlete's club calendar reference app's "Add a race +" button, adapted to this app's own button language (and its own "+"-free label) rather than copying its colours.</p>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Sits above the add-race form on the Races tab, which is collapsed by default (<span class="mono">.race-add-toggle</span>, --blue fill, full width). Tapping it doesn't flip the button in place — it stops rendering the toggle entirely and renders the form instead (<span class="mono">raceFormOpen</span> gates which one exists in the DOM). Cancelling is handled by a separate button inside the open form, next to "Add race": the app's standard secondary button, <span class="mono">.btn-ghost</span> — transparent fill, --bd2 border, --ink text, not full-width — the same class used elsewhere in the app (e.g. the flow's "Back" button). It reads fine here because it sits inside the form's own bordered white (--s1) card next to a clear primary action, unlike a transparent button floating solo on the page's --bg, which is what the earlier solid-white "flips to Cancel" version above was built to avoid. The form auto-collapses back to the toggle button the moment a race is successfully added. Mirrors the toggle-a-hidden-form pattern from the athlete's club calendar reference app's "Add a race +" button, adapted to this app's own button language (and its own "+"-free label) rather than copying its colours.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Race card</span><span class="spec mono">banner headline · grey date/countdown band</span></div>
@@ -630,9 +710,84 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
     </div>
   </section>
 
+  <!-- ══════════ ACCESSIBILITY ══════════ -->
+  <section class="doc" id="a11y">
+    <div class="doc-hd"><span class="num mono">05</span><h2>Accessibility</h2></div>
+    <p class="doc-intro">A standing check, not a one-off audit — two tokens have already shipped, failed, and been caught here. Both times the fix was made at the token level, not with a per-component override, so every screen using that token got corrected at once.</p>
+
+    <div class="a11y-rule">
+      <b>Text must clear WCAG AA contrast against its actual background</b> — 4.5:1 for normal text, 3:1 for large text (18px+ regular, or 14px+/18.66px+ bold) and UI components/icons. Check a new colour against where it's actually used, not against <span class="mono">--bg</span> or white in isolation — a chip on a tinted fill needs its own check.
+    </div>
+
+    <div class="a11y-compare">
+      <p class="a11y-compare-label">Case 01</p>
+      <p class="a11y-compare-title"><span class="mono">--ink3</span> — tertiary text, eyebrows, dates, placeholders</p>
+      <div class="a11y-tile">
+        <div class="a11y-tile-fill" style="background:#F7F8FC">
+          <span class="Aa" style="color:#8B93B8">Aa</span>
+          <span class="a11y-badge fail">Fail</span>
+        </div>
+        <div class="a11y-tile-meta">
+          <div class="hex">#8B93B8 on --bg</div>
+          <div class="ratio">2.84:1 — read fine to the eye, failed AA everywhere it was used</div>
+        </div>
+      </div>
+      <div class="a11y-tile">
+        <div class="a11y-tile-fill" style="background:#F7F8FC">
+          <span class="Aa" style="color:#626B8C">Aa</span>
+          <span class="a11y-badge pass">Pass</span>
+        </div>
+        <div class="a11y-tile-meta">
+          <div class="hex">#626B8C on --bg</div>
+          <div class="ratio">4.95:1 — also 5.25:1 on white, 4.55:1 on --blue-l</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="a11y-compare">
+      <p class="a11y-compare-label">Case 02</p>
+      <p class="a11y-compare-title"><span class="mono">--phase-build</span> — Month week pill, "Considering" race pill</p>
+      <div class="a11y-tile">
+        <div class="a11y-tile-fill" style="background:#D9660B">
+          <span class="Aa" style="color:#FFF1E0">Aa</span>
+          <span class="a11y-badge fail">Fail</span>
+        </div>
+        <div class="a11y-tile-meta">
+          <div class="hex">--phase-build-l text on #D9660B</div>
+          <div class="ratio">3.23:1 at 11.5px bold — even white text on this fill only reached 3.59:1</div>
+        </div>
+      </div>
+      <div class="a11y-tile">
+        <div class="a11y-tile-fill" style="background:#A64C09">
+          <span class="Aa" style="color:#FFF1E0">Aa</span>
+          <span class="a11y-badge pass">Pass</span>
+        </div>
+        <div class="a11y-tile-meta">
+          <div class="hex">--phase-build-l text on #A64C09</div>
+          <div class="ratio">5.17:1 — also 5.74:1 for white text on the same fill</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="eyebrow" style="margin:0 0 14px">Checked and already compliant</p>
+    <div class="wrap-x">
+    <table class="tbl">
+      <thead><tr><th>Token</th><th>Paired with</th><th>Ratio</th></tr></thead>
+      <tbody>
+        <tr><td class="tbl-key">--ink2</td><td>--bg / --s1</td><td>7.56:1</td></tr>
+        <tr><td class="tbl-key">--ink</td><td>--bg / --s1</td><td>18.86:1</td></tr>
+        <tr><td class="tbl-key">--phase-base</td><td>--phase-base-l</td><td>5.46:1</td></tr>
+        <tr><td class="tbl-key">--phase-peak</td><td>--phase-peak-l</td><td>6.03:1</td></tr>
+        <tr><td class="tbl-key">--ink</td><td>race card --bd2 banner</td><td>18.9:1</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="font-size:12px; color:var(--page-ink3); line-height:1.6; margin-top:10px">Checked in the same pass as each fix above, so a real regression doesn't hide behind "we already looked at colour once."</p>
+  </section>
+
   <!-- ══════════ VOICE ══════════ -->
   <section class="doc" id="voice">
-    <div class="doc-hd"><span class="num mono">05</span><h2>Voice</h2></div>
+    <div class="doc-hd"><span class="num mono">06</span><h2>Voice</h2></div>
     <p class="doc-intro">Tip copy is the product's actual IP, so the tone rules are as fixed as the colour tokens. Five rules, then the pattern they produce.</p>
 
     <div class="principle-list">
