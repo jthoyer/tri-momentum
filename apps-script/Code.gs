@@ -27,12 +27,14 @@
  *     row automatically on the very first write if the sheet is still
  *     empty, using the exact column order/names the app's read path
  *     (parseTrainingLogRows in Tri-momentum-log-v9.html) expects. A body
- *     with `kind: 'race'` is routed to the race calendar instead (see
- *     "Race calendar" below) — everything else is treated as a session.
+ *     with `kind: 'race'` is routed to the race calendar, and one with
+ *     `kind: 'plan'` to the training plan (see below) — everything else is
+ *     treated as a session.
  *   - doGet(e): a plain health-check page, so you (and the app, in a
  *     pinch) can confirm the endpoint is reachable without POSTing
- *     anything. Also handles the Strava OAuth redirect (see below), and
- *     `?races=1` to list the race calendar.
+ *     anything. Also handles the Strava OAuth redirect (see below),
+ *     `?races=1` to list the race calendar, and `?plan=1` to list the
+ *     training plan.
  *
  * ---------------------------------------------------------------------
  * Race calendar: a second sheet tab named "Races" (created automatically
@@ -43,6 +45,14 @@
  * script, so a fire-and-forget no-cors write (same pattern as session
  * logging) can still be deleted later without needing to read a response
  * body back. See handleRacePost_ / listRaces_ below.
+ *
+ * Training plan: a third sheet tab named "Plan" (also created on first
+ * use), holding the athlete's manually-entered planned sessions, one row
+ * per session against a real ISO date. Read via `?plan=1`; written via
+ * `{ kind: 'plan', action: 'add'|'addBatch'|'delete'|'deleteWeek', ... }`.
+ * Same client-generated-id rule as races. `addBatch` and `deleteWeek`
+ * exist because a week is ~10 sessions and firing 10 concurrent no-cors
+ * POSTs races on appendRow. See handlePlanPost_ / listPlan_ below.
  * ---------------------------------------------------------------------
  *
  * Redeploying after edits: Deploy -> Manage deployments -> pencil icon ->
@@ -148,6 +158,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.races === '1') {
     return listRaces_();
   }
+  if (e && e.parameter && e.parameter.plan === '1') {
+    return listPlan_();
+  }
   return ContentService
     .createTextOutput('TRI Momentum training log endpoint is live.')
     .setMimeType(ContentService.MimeType.TEXT);
@@ -201,7 +214,16 @@ function doPost(e) {
   var result = { ok: false };
   try {
     var body = JSON.parse(e.postData.contents);
-    result = body.kind === 'race' ? handleRacePost_(body) : handleSessionPost_(body);
+    // Was a two-way ternary when 'race' was the only non-session kind; an
+    // if/else chain now that 'plan' is a third, so adding a fourth kind
+    // doesn't mean nesting ternaries.
+    if (body.kind === 'race') {
+      result = handleRacePost_(body);
+    } else if (body.kind === 'plan') {
+      result = handlePlanPost_(body);
+    } else {
+      result = handleSessionPost_(body);
+    }
   } catch (err) {
     result = { ok: false, error: String(err) };
   }
@@ -355,6 +377,214 @@ function findRaceRow_(sheet, id) {
     if (String(ids[i][0]) === String(id)) { return i + 2; }
   }
   return null;
+}
+
+/* ============================= Training plan ============================= */
+
+// The athlete's own planned sessions, entered by hand in the app's Plan view
+// and stored one row per planned session against a real ISO calendar date
+// (not a cycle-relative template) — so joining a plan row to a logged session
+// is a plain date equality test, with no resolver and no cycle metadata to
+// store anywhere. The app never authors or suggests a session; this sheet
+// holds a transcribed copy of a plan authored elsewhere.
+//
+// Structural clone of the Races tab above: created on demand, hand-editable,
+// client-generated IDs, fire-and-forget no-cors writes, cors reads.
+var PLAN_SHEET_NAME = 'Plan';
+var PLAN_HEADERS = ['ID', 'Date', 'Disc', 'Title', 'Intensity', 'DurationMin', 'Key', 'Notes', 'Phase', 'CreatedAt'];
+
+function getPlanSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PLAN_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PLAN_SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(PLAN_HEADERS);
+  } else {
+    // Trailing-column backfill, same as getRacesSheet_/ensureHeaders_ — a
+    // sheet created before a later column was added gains the header without
+    // its existing rows being touched or reordered. No value backfill here:
+    // every current column is populated on write, and unlike Races' Status
+    // there's no column whose blank would be ambiguous to a human editor.
+    var existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (existing.length < PLAN_HEADERS.length) {
+      var addedCols = PLAN_HEADERS.length - existing.length;
+      sheet.getRange(1, existing.length + 1, 1, addedCols)
+        .setValues([PLAN_HEADERS.slice(existing.length)]);
+    }
+  }
+  return sheet;
+}
+
+// Read path — mirrors listRaces_'s { ok, plan } envelope so the app's
+// fetch/parse handling follows the same pattern as sessions and races.
+function listPlan_() {
+  var sheet = getPlanSheet_();
+  var lastRow = sheet.getLastRow();
+  var plan = [];
+  if (lastRow > 1) {
+    var values = sheet.getRange(2, 1, lastRow - 1, PLAN_HEADERS.length).getValues();
+    for (var i = 0; i < values.length; i++) {
+      var r = values[i];
+      if (!r[0]) { continue; }
+      var dur = parseInt(r[5], 10);
+      plan.push({
+        id: String(r[0]),
+        // formatWhen_, not String() — Sheets autoconverts a plain
+        // "yyyy-MM-dd" write into a real Date cell depending on locale, and
+        // the app compares these as ISO strings.
+        date: formatWhen_(r[1]),
+        disc: r[2] || '',
+        title: r[3] || '',
+        intensity: r[4] || '',
+        duration: isNaN(dur) ? null : dur,
+        key: normalizePlanKey_(r[6]),
+        notes: r[7] || '',
+        phase: r[8] || ''
+      });
+    }
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, plan: plan }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// The Key column is meant to be hand-editable in the sheet, same intent as
+// Races' Status, so accept whatever a human plausibly types for "yes" —
+// a checkbox (real boolean true), TRUE/true, yes/y, or 1 — and treat
+// everything else, including blank, as not-key.
+function normalizePlanKey_(raw) {
+  if (raw === true) { return true; }
+  var s = String(raw == null ? '' : raw).trim().toLowerCase();
+  return s === 'true' || s === 'yes' || s === 'y' || s === '1';
+}
+
+// Builds one sheet row from a planned-session object, or null if the item
+// is missing the fields a row is meaningless without. Column order must
+// match PLAN_HEADERS exactly — this and listPlan_ are the only two places
+// that encode the layout.
+function planRow_(item) {
+  if (!item || !item.id || !item.date || !item.disc) { return null; }
+  var dur = parseInt(item.duration, 10);
+  return [
+    item.id,
+    item.date,
+    item.disc,
+    item.title || '',
+    item.intensity || '',
+    isNaN(dur) ? '' : dur,
+    item.key ? 'TRUE' : 'FALSE',
+    item.notes || '',
+    item.phase || '',
+    new Date()
+  ];
+}
+
+// action: 'add' | 'addBatch' | 'delete' | 'deleteWeek'. Plan ids are
+// generated client-side (see index.html's newPlanId) for the same reason
+// race ids are: a delete must never need to read an id back out of an
+// opaque no-cors add response.
+function handlePlanPost_(body) {
+  var sheet = getPlanSheet_();
+  var action = body.action;
+
+  if (action === 'add') {
+    var row = planRow_(body.item);
+    if (!row) { return { ok: false, error: 'plan add requires id, date, disc' }; }
+    sheet.appendRow(row);
+    return { ok: true, added: 1 };
+  }
+
+  // Entering or copying a week is ~10 sessions. This exists so that's one
+  // request and one block write, rather than 10 concurrent no-cors POSTs
+  // racing each other on appendRow.
+  if (action === 'addBatch') {
+    var items = body.items;
+    if (!items || !items.length) { return { ok: false, error: 'plan addBatch requires a non-empty items array' }; }
+    var rows = [];
+    for (var i = 0; i < items.length; i++) {
+      var r = planRow_(items[i]);
+      if (r) { rows.push(r); }
+    }
+    if (!rows.length) { return { ok: false, error: 'plan addBatch had no valid items' }; }
+    // getLastRow() then setValues() is a read-then-write, so it needs a lock
+    // in a way appendRow (atomic) does not — without one, two batches landing
+    // together would both target the same first row and one would overwrite
+    // the other, which is the exact race addBatch exists to avoid.
+    var lock = LockService.getDocumentLock();
+    lock.waitLock(20000);
+    try {
+      var startRow = sheet.getLastRow() + 1;
+      // setValues, unlike appendRow, does not grow the sheet — getRange past
+      // the last row throws "out of bounds". A new sheet is 1000 rows, which
+      // a plan reaches in about two years at ~10 sessions/week.
+      var needed = startRow + rows.length - 1;
+      if (needed > sheet.getMaxRows()) { sheet.insertRowsAfter(sheet.getMaxRows(), needed - sheet.getMaxRows()); }
+      sheet.getRange(startRow, 1, rows.length, PLAN_HEADERS.length).setValues(rows);
+    } finally {
+      lock.releaseLock();
+    }
+    return { ok: true, added: rows.length };
+  }
+
+  if (action === 'delete') {
+    var id = body.item && body.item.id;
+    if (!id) { return { ok: false, error: 'plan delete requires an item id' }; }
+    var rowNum = findPlanRow_(sheet, id);
+    if (rowNum) { sheet.deleteRow(rowNum); }
+    return { ok: true };
+  }
+
+  // Clearing a week, by inclusive ISO date range (Monday..Sunday) rather
+  // than by id list — re-entering a changed week must not cost N deletes.
+  if (action === 'deleteWeek') {
+    return deletePlanWeek_(sheet, body.from, body.to);
+  }
+
+  return { ok: false, error: 'unknown plan action: ' + action };
+}
+
+function findPlanRow_(sheet, id) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return null; }
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(id)) { return i + 2; }
+  }
+  return null;
+}
+
+function deletePlanWeek_(sheet, from, to) {
+  if (!from || !to) { return { ok: false, error: 'plan deleteWeek requires from and to (ISO dates)' }; }
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return { ok: true, deleted: 0 }; }
+  // Same reasoning as addBatch: this reads the whole Date column and then
+  // mutates row indices, so it must not interleave with another write.
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(20000);
+  var deleted = 0;
+  try {
+    var dates = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    // Walk bottom-up. deleteRow shifts every row below the deleted one up by
+    // one, so a top-down loop would skip the row immediately after each
+    // deletion and then delete rows that had moved into an already-passed
+    // index. findRaceRow_ never had to deal with this because a race delete
+    // only ever removes a single row.
+    for (var i = dates.length - 1; i >= 0; i--) {
+      // Both sides are 'yyyy-MM-dd', so a plain string compare is a correct
+      // date compare — no Date parsing or timezone handling needed. A blank
+      // cell formats to '' and fails the >= from test, so it's skipped.
+      var iso = formatWhen_(dates[i][0]);
+      if (iso >= from && iso <= to) {
+        sheet.deleteRow(i + 2);
+        deleted++;
+      }
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, deleted: deleted };
 }
 
 // Creates the header row on a blank sheet, or appends any headers a sheet

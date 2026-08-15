@@ -134,12 +134,55 @@ textarea::placeholder{color:var(--ink3)}
 .splash-logo{width:192px;height:192px;border-radius:var(--rxl)}
 .splash-headline{margin-top:12px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
 .splash-headline:focus,.splash-headline:focus-visible{outline:none}
-.splash-countdown{margin-top:56px;padding:14px 18px;max-width:300px;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+/* width:100% (capped at 300px) on both cards, not shrink-to-fit — the splash
+   is a centred column, so two content-sized cards stack at two different
+   widths and read as a mistake. */
+.splash-countdown{margin-top:56px;padding:14px 18px;width:100%;max-width:300px;box-sizing:border-box;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
 .splash-countdown[hidden]{display:none}
-.splash-countdown-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+/* .82 alpha, not .7/.75 — white at those alphas over the translucent card
+   measures 3.97:1 and 4.35:1 against the card's own composited background,
+   both under the 4.5:1 AA floor style-guide.md sets for normal text. .82
+   measures 4.93:1. Applies to the new Today card's labels as well, so the
+   two splash cards stay visually identical. */
+.splash-countdown-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
 .splash-countdown-race{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
 .splash-countdown-time{margin-top:2px;font-family:var(--fd);font-size:22px;font-weight:600;letter-spacing:-.3px;color:#fff}
-.splash-countdown-time .u{font-size:14px;font-weight:500;color:rgba(255,255,255,.75)}
+.splash-countdown-time .u{font-size:14px;font-weight:500;color:rgba(255,255,255,.82)}
+
+/* Splash "Today" card — sibling of the race countdown, same translucent-on-
+   --blue treatment. Unlike the countdown (which stays in the DOM behind
+   [hidden]), renderSplashToday() builds and removes this node outright, so
+   "no plan anywhere in this week" leaves nothing behind at all. */
+.splash-today{margin-top:14px;padding:14px 18px;width:100%;max-width:300px;box-sizing:border-box;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+.splash-countdown[hidden] + .splash-today{margin-top:56px}
+.splash-today-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
+.splash-today-list{list-style:none;margin:0;padding:0}
+.splash-today-item + .splash-today-item{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.22)}
+.splash-today-btn{display:block;width:100%;min-height:44px;padding:2px 0;background:none;border:none;text-align:center;cursor:pointer;font:inherit}
+/* The global focus ring is --blue, which is also the splash background — it
+   would be invisible here. These are the only focusable controls on the
+   splash, so they need a white ring (6.65:1 against the card) to satisfy
+   WCAG 2.4.7 / 1.4.11. */
+.splash-today-btn:focus,.splash-today-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.splash-today-name{display:block;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35;overflow-wrap:anywhere}
+.splash-today-meta{display:block;margin-top:2px;font-family:var(--fd);font-size:13px;font-weight:500;color:rgba(255,255,255,.82);overflow-wrap:anywhere}
+.splash-today-rest{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
+
+/* Planned-session cards at the top of the check-in flow's first page. A
+   shortcut into the same form — every value they set stays freely editable,
+   and none of them is ever a1 (see CLAUDE.md decision 29). */
+.flow-plan{margin-bottom:2.5rem}
+.flow-plan-eyebrow{font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.flow-plan-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin:.6rem 0 0;padding:0}
+.flow-plan-card{display:block;width:100%;min-height:44px;padding:12px 14px;text-align:left;background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rmd);cursor:pointer;font:inherit;box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
+.flow-plan-card:hover{border-color:var(--blue)}
+.flow-plan-hd{display:flex;align-items:center;gap:10px}
+.flow-plan-dot{flex:none;width:10px;height:10px;border-radius:3px;background:var(--rest)}
+.flow-plan-title{flex:1;min-width:0;font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink);line-height:1.35;overflow-wrap:anywhere}
+.flow-plan-key{flex:none;padding:3px 9px;border-radius:999px;background:var(--phase-peak-l);color:var(--phase-peak);font-family:var(--fd);font-size:11px;font-weight:600}
+.flow-plan-meta{display:block;margin-top:4px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.flow-plan-notes{display:block;margin-top:8px;font-family:var(--fb);font-size:13.5px;color:var(--ink2);line-height:1.5;overflow-wrap:anywhere}
+.flow-plan-cta{display:block;margin-top:10px;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue)}
 
 /* ── One-time training phase screen ── */
 .period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;justify-content:center}
@@ -202,6 +245,28 @@ textarea::placeholder{color:var(--ink3)}
 .dash-cell-seg.good{background:var(--dash-good)}
 .dash-cell-seg.mid{background:var(--dash-mid)}
 .dash-cell-seg.bad{background:var(--dash-bad)}
+/* ── Adherence Stage B only (objective, plan-anchored) ──
+   Three states the grid never had to draw before, because every earlier signal
+   started from a logged session. All three are non-text UI components, so each
+   carries a solid 3:1-clearing edge or fill against BOTH --s1 (#FFFFFF, the card)
+   and --s4 (#E8EBF5, the empty cell) per style-guide.md's Accessibility rule.
+   Measured: --dash-bad #C81E1E = 5.74:1 on --s1, 4.82:1 on --s4.
+             --ink3    #626B8C = 5.25:1 on --s1, 4.41:1 on --s4.
+   No new token was needed: both are existing tokens whose semantics already
+   fit (bad-severity red, neutral-informational grey), so there is nothing new
+   to mirror into the design guide's own hardcoded palette copy.
+   KNOWN, PRE-EXISTING, NOT INTRODUCED HERE: --dash-mid #E0A100 measures
+   2.27:1 on --s1 and 1.90:1 on --s4, i.e. the existing `mid` segment has
+   never cleared 3:1 on any signal. Same class of defect as decisions 24 and
+   26. Left unchanged deliberately — darkening it is an app-wide token change
+   affecting every grid, stat bar and insight strip, and belongs in its own
+   pass, not smuggled into this one. See CLAUDE.md decision 30.
+   The hatch fill is decorative — it reads as "absence" rather than a filled
+   outcome — and deliberately carries none of the contrast burden itself. */
+.dash-cell-seg.missed{background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--dash-bad) 42%, transparent) 0 2px, transparent 2px 5px);box-shadow:inset 0 0 0 1.5px var(--dash-bad)}
+.dash-cell-seg.planned{background:transparent;box-shadow:inset 0 0 0 1px var(--ink3)}
+/* An unplanned session is neutral, never a failure — grey, not red. */
+.dash-cell-seg.extra{background:var(--ink3)}
 .dash-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:1.6rem;padding-top:1rem;border-top:0.5px solid var(--bd)}
 .dash-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)}
 .dash-legend-sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;box-sizing:border-box}
@@ -224,6 +289,10 @@ textarea::placeholder{color:var(--ink3)}
 .race-hero-stat b{font-size:18px;font-weight:600;margin-right:5px}
 .race-hero-stat.locked b{color:var(--done-l)}
 .race-hero-stat.considering b{color:var(--phase-build-l)}
+/* Plan reuses the race hero, but not its commitment semantics — planned
+   takes the brand blue (the plan), logged takes the done green. */
+.race-hero-stat.planned b{color:var(--blue-m)}
+.race-hero-stat.logged b{color:var(--done-l)}
 .text-input{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1)}
 .text-input::placeholder{color:var(--ink3)}
 .race-add-toggle{width:100%;min-height:52px;margin-top:1.3rem;padding:14px;border-radius:999px;border:1px solid transparent;background:var(--blue);color:#fff;font-family:var(--fd);font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -272,6 +341,68 @@ textarea::placeholder{color:var(--ink3)}
 .race-card-link:hover{color:var(--blue-m)}
 .race-card-delete{margin-left:auto;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
 .race-card-delete:hover{color:var(--run)}
+/* ── Training plan ───────────────────────────────────────────────────
+   The athlete's own planned sessions, transcribed by hand. Deliberately
+   reuses the Races component language rather than inventing a second one:
+   the same hero, the same label/input field pairs, the same lifted-card
+   shadow and native <details> disclosure. See decision 28 in CLAUDE.md. */
+/* The chip groups are real <fieldset>/<legend> pairs so the group has a
+   programmatic label, not just its first radio. Fieldsets carry a default
+   border the global reset doesn't clear, and an intrinsic min-width that
+   breaks them inside a flex column — both neutralised here. */
+fieldset.plan-field{border:0;min-width:0}
+.plan-field .field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:12px}
+.plan-field .sub{font-weight:400;font-size:12.5px;color:var(--ink2)}
+.plan-field textarea{min-height:48px}
+.plan-week-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:1.6rem;padding:10px 12px;background:var(--s3);border-radius:var(--rmd)}
+.plan-week-nav-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;flex:1}
+.plan-week-num{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink)}
+.plan-week-btn{flex:none;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bd2);border-radius:var(--rmd);background:var(--s1);color:var(--ink);font-family:var(--fd);font-size:17px;font-weight:600;cursor:pointer}
+.plan-week-btn:hover{background:var(--s4)}
+.plan-day{margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--bd)}
+.plan-day-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.plan-day-name{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink)}
+.plan-day.is-today .plan-day-name{color:var(--blue)}
+.plan-day-date{font-family:var(--fm);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.plan-item-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:.7rem}
+.plan-item{background:var(--s1);border-radius:var(--rmd);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);overflow:hidden}
+.plan-item summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:44px}
+.plan-item summary::-webkit-details-marker{display:none}
+.plan-item summary::marker{content:''}
+.plan-item-dot{flex:none;width:10px;height:10px;border-radius:3px;background:var(--rest)}
+.plan-item-main{flex:1;min-width:0}
+.plan-item-title{display:block;font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink);line-height:1.35}
+.plan-item-meta{display:block;margin-top:2px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.plan-item-key{flex:none;padding:3px 9px;border-radius:999px;background:var(--phase-peak-l);color:var(--phase-peak);font-family:var(--fd);font-size:11px;font-weight:600}
+.plan-item-chevron{flex:none;width:16px;height:16px;color:var(--ink3);transition:transform .15s ease}
+.plan-item[open] .plan-item-chevron{transform:rotate(180deg)}
+/* --dash-bad on white is 5.74:1 — clears the 4.5:1 AA bar for body text. */
+.plan-form-error{padding:10px 12px;border-radius:var(--rmd);background:var(--skipped-l);color:var(--dash-bad);font-size:13.5px;font-weight:500;line-height:1.5}
+.plan-form-error[hidden]{display:none}
+.plan-item-body{padding:0 14px 14px}
+.plan-item-notes{font-size:13.5px;color:var(--ink2);line-height:1.5}
+.plan-item-foot{display:flex;justify-content:flex-end;margin-top:12px}
+.plan-item-delete{min-height:44px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
+.plan-item-delete:hover{color:var(--run)}
+/* Dashed border in --blue-m, not --bd3: --bd3 over --bg only reaches
+   1.73:1, under the 3:1 non-text-contrast rule in style-guide.md's
+   Accessibility section. --blue-m clears it at 3.71:1 and ties the outline
+   to the blue label inside it. */
+.plan-day-add{margin-top:.7rem;width:100%;min-height:44px;padding:10px 14px;border:1px dashed var(--blue-m);border-radius:var(--rmd);background:none;color:var(--blue);font-family:var(--fd);font-size:14px;font-weight:600;cursor:pointer}
+.plan-day-add:hover{background:var(--blue-l)}
+.plan-form-wrap[hidden]{display:none}
+.plan-form{margin-top:.8rem;padding:1rem 1.05rem 1.1rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);display:flex;flex-direction:column;gap:14px}
+.plan-form-actions{display:flex;gap:10px;margin-top:2px}
+.plan-form-actions .btn{border-radius:999px}
+.plan-tools{margin-top:2.3rem;padding-top:1.1rem;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:6px}
+.plan-copy summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;font-family:var(--fd);font-size:14px;font-weight:600;color:var(--blue)}
+.plan-copy summary::-webkit-details-marker{display:none}
+.plan-copy summary::marker{content:''}
+.plan-copy-list{list-style:none;display:flex;flex-direction:column;gap:2px;margin-top:.5rem}
+.plan-copy-opt{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;color:var(--ink2)}
+.plan-copy-opt input{flex:none;width:20px;height:20px;accent-color:var(--blue)}
+.plan-clear{align-self:flex-start;min-height:44px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
+.plan-clear:hover{color:var(--run)}
 
 /* ── Warm up ── */
 .warmup-hero{margin-top:1.4rem;padding:1.5rem 1.3rem 1.4rem;border-radius:var(--rxl);background:#182542;color:#fff}
@@ -417,6 +548,14 @@ textarea::placeholder{color:var(--ink3)}
 
   <!-- ══════════ RACE CALENDAR ══════════ -->
   <div class="dash" id="view-races" role="tabpanel" aria-labelledby="tab-races" hidden></div>
+
+  <!-- Training plan — a full view with no bottom-nav tab of its own,
+       reached from the "Edit plan →" link in This week. Same treatment as
+       the Month view (#view-trends): the nav is a fixed five buttons, and a
+       plan editor visited once a week doesn't earn permanent nav space.
+       role="region" rather than "tabpanel" precisely because no tab owns
+       it — it's labelled by its own heading instead. -->
+  <div class="dash" id="view-plan" role="region" aria-labelledby="plan-h" hidden></div>
 
   </div>
   <!-- /#app-main -->
@@ -665,6 +804,7 @@ if(window.caches && caches.keys){
   var PHASE_KEY = 'triMomentumPhase_v1';
   var WARMUP_SESSIONS_KEY = 'triMomentumWarmupSessions_v1';
   var RACES_KEY = 'triMomentumRaces_v1';
+  var PLAN_KEY = 'triMomentumPlan_v1';
   var storageOk = true;
   try{ window.localStorage.setItem('__tri_test__','1'); window.localStorage.removeItem('__tri_test__'); }
   catch(e){ storageOk = false; }
@@ -715,6 +855,18 @@ if(window.caches && caches.keys){
   function persistRaces(){
     if(!storageOk){ return; }
     try{ window.localStorage.setItem(RACES_KEY, JSON.stringify(races)); } catch(e){}
+  }
+  function loadPlan(){
+    if(!storageOk){ return []; }
+    try{
+      var raw = window.localStorage.getItem(PLAN_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch(e){ return []; }
+  }
+  function persistPlan(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(PLAN_KEY, JSON.stringify(plan)); } catch(e){}
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -827,6 +979,72 @@ if(window.caches && caches.keys){
 
   var races = loadRaces(); // cached copy; replaced by refreshRacesFromSheet() as soon as the Sheet responds
 
+  // ═══════════════════════════════════════════════════════════════
+  // TRAINING PLAN SYNC — same Sheet, same pattern as races above: a third
+  // sheet tab ("Plan", created on demand by Code.gs) is the cross-device
+  // source of truth for the athlete's manually-entered planned sessions.
+  // Client-generated ids, fire-and-forget no-cors writes, cors reads.
+  //
+  // Two extra actions beyond the race pattern — addBatch and deleteWeek.
+  // A week's plan is ~10 sessions, and firing 10 concurrent no-cors POSTs
+  // races on the script's appendRow; one batched request per copy-week and
+  // one per clear-week keeps a full week's entry to a couple of writes.
+  // ═══════════════════════════════════════════════════════════════
+  var PLAN_READ_URL = TRAINING_LOG_WRITE_URL + '?plan=1';
+  function newPlanId(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  // `extra` carries whatever the action needs beyond a single item —
+  // {items:[...]} for addBatch, {from,to} for deleteWeek.
+  function submitPlanToSheet(action, item, extra){
+    if(!TRAINING_LOG_WRITE_URL){ return; }
+    var payload = {kind: 'plan', action: action};
+    if(item){ payload.item = item; }
+    if(extra){
+      for(var k in extra){ if(Object.prototype.hasOwnProperty.call(extra, k)){ payload[k] = extra[k]; } }
+    }
+    try{
+      fetch(TRAINING_LOG_WRITE_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify(payload)
+      // fetch() rejects a promise on a network failure rather than throwing
+      // synchronously, so the try/catch alone doesn't swallow it — without
+      // this, going offline logs an "Uncaught (in promise)" for every write.
+      // Same trade-off as submitSessionToSheet: best-effort, never blocks.
+      }).catch(function(){});
+    } catch(err){ /* best-effort — same trade-off as submitSessionToSheet */ }
+  }
+  // Normalises a row coming back from the Sheet into the same shape the
+  // client builds locally, so a planned session round-trips unchanged.
+  // Duration is coerced here rather than trusted, since the Plan tab is
+  // meant to be hand-editable and a human may type "60 min".
+  function parseSheetPlanItem(row){
+    var dur = parseInt(row.duration, 10);
+    return {
+      id: String(row.id || ''), date: row.date || '', disc: row.disc || '',
+      title: row.title || '', intensity: row.intensity || '',
+      duration: isNaN(dur) ? null : dur,
+      key: row.key === true || row.key === 'TRUE' || row.key === 'true',
+      notes: row.notes || '', phase: row.phase || ''
+    };
+  }
+  var planFetchInFlight = null;
+  function refreshPlanFromSheet(){
+    if(planFetchInFlight){ return planFetchInFlight; }
+    planFetchInFlight = fetch(PLAN_READ_URL)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(!data || !data.ok || !Array.isArray(data.plan)){ throw new Error('bad response'); }
+        plan = data.plan.map(parseSheetPlanItem);
+        persistPlan();
+        return true;
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ planFetchInFlight = null; return ok; });
+    return planFetchInFlight;
+  }
+
+  var plan = loadPlan(); // cached copy; replaced by refreshPlanFromSheet() as soon as the Sheet responds
+
   // ── Dates ─────────────────────────────────────────────────────
   var MONTH_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   function isoDate(d){
@@ -835,11 +1053,20 @@ if(window.caches && caches.keys){
   }
   function todayISO(){ return isoDate(new Date()); }
   var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Weekday + day + month, e.g. "Mon 10 Aug" — the app's base date label,
+  // and the one source the three variants below all build on so they can't
+  // drift apart: formatDateLabel substitutes "Today", formatRaceDateLabel
+  // appends the year, and the Plan view's aria-labels and announcements use
+  // this plain form directly (a "Remove X from Today" label is ambiguous in
+  // a seven-day list where every row needs naming unambiguously).
+  function formatWeekdayDate(iso){
+    var d = new Date(iso + 'T00:00:00');
+    return MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()];
+  }
   function formatDateLabel(iso){
     if(!iso){ return null; }
     if(iso === todayISO()){ return 'Today'; }
-    var d = new Date(iso + 'T00:00:00');
-    return MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()];
+    return formatWeekdayDate(iso);
   }
   function mondayOf(d){
     var m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -860,8 +1087,7 @@ if(window.caches && caches.keys){
 
   // ── Races ─────────────────────────────────────────────────────
   function formatRaceDateLabel(iso){
-    var d = new Date(iso + 'T00:00:00');
-    return MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+    return formatWeekdayDate(iso) + ' ' + new Date(iso + 'T00:00:00').getFullYear();
   }
   // Whole days between today and iso (positive = future). Both sides are
   // taken at local midnight so a race "today" always reads as 0, never -1
@@ -925,8 +1151,15 @@ if(window.caches && caches.keys){
   }
 
   // Weeks to show in Month: every week (going back) that has at least one
-  // logged session, plus the current week always — capped to 6 so a long
-  // history doesn't turn into an endless scroll on a phone.
+  // logged session OR at least one planned session, plus the current week
+  // always — capped to 6 so a long history doesn't turn into an endless
+  // scroll on a phone.
+  //
+  // The plan clause is not cosmetic. Until it was added, a week that was fully
+  // planned and completely missed — the single most informative week the
+  // Adherence signal exists to report on — was silently absent from Month,
+  // because the only inclusion test was "has a logged entry" and a missed week
+  // has none by definition. See CLAUDE.md decision 30.
   var MAX_MONTH_WEEKS = 6;
   function monthWeeks(){
     var todayMonday = mondayOf(new Date());
@@ -934,11 +1167,19 @@ if(window.caches && caches.keys){
     for(var i = 0; i < 26 && weeks.length < MAX_MONTH_WEEKS; i++){
       var monday = addDays(todayMonday, -7*i);
       var days = buildWeek(monday);
-      var hasAny = days.some(function(d){ return d.entries.length; });
+      var weekPlan = planItemsInWeek(isoDate(monday));
+      var hasAny = days.some(function(d){ return d.entries.length; }) || weekPlan.length > 0;
       var isCurrent = i === 0;
       if(!hasAny && !isCurrent){ continue; }
       var phaseCounts = {};
       days.forEach(function(d){ d.entries.forEach(function(e){ if(e.phase){ var pk = normalizePhaseKey(e.phase); phaseCounts[pk] = (phaseCounts[pk]||0)+1; } }); });
+      // A plan-only week has no logged entries to read a phase off, so fall
+      // back to the phase its planned rows carry before falling back to the
+      // global once-ever setting — otherwise every missed week shows the
+      // athlete's *current* phase pill rather than the one it was planned in.
+      if(!Object.keys(phaseCounts).length){
+        weekPlan.forEach(function(p){ if(p.phase){ var pk = normalizePhaseKey(p.phase); phaseCounts[pk] = (phaseCounts[pk]||0)+1; } });
+      }
       var topPhase = null, topN = 0;
       Object.keys(phaseCounts).forEach(function(p){ if(phaseCounts[p] > topN){ topN = phaseCounts[p]; topPhase = p; } });
       var weekNum = isoWeekNumber(monday);
@@ -961,6 +1202,7 @@ if(window.caches && caches.keys){
     periodisation: loadPhase(),
     monthSignal: 'intensity',
     weekSignal: 'intensity',
+    planWeek: weekKey(new Date()),  // Monday (ISO) of the week the Plan view is showing
     warmupDisc: 'swim',
     warmupChecked: {},
     warmupSessions: loadWarmupSessions(),
@@ -1001,6 +1243,11 @@ if(window.caches && caches.keys){
   var DASH_DISCIPLINES = ['swim','bike','run','brick','strength'];
   var DRIFT_CAT = {intent:'good', slight:'mid', well:'bad'};
   var FUEL_CAT  = {race:'good', lighter:'mid', no:'bad'};
+  // Adherence reads a2 ("Did you do it as planned?"), which the check-in has
+  // always captured and written to the Sheet's VsPlan column but which nothing
+  // read back until now. Shortened and substituted are deliberately 'mid', not
+  // 'bad' — the question's own hint promises they're flagged, not penalised.
+  var PLAN_CAT  = {planned:'good', short:'mid', sub:'mid', didnt:'bad'};
   var STAT_MIN_N = 8;
   var NUMBER_WORDS = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine'];
   function numWord(n){ return (n >= 0 && n < 10) ? NUMBER_WORDS[n] : String(n); }
@@ -1009,6 +1256,119 @@ if(window.caches && caches.keys){
     if(!session || !isLong(session.duration)) return null;
     return FUEL_CAT[session.a3] || null;
   }
+  function planCat(session){ return session ? (PLAN_CAT[session.a2] || null) : null; }
+
+  // ═══ ADHERENCE STAGE B — objective, plan-anchored ═══
+  //
+  // Stage A (planCat over the self-reported a2 field, above) is not replaced.
+  // It stays exactly as shipped and still runs whenever the displayed period
+  // contains no planned sessions at all — which is every period for an athlete
+  // who has never opened the Plan view. Stage B takes over the moment any plan
+  // row falls inside the period, and answers the question Stage A structurally
+  // cannot: what was planned and never happened. See CLAUDE.md decision 30.
+  //
+  // Every existing tally short-circuits on `if(!d.session) return;`, so a day
+  // with a planned session and no logged one is invisible to all of them.
+  // That day is the whole point of this signal, which is why tallyDays()
+  // cannot be reused here and tallyPlanDays() exists instead.
+  // Memoises the greedy match per day object. Safe only because of one
+  // invariant, which is why it's written down: buildWeek() constructs brand-new
+  // day objects (and brand-new `entries` arrays) on every call, and nothing
+  // mutates a day in place afterwards — so a cached result can never outlive
+  // the data it was computed from. A Month render calls monthWeeks() a dozen
+  // times over (once per discipline in the By-discipline strip, again for the
+  // week blocks), and each planDayResults() is O(planned × logged), so this is
+  // worth having. If day objects ever start being reused or mutated across a
+  // plan refresh, this cache turns into a silent wrong-answer bug — delete it
+  // rather than trying to invalidate it.
+  var PLAN_MATCH_CACHE = new WeakMap();
+
+  function daysHavePlan(days){
+    return days.some(function(d){ return planItemsFor(d.date).length > 0; });
+  }
+
+  // Planned duration is free minutes; logged duration is one of three buckets
+  // (30 / 60 / 120). Comparing them with the raw 25% rule alone would score a
+  // 90-min planned session logged at its own pre-filled '60' bucket as
+  // shortened — i.e. the Phase 2 pre-fill would manufacture false shortfalls
+  // in the signal it was built to serve. Bucket parity is therefore checked
+  // first, as an invariant: accepting the pre-fill always scores good.
+  function planDurationOk(item, entry){
+    var plannedMin = parseInt(item.duration, 10);
+    var loggedMin  = parseInt(entry.duration, 10);
+    if(!isFinite(plannedMin) || plannedMin <= 0 || !isFinite(loggedMin)){ return true; }
+    if(String(entry.duration) === planDurationBucket(item.duration)){ return true; }
+    return loggedMin >= plannedMin * 0.75;
+  }
+
+  // Greedy one-to-one match by (date, disc): each planned session consumes at
+  // most one logged entry, each logged entry satisfies at most one planned
+  // session, walked in array order. Two planned + two logged swims on one day
+  // therefore produce two scored results, not one match plus a false miss plus
+  // a false extra — decision 27 confirmed same-day, same-discipline doubles are
+  // a real case in this app, so that is the case this rule exists for.
+  //
+  // Known limitation: with two planned swims of different durations on one day
+  // and two logged swims, which logged entry pairs with which planned session
+  // is arbitrary (array order), so the good/mid split between them can be the
+  // wrong way round. The count is right; the attribution may not be. An exact
+  // planId stamped on the check-in would remove the heuristic entirely and is
+  // deliberately deferred — it needs a new column on the session sheet.
+  function planDayResults(dayEntry){
+    var cached = PLAN_MATCH_CACHE.get(dayEntry);
+    if(cached){ return cached; }
+    var today = todayISO();
+    var planned = planItemsFor(dayEntry.date);
+    var pool = dayEntry.entries;
+    var used = [];
+    var results = [];
+    planned.forEach(function(item){
+      var match = null;
+      for(var i = 0; i < pool.length; i++){
+        if(used[i]){ continue; }
+        if(pool[i].disc !== item.disc){ continue; }
+        used[i] = true; match = pool[i]; break;
+      }
+      var cat;
+      if(!match){
+        // Not yet due is not a miss. Only a planned session whose day has
+        // already passed can be scored bad; today's and any future day are
+        // 'pending' and stay out of the good/mid/bad tally entirely — without
+        // this, every week would read as failing from Monday morning onward.
+        cat = dayEntry.date < today ? 'bad' : 'pending';
+      } else if(match.a2 === 'didnt'){
+        cat = 'bad';
+      } else if(match.a2 === 'short' || match.a2 === 'sub' || !planDurationOk(item, match)){
+        cat = 'mid';
+      } else {
+        cat = 'good';
+      }
+      results.push({item:item, entry:match, cat:cat, day:dayEntry.day, disc:item.disc, key:!!item.key});
+    });
+    // Leftover logged entries are extras — counted and reported, never scored
+    // as bad. An unplanned session is not a failure, and treating it as one
+    // would make the whole signal actively misleading.
+    var extras = pool.filter(function(e, i){ return !used[i]; });
+    var out = {results:results, extras:extras};
+    PLAN_MATCH_CACHE.set(dayEntry, out);
+    return out;
+  }
+
+  // Same {good, mid, bad, total} shape tallyDays() returns, so renderSignalBody()
+  // and renderStatBar() work unchanged — plus `extra` and `pending` alongside.
+  function tallyPlanDays(days){
+    var t = {good:0, mid:0, bad:0, total:0, extra:0, pending:0};
+    days.forEach(function(d){
+      var r = planDayResults(d);
+      r.results.forEach(function(res){
+        if(res.cat === 'pending'){ t.pending++; return; }
+        t[res.cat]++; t.total++;
+      });
+      t.extra += r.extras.length;
+    });
+    return t;
+  }
+
   function tallyDays(days, catFn){
     var t = {good:0, mid:0, bad:0, total:0};
     days.forEach(function(d){
@@ -1029,6 +1389,26 @@ if(window.caches && caches.keys){
       var c = catFn(e);
       cell.appendChild(el('div', 'dash-cell-seg' + (c ? ' ' + c : ' na')));
     });
+    return cell;
+  }
+  // Stage B's cell. Unlike dashCell() it is driven by the *plan*, not the log,
+  // so it can draw a segment for a session that was planned and never logged —
+  // something the grid has never had to represent. Note the deliberate split
+  // between the two ways a session can score bad: `missed` (hatched, no logged
+  // entry at all) vs `bad` (solid, logged but reported as not done). They are
+  // different facts and the grid says so.
+  function planDashCell(dayEntry, disc){
+    var r = planDayResults(dayEntry);
+    var segs = [];
+    r.results.forEach(function(res){
+      if(res.disc !== disc){ return; }
+      if(res.cat === 'pending'){ segs.push('planned'); }
+      else if(res.cat === 'bad' && !res.entry){ segs.push('missed'); }
+      else { segs.push(res.cat); }
+    });
+    r.extras.forEach(function(e){ if(e.disc === disc){ segs.push('extra'); } });
+    var cell = el('div', 'dash-cell' + (segs.length > 1 ? ' multi' : ''));
+    segs.forEach(function(s){ cell.appendChild(el('div', 'dash-cell-seg ' + s)); });
     return cell;
   }
   function dashMatrixHeader(sub, weekLabel){
@@ -1061,20 +1441,24 @@ if(window.caches && caches.keys){
     frag.appendChild(change);
     return frag;
   }
-  function dashMatrixGrid(catFn, days){
+  // cellFn is the Stage B seam: pass planDashCell to draw the grid from the
+  // plan instead of from catFn over logged entries. Omitted everywhere else,
+  // so Intensity, Fuelling and Stage A Adherence keep the exact code path
+  // they had before.
+  function dashMatrixGrid(catFn, days, cellFn){
     var grid = el('div', 'dash-grid');
     grid.appendChild(el('div'));
     days.forEach(function(d){ grid.appendChild(el('div', 'dash-grid-day', d.day.charAt(0))); });
     DASH_DISCIPLINES.forEach(function(disc){
       grid.appendChild(el('div', 'dash-grid-disc', DISC_LABEL[disc]));
-      days.forEach(function(d){ grid.appendChild(dashCell(d, disc, catFn)); });
+      days.forEach(function(d){ grid.appendChild(cellFn ? cellFn(d, disc) : dashCell(d, disc, catFn)); });
     });
     return grid;
   }
-  function dashMatrix(sub, catFn, days, weekLabel){
+  function dashMatrix(sub, catFn, days, weekLabel, cellFn){
     var frag = document.createDocumentFragment();
     frag.appendChild(dashMatrixHeader(sub, weekLabel));
-    frag.appendChild(dashMatrixGrid(catFn, days));
+    frag.appendChild(dashMatrixGrid(catFn, days, cellFn));
     return frag;
   }
   function renderStatBar(t, bigDesc){
@@ -1128,9 +1512,9 @@ if(window.caches && caches.keys){
     wrap.appendChild(counts);
     if(opts.weekLabel){
       wrap.appendChild(dashMatrixHeader(opts.matrixSub, null));
-      wrap.appendChild(dashMatrixGrid(catFn, days));
+      wrap.appendChild(dashMatrixGrid(catFn, days, opts.cellFn));
     } else {
-      wrap.appendChild(dashMatrix(opts.matrixSub, catFn, days));
+      wrap.appendChild(dashMatrix(opts.matrixSub, catFn, days, null, opts.cellFn));
     }
   }
   function dashSignalSection(label, t, catFn, insight, opts, days){
@@ -1147,55 +1531,117 @@ if(window.caches && caches.keys){
     wrap.appendChild(link);
     return wrap;
   }
-  function dashLegendItem(color, label, hairline){
+  // segClass, when given, styles the swatch with the *same* .dash-cell-seg
+  // rule the grid uses, so a legend entry can never drift from what it claims
+  // to describe. (.dash-legend-sw's own flex:none is declared after
+  // .dash-cell-seg's flex:1, so it still wins outside a flex container.)
+  function dashLegendItem(color, label, segClass){
     var it = el('div', 'dash-legend-item');
     var sw = document.createElement('span');
-    sw.className = 'dash-legend-sw';
-    if(hairline){ sw.style.border = '1px solid var(--bd2)'; }
-    else{ sw.style.background = color; }
+    sw.className = 'dash-legend-sw' + (segClass ? ' dash-cell-seg ' + segClass : '');
+    if(!segClass){ sw.style.background = color; }
     it.appendChild(sw);
     it.appendChild(document.createTextNode(label));
     return it;
   }
-  function dashLegend(){
+  // The legend was previously hardcoded to the drift/fuelling vocabulary ("on
+  // plan / slightly off / well off") and shown under all three subtabs, so it
+  // already described Adherence wrongly before Stage B existed. It now takes
+  // the signal it is captioning, and a stageB flag for the plan-anchored
+  // vocabulary, which is a different set of states — not different words for
+  // the same ones.
+  var LEGEND_LABELS = {
+    intensity: ['at intent', 'slightly over', 'well over'],
+    fuelling:  ['race conc.', 'lighter', 'none'],
+    adherence: ['as planned', 'adjusted', 'didn’t happen']
+  };
+  function dashLegend(signal, stageB){
     var legend = el('div', 'dash-legend');
-    legend.appendChild(dashLegendItem('var(--dash-good)', 'on plan'));
-    legend.appendChild(dashLegendItem('var(--dash-mid)', 'slightly off'));
-    legend.appendChild(dashLegendItem('var(--dash-bad)', 'well off'));
-    legend.appendChild(dashLegendItem(null, 'not asked', true));
+    if(stageB){
+      legend.appendChild(dashLegendItem('var(--dash-good)', 'as planned'));
+      legend.appendChild(dashLegendItem('var(--dash-mid)', 'adjusted'));
+      legend.appendChild(dashLegendItem('var(--dash-bad)', 'logged, off plan'));
+      legend.appendChild(dashLegendItem(null, 'missed', 'missed'));
+      legend.appendChild(dashLegendItem(null, 'not due yet', 'planned'));
+      legend.appendChild(dashLegendItem('var(--ink3)', 'unplanned'));
+      legend.appendChild(dashLegendItem('var(--s4)', 'nothing planned'));
+      return legend;
+    }
+    var labels = LEGEND_LABELS[signal] || LEGEND_LABELS.intensity;
+    legend.appendChild(dashLegendItem('var(--dash-good)', labels[0]));
+    legend.appendChild(dashLegendItem('var(--dash-mid)', labels[1]));
+    legend.appendChild(dashLegendItem('var(--dash-bad)', labels[2]));
+    legend.appendChild(dashLegendItem(null, 'not asked', 'na'));
     legend.appendChild(dashLegendItem('var(--s4)', 'no session'));
     return legend;
   }
-  function computeSignalFacts(weeks, catFn){
+  // The compound-pair / bounce-back / good-streak vocabulary every signal's
+  // rule set reads. `units` is a flat, chronological list of {day, disc, cat}:
+  // logged sessions for Intensity and Fuelling, scored *planned* sessions for
+  // Stage B Adherence. Extracted so Stage B extends the facts shape rather
+  // than forking the rule set — the existing compound/isolated/clean rules
+  // then work unchanged whichever kind of unit fed them.
+  function accumulateFacts(units){
     var badCount = 0, goodCount = 0, total = 0, compoundPairs = 0, firstPair = null;
     var bounceBackPairs = 0, firstBounceBack = null, prevBad = null, curStreak = 0, goodStreak = 0;
+    units.forEach(function(u){
+      total++;
+      if(u.cat === 'good'){
+        goodCount++; curStreak++;
+        if(curStreak > goodStreak){ goodStreak = curStreak; }
+        if(prevBad){
+          bounceBackPairs++;
+          if(!firstBounceBack){ firstBounceBack = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: u.day, disc2: DISC_LABEL[u.disc]}; }
+        }
+        prevBad = null;
+      } else if(u.cat === 'bad'){
+        curStreak = 0; badCount++;
+        if(prevBad){
+          compoundPairs++;
+          if(!firstPair){ firstPair = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: u.day, disc2: DISC_LABEL[u.disc]}; }
+        }
+        prevBad = {day: u.day, disc: u.disc};
+      } else {
+        curStreak = 0; prevBad = null;
+      }
+    });
+    return {badCount:badCount, goodCount:goodCount, total:total, compoundPairs:compoundPairs, firstPair:firstPair, bounceBackPairs:bounceBackPairs, firstBounceBack:firstBounceBack, goodStreak:goodStreak};
+  }
+  function computeSignalFacts(weeks, catFn){
+    var units = [];
     weeks.forEach(function(w){
       w.days.forEach(function(d){
         if(!d.session){ return; }
         var cat = catFn(d.session);
         if(cat === null){ return; }
-        total++;
-        if(cat === 'good'){
-          goodCount++; curStreak++;
-          if(curStreak > goodStreak){ goodStreak = curStreak; }
-          if(prevBad){
-            bounceBackPairs++;
-            if(!firstBounceBack){ firstBounceBack = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: d.day, disc2: DISC_LABEL[d.session.disc]}; }
-          }
-          prevBad = null;
-        } else if(cat === 'bad'){
-          curStreak = 0; badCount++;
-          if(prevBad){
-            compoundPairs++;
-            if(!firstPair){ firstPair = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: d.day, disc2: DISC_LABEL[d.session.disc]}; }
-          }
-          prevBad = {day: d.day, disc: d.session.disc};
-        } else {
-          curStreak = 0; prevBad = null;
-        }
+        units.push({day: d.day, disc: d.session.disc, cat: cat});
       });
     });
-    return {badCount:badCount, goodCount:goodCount, total:total, compoundPairs:compoundPairs, firstPair:firstPair, bounceBackPairs:bounceBackPairs, firstBounceBack:firstBounceBack, goodStreak:goodStreak};
+    return accumulateFacts(units);
+  }
+  // Stage B's facts. Same vocabulary as above, computed over planned sessions
+  // instead of logged ones, plus the two fields only the plan can supply:
+  // missedKey (the first missed key:true session) and extraCount.
+  function computePlanSignalFacts(weeks){
+    var units = [], extraCount = 0, pendingCount = 0, missedKey = null;
+    weeks.forEach(function(w){
+      w.days.forEach(function(d){
+        var r = planDayResults(d);
+        r.results.forEach(function(res){
+          if(res.cat === 'pending'){ pendingCount++; return; }
+          units.push({day: res.day, disc: res.disc, cat: res.cat});
+          if(res.cat === 'bad' && res.key && !missedKey){
+            missedKey = {day: res.day, disc: DISC_LABEL[res.disc] || res.disc, title: (res.item.title || '')};
+          }
+        });
+        extraCount += r.extras.length;
+      });
+    });
+    var f = accumulateFacts(units);
+    f.missedKey = missedKey;
+    f.extraCount = extraCount;
+    f.pendingCount = pendingCount;
+    return f;
   }
 
   var DRIFT_INSIGHT_RULES = [
@@ -1256,6 +1702,69 @@ if(window.caches && caches.keys){
     return matches[0];
   }
 
+  // 'mid' here is shortened-or-substituted, which computeSignalFacts doesn't
+  // count directly — it's whatever isn't good and isn't bad.
+  function adherenceAdjusted(f){ return f.total - f.goodCount - f.badCount; }
+  var ADHERENCE_INSIGHT_RULES = [
+    // Stage B only — missedKey, extraCount and pendingCount are undefined in
+    // Stage A's facts, so these three simply never match there and the rule
+    // set stays a single shared list rather than two divergent ones.
+    //
+    // This is the rule that makes the `key` flag load-bearing rather than
+    // merely stored: at priority 5 it outranks every other rule, so one missed
+    // key session forces the period's severity to bad no matter how clean the
+    // rest of the week was.
+    {id:'missed_key_session', priority:5, severity:'bad',
+      match:function(f){ return !!f.missedKey; },
+      headline:function(f){
+        var when = WEEKDAY_FULL[f.missedKey.day] || f.missedKey.day;
+        // With a title the em-dashes do the setting-off, so the comma after
+        // "session" has to go — otherwise it reads "Your key session, — VO2
+        // 5x3min — the run on…". Without a title the comma is what sets the
+        // clause off instead. Both forms verified rendered, not just read.
+        var lead = f.missedKey.title ? (' — ' + f.missedKey.title + ' — ') : ', ';
+        return 'Your key session' + lead + 'the ' + f.missedKey.disc.toLowerCase() + ' on ' + when + ', didn’t happen. That’s the one the week was built around; the easy sessions can slide without costing much, that one can’t.';
+      }},
+    {id:'plan_nothing_due_yet', priority:8, severity:'mid',
+      match:function(f){ return f.total === 0 && f.pendingCount > 0; },
+      headline:function(f){ return numWord(f.pendingCount) + (f.pendingCount === 1 ? ' session is planned this week and it hasn’t come due yet.' : ' sessions are planned this week and none has come due yet.'); }},
+    {id:'compound_missed_2plus', priority:10, severity:'bad',
+      match:function(f){ return f.compoundPairs >= 2; },
+      headline:function(f){ return numWord(f.compoundPairs) + ' times this week, a session you didn’t do was followed by another one you didn’t do — that’s a week coming apart rather than a session skipped, so look at what’s crowding the week before you look at the training.'; }},
+    {id:'compound_missed_1', priority:20, severity:'bad',
+      match:function(f){ return f.compoundPairs === 1; },
+      headline:function(f){ return 'Your ' + f.firstPair.disc1 + ' on ' + f.firstPair.day1 + ' didn’t happen, and the ' + f.firstPair.disc2 + ' on ' + f.firstPair.day2 + ' that followed didn’t either — one data point, worth watching before missing becomes the default.'; }},
+    {id:'bounce_back_adherence', priority:25, severity:'mid',
+      match:function(f){ return f.badCount > 0 && f.compoundPairs === 0 && f.bounceBackPairs > 0; },
+      headline:function(f){ return 'Your ' + f.firstBounceBack.disc1 + ' on ' + f.firstBounceBack.day1 + ' didn’t happen, but the ' + f.firstBounceBack.disc2 + ' on ' + f.firstBounceBack.day2 + ' right after went as planned — the miss didn’t carry into the next one.'; }},
+    {id:'isolated_missed', priority:30, severity:'mid',
+      match:function(f){ return f.badCount > 0 && f.compoundPairs === 0; },
+      headline:function(f){ return numWord(f.badCount) + (f.badCount === 1 ? ' planned session didn’t happen' : ' planned sessions didn’t happen') + ' this week, but the rest of the week held — no back-to-back pattern.'; }},
+    {id:'all_shortened', priority:35, severity:'mid',
+      match:function(f){ return f.total > 0 && f.badCount === 0 && adherenceAdjusted(f) > 0; },
+      headline:function(f){
+        var n = adherenceAdjusted(f);
+        return numWord(n) + (n === 1 ? ' session was shortened or substituted' : ' sessions were shortened or substituted') + ' this week, but nothing was missed outright — the week’s shape held even where the sessions didn’t match the plan.';
+      }},
+    {id:'clean_week_with_extra', priority:38, severity:'good',
+      match:function(f){ return f.total > 0 && f.badCount === 0 && f.goodCount === f.total && f.extraCount > 0; },
+      headline:function(f){ return 'Every planned session this week happened, plus ' + numWord(f.extraCount).toLowerCase() + (f.extraCount === 1 ? ' that wasn’t planned — extra on top of a complete week, not instead of one.' : ' that weren’t planned — extra on top of a complete week, not instead of one.'); }},
+    {id:'clean_week_adherence', priority:40, severity:'good',
+      match:function(f){ return f.total > 0 && f.badCount === 0 && f.goodCount === f.total; },
+      headline:function(f){
+        if(f.goodStreak >= 5){ return 'Every session this week went as planned — ' + numWord(f.goodStreak) + ' in a row, the plan and the week are the same thing right now.'; }
+        return 'Every session this week went as planned.';
+      }},
+    {id:'no_adherence_data', priority:45, severity:'mid',
+      match:function(f){ return f.total === 0; },
+      headline:function(){ return 'Nothing logged yet this week that says whether it went to plan.'; }}
+  ];
+  function resolveAdherenceInsight(facts){
+    var matches = ADHERENCE_INSIGHT_RULES.filter(function(r){ return r.match(facts); });
+    matches.sort(function(a,b){ return a.priority - b.priority; });
+    return matches[0];
+  }
+
   var WEEKDAY_FULL = {Mon:'Monday', Tue:'Tuesday', Wed:'Wednesday', Thu:'Thursday', Fri:'Friday', Sat:'Saturday', Sun:'Sunday'};
   var DISC_SINGULAR_NOUN = {swim:'swim', bike:'bike', run:'run', brick:'brick', strength:'strength session'};
   var DISC_PLURAL_NOUN   = {swim:'swims', bike:'bikes', run:'runs', brick:'bricks', strength:'strength sessions'};
@@ -1281,6 +1790,26 @@ if(window.caches && caches.keys){
     });
     return t;
   }
+  // Stage B's per-discipline tally. Without this, the By-discipline strip
+  // would still be reading self-reported a2 values while the section directly
+  // below it reads the plan — so a fully missed Tuesday swim could headline as
+  // "Every Tuesday swim this month went as planned" three centimetres above a
+  // grid row of hatched misses. Same switch predicate as everywhere else.
+  function disciplinePlanTally(disc){
+    var t = {good:0, mid:0, bad:0, total:0};
+    monthWeeks().forEach(function(w){
+      w.days.forEach(function(d){
+        planDayResults(d).results.forEach(function(res){
+          if(res.disc !== disc || res.cat === 'pending'){ return; }
+          t[res.cat]++; t.total++;
+        });
+      });
+    });
+    return t;
+  }
+  function monthHasPlan(){
+    return monthWeeks().some(function(w){ return daysHavePlan(w.days); });
+  }
   function disciplineSeverity(t){ return t.bad ? 'bad' : (t.mid ? 'mid' : 'good'); }
   function disciplineDriftHeadline(disc, t, weekday){
     var one  = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_SINGULAR_NOUN[disc]) : DISC_SINGULAR_NOUN[disc];
@@ -1300,12 +1829,21 @@ if(window.caches && caches.keys){
     if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' over 45 min ran lighter than race concentration this month.'; }
     return 'Every ' + one + ' over 45 min this month was fuelled at race concentration.';
   }
-  function renderDisciplineInsights(catFn, headlineFn){
+  function disciplineAdherenceHeadline(disc, t, weekday){
+    var one  = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_SINGULAR_NOUN[disc]) : DISC_SINGULAR_NOUN[disc];
+    var many = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_PLURAL_NOUN[disc])   : DISC_PLURAL_NOUN[disc];
+    if(t.bad === t.total){ return 'Not one ' + one + ' this month happened.'; }
+    if(t.mid === t.total){ return 'Every ' + one + ' this month was shortened or substituted.'; }
+    if(t.bad){ return numWord(t.bad) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' didn’t happen this month.'; }
+    if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + (t.mid === 1 ? ' was' : ' were') + ' shortened or substituted this month.'; }
+    return 'Every ' + one + ' this month went as planned.';
+  }
+  function renderDisciplineInsights(catFn, headlineFn, tallyFn){
     var wrap = el('div', 'dash-section');
     wrap.setAttribute('data-label', 'By discipline');
     var any = false;
     DASH_DISCIPLINES.forEach(function(disc){
-      var t = disciplineTally(disc, catFn);
+      var t = tallyFn ? tallyFn(disc) : disciplineTally(disc, catFn);
       if(!t.total){ return; }
       any = true;
       var weekday = disciplineWeekday(disc);
@@ -1348,11 +1886,20 @@ if(window.caches && caches.keys){
     weeks.forEach(function(w){
       var block = el('div', 'month-week-block');
       block.appendChild(monthWeekHeader(w));
-      var t = tallyDays(w.days, catFn);
-      var facts = computeSignalFacts([{wk:w.wk, days:w.days}], catFn);
+      // The Stage A/B switch is per *week*, not per view: a month can contain
+      // both weeks the athlete planned and weeks they didn't, and each should
+      // be reported the most precise way its own data allows.
+      var useB = !!opts.planAware && daysHavePlan(w.days);
+      var t = useB ? tallyPlanDays(w.days) : tallyDays(w.days, catFn);
+      var facts = useB ? computePlanSignalFacts([{wk:w.wk, days:w.days}])
+                       : computeSignalFacts([{wk:w.wk, days:w.days}], catFn);
       var rule = resolveInsight(facts);
       renderSignalBody(block, t, catFn, {severity: rule.severity, headline: rule.headline(facts)},
-        {nText: opts.nText(t), bigDesc: opts.bigDesc, goodLabel: opts.goodLabel, midLabel: opts.midLabel, badLabel: opts.badLabel, matrixSub: opts.matrixSub},
+        {nText: useB && opts.nTextB ? opts.nTextB(t) : opts.nText(t), bigDesc: opts.bigDesc,
+         goodLabel: opts.goodLabel, midLabel: opts.midLabel,
+         badLabel: useB && opts.badLabelB ? opts.badLabelB : opts.badLabel,
+         matrixSub: useB && opts.matrixSubB ? opts.matrixSubB : opts.matrixSub,
+         cellFn: useB ? planDashCell : null},
         w.days);
       wrap.appendChild(block);
     });
@@ -1362,14 +1909,27 @@ if(window.caches && caches.keys){
     var tabs = el('div', 'signal-subtabs');
     tabs.setAttribute('role', 'tablist');
     tabs.setAttribute('aria-label', 'Signal');
-    [['intensity','Intensity'], ['fuelling','Fuelling']].forEach(function(pair){
+    [['intensity','Intensity'], ['fuelling','Fuelling'], ['adherence','Adherence']].forEach(function(pair){
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'signal-subtab';
       btn.setAttribute('role', 'tab');
       btn.setAttribute('aria-selected', String(current === pair[0]));
+      btn.setAttribute('data-signal', pair[0]);
       btn.textContent = pair[1];
-      btn.addEventListener('click', function(){ onSelect(pair[0]); });
+      btn.addEventListener('click', function(){
+        // Choosing a signal re-renders the whole view, which destroys this
+        // button — so a keyboard user would otherwise be dropped back to
+        // <body> and lose their place. Put focus back on the same tab in the
+        // freshly rendered tablist. Mouse users see no ring, since the focus
+        // outline is :focus-visible only.
+        var owner = tabs.parentNode;
+        var keepFocus = document.activeElement === btn;
+        onSelect(pair[0]);
+        if(!keepFocus || !owner){ return; }
+        var next = owner.querySelector('.signal-subtab[data-signal="' + pair[0] + '"]');
+        if(next){ next.focus(); }
+      });
       tabs.appendChild(btn);
     });
     return tabs;
@@ -1381,6 +1941,7 @@ if(window.caches && caches.keys){
     h.id = 'trends-h'; h.tabIndex = -1;
     root.appendChild(h);
     root.appendChild(renderSignalSubtabs(state.monthSignal, function(v){ state.monthSignal = v; renderTrends(); }));
+    var adherenceLegendStageB = false;
     if(state.monthSignal === 'fuelling'){
       var fuelT = monthTally(fuelCat);
       root.appendChild(renderDisciplineInsights(fuelCat, disciplineFuelHeadline));
@@ -1389,6 +1950,18 @@ if(window.caches && caches.keys){
         nText: function(t){ return t.total + ' over 45 min'; }, bigDesc: 'at race concentration',
         goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none', matrixSub: 'over 45 min only'
       }, resolveFuelInsight));
+    } else if(state.monthSignal === 'adherence'){
+      var monthPlan = monthHasPlan();
+      root.appendChild(renderDisciplineInsights(planCat, disciplineAdherenceHeadline, monthPlan ? disciplinePlanTally : null));
+      root.appendChild(renderMonthSection('Adherence', planCat, {
+        planAware: true,
+        nText: function(t){ return t.total + ' session' + (t.total === 1 ? '' : 's'); },
+        nTextB: function(t){ return t.total + ' of ' + (t.total + t.pending) + ' planned' + (t.extra ? ' · ' + t.extra + ' unplanned' : ''); },
+        bigDesc: 'went as planned',
+        goodLabel: 'as planned', midLabel: 'adjusted', badLabel: 'didn’t happen', badLabelB: 'missed',
+        matrixSub: 'by session', matrixSubB: 'planned vs logged'
+      }, resolveAdherenceInsight));
+      adherenceLegendStageB = monthPlan;
     } else {
       root.appendChild(renderDisciplineInsights(driftCat, disciplineDriftHeadline));
       root.appendChild(renderMonthSection('Intensity drift', driftCat, {
@@ -1396,7 +1969,7 @@ if(window.caches && caches.keys){
         goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over', matrixSub: 'by session'
       }, resolveDriftInsight));
     }
-    root.appendChild(dashLegend());
+    root.appendChild(dashLegend(state.monthSignal, adherenceLegendStageB));
   }
   function renderDashboard(){
     var root = els.viewDash;
@@ -1405,8 +1978,18 @@ if(window.caches && caches.keys){
     h.id = 'dash-h'; h.tabIndex = -1;
     root.appendChild(h);
     root.appendChild(renderSignalSubtabs(state.weekSignal, function(v){ state.weekSignal = v; renderDashboard(); }));
+    // The Plan view has no bottom-nav tab of its own (same as Month), so
+    // this link is the way in. Styled as dash-signal-link to match the
+    // "See this month →" link the Month view is reached by.
+    var planLink = document.createElement('button');
+    planLink.type = 'button';
+    planLink.className = 'dash-signal-link';
+    planLink.textContent = 'Edit plan →';
+    planLink.addEventListener('click', function(){ goToPlan(); });
+    root.appendChild(planLink);
     var days = currentWeekDays();
     var weekLabel = 'Week ' + isoWeekNumber(mondayOf(new Date()));
+    var adherenceLegendStageB = false;
     if(state.weekSignal === 'fuelling'){
       var fuelT = tallyDays(days, fuelCat);
       var fuelFacts = computeSignalFacts([{wk:'This week', days:days}], fuelCat);
@@ -1415,6 +1998,24 @@ if(window.caches && caches.keys){
         nText: fuelT.total + ' over 45 min', bigDesc: 'at race concentration',
         goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none', matrixSub: 'over 45 min only', signal: 'fuelling', weekLabel: weekLabel
       }, days));
+    } else if(state.weekSignal === 'adherence'){
+      // Stage B the moment this week has any plan row in it; otherwise the
+      // Stage A path exactly as it shipped, so an athlete who has never opened
+      // the Plan view sees no change at all.
+      var useB = daysHavePlan(days);
+      var planT = useB ? tallyPlanDays(days) : tallyDays(days, planCat);
+      var planFacts = useB ? computePlanSignalFacts([{wk:'This week', days:days}])
+                           : computeSignalFacts([{wk:'This week', days:days}], planCat);
+      var planRule = resolveAdherenceInsight(planFacts);
+      root.appendChild(dashSignalSection('Adherence', planT, planCat, {severity: planRule.severity, headline: planRule.headline(planFacts)}, {
+        nText: useB ? (planT.total + ' of ' + (planT.total + planT.pending) + ' planned' + (planT.extra ? ' · ' + planT.extra + ' unplanned' : ''))
+                    : (planT.total + ' session' + (planT.total === 1 ? '' : 's')),
+        bigDesc: 'went as planned',
+        goodLabel: 'as planned', midLabel: 'adjusted', badLabel: useB ? 'missed' : 'didn’t happen',
+        matrixSub: useB ? 'planned vs logged' : 'by session',
+        signal: 'adherence', weekLabel: weekLabel, cellFn: useB ? planDashCell : null
+      }, days));
+      adherenceLegendStageB = useB;
     } else {
       var driftT = tallyDays(days, driftCat);
       var driftFacts = computeSignalFacts([{wk:'This week', days:days}], driftCat);
@@ -1424,7 +2025,7 @@ if(window.caches && caches.keys){
         goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over', matrixSub: 'by session', signal: 'intensity', weekLabel: weekLabel
       }, days));
     }
-    root.appendChild(dashLegend());
+    root.appendChild(dashLegend(state.weekSignal, adherenceLegendStageB));
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1740,6 +2341,567 @@ if(window.caches && caches.keys){
     els.splashCountdown.hidden = false;
   }
 
+  // Splash "Today" card — sibling of the countdown above, three states:
+  //
+  //   sessions planned today   → one tappable line per session
+  //   week has a plan, today doesn't → "Rest day" (a real, useful answer —
+  //                              a planned rest is not the same as no plan)
+  //   week has no plan at all  → node removed from the DOM entirely
+  //
+  // The third state is a removal rather than the countdown's [hidden] toggle
+  // on purpose: an athlete who has never entered a plan should find no trace
+  // of the feature on the splash, not an empty shell. Rebuilt from scratch on
+  // every call, so a Sheet refresh landing while the splash is still up
+  // repaints it correctly without any diffing.
+  function renderSplashToday(){
+    var existing = document.getElementById('splash-today');
+    if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
+
+    var today = todayISO();
+    var weekItems = planItemsInWeek(isoDate(mondayOf(new Date())));
+    if(!weekItems.length){ return; }
+    var items = planItemsFor(today);
+
+    var card = el('div', 'splash-today');
+    card.id = 'splash-today';
+    card.appendChild(el('p', 'splash-today-eyebrow', 'Today'));
+
+    if(!items.length){
+      card.appendChild(el('p', 'splash-today-rest', 'Rest day'));
+      els.splashScreen.appendChild(card);
+      return;
+    }
+
+    var list = el('ul', 'splash-today-list');
+    list.setAttribute('aria-label', 'Planned sessions for today');
+    items.forEach(function(item){
+      var li = el('li', 'splash-today-item');
+      // Each session is its own button rather than one tap target for the
+      // whole card: with two sessions planned, a single card-level tap would
+      // have to guess which one was just finished, and guessing wrong writes
+      // the wrong discipline into a check-in.
+      var btn = el('button', 'splash-today-btn');
+      btn.type = 'button';
+      btn.appendChild(el('span', 'splash-today-name', splashTodayName(item)));
+      btn.appendChild(el('span', 'splash-today-meta', planMetaLine(item)));
+      btn.addEventListener('click', function(){ startCheckInFromPlan(item); });
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+    card.appendChild(list);
+    els.splashScreen.appendChild(card);
+  }
+  function splashTodayName(item){
+    var disc = DISC_LABEL[item.disc] || item.disc;
+    return item.title ? (disc + ' — ' + item.title) : disc;
+  }
+  // "60 min · Hard / quality · Key" — the same fields planItemCard() shows in
+  // the Plan view, in the same order, so the two surfaces read identically.
+  // includeKey is false wherever a surface already shows the standalone "Key"
+  // pill (the in-flow card does; the splash card has no room for one), so the
+  // word never appears twice on the same card.
+  function planMetaLine(item, includeKey){
+    var bits = [];
+    if(item.duration != null){ bits.push(planDurationLabel(item.duration)); }
+    if(item.intensity){ bits.push(PLAN_INTENSITY_LABEL[item.intensity] || item.intensity); }
+    if(item.key && includeKey !== false){ bits.push('Key'); }
+    return bits.join(' · ');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRAINING PLAN
+  //
+  // A manually-entered copy of the athlete's own plan — the app never
+  // authors, suggests or adjusts a session. Rows are stored against real
+  // ISO dates (not a cycle-relative template), so joining a planned session
+  // to a logged one is a plain date equality test.
+  // ═══════════════════════════════════════════════════════════════
+  var MAX_COPY_WEEKS = 8;
+  // Reused straight off the check-in questions rather than re-declared, so
+  // the planned enum and the logged enum can never drift apart — a future
+  // planned-vs-actual match is then an equality test, not a mapping table.
+  var PLAN_DISC_OPTS = QUESTIONS_BY_KEY.disc.opts;
+  var PLAN_INTENSITY_OPTS = QUESTIONS_BY_KEY.intensity.opts;
+  var PLAN_INTENSITY_LABEL = {};
+  PLAN_INTENSITY_OPTS.forEach(function(o){ PLAN_INTENSITY_LABEL[o.v] = o.label; });
+
+  // Which day's add-session form is open ('YYYY-MM-DD' or null) — module
+  // state, never derived from the DOM, because renderPlan() fully rebuilds
+  // the view (including on a background Sheet refresh) and a half-filled
+  // form must not silently snap shut. Same reason raceFormOpen exists.
+  var planFormOpenFor = null;
+  // The copy-week panel needs the same protection for the same reason: it's
+  // a multi-step selection (tick N target weeks, then confirm) rebuilt by
+  // renderPlan(), so a background refresh mid-selection would snap it shut
+  // and clear the ticks. Tracked here, and honoured by the re-render guard
+  // in refreshVisibleViewFromSheet() alongside planFormOpenFor.
+  var planCopyOpen = false;
+
+  function planWeekDates(mondayISO){
+    var monday = new Date(mondayISO + 'T00:00:00');
+    var out = [];
+    for(var i = 0; i < 7; i++){ out.push(isoDate(addDays(monday, i))); }
+    return out;
+  }
+  function planItemsFor(dateISO){
+    return plan.filter(function(p){ return p.date === dateISO; });
+  }
+  function planItemsInWeek(mondayISO){
+    var dates = planWeekDates(mondayISO);
+    var from = dates[0], to = dates[6];
+    return plan.filter(function(p){ return p.date >= from && p.date <= to; });
+  }
+  function loggedCountInWeek(mondayISO){
+    var dates = planWeekDates(mondayISO);
+    var from = dates[0], to = dates[6];
+    return log.filter(function(e){ return e.date >= from && e.date <= to; }).length;
+  }
+  function planDurationLabel(mins){
+    return mins == null ? '' : (mins + ' min');
+  }
+
+  function addPlanSession(dateISO, fields){
+    var item = {
+      id: newPlanId(), date: dateISO, disc: fields.disc,
+      title: (fields.title || '').trim(),
+      intensity: fields.intensity || 'easy',
+      duration: fields.duration,
+      key: !!fields.key,
+      notes: (fields.notes || '').trim(),
+      phase: state.periodisation || ''
+    };
+    plan.push(item);
+    persistPlan();
+    submitPlanToSheet('add', item);
+    renderPlan();
+    say('Planned ' + (DISC_LABEL[item.disc] || item.disc) + ' added for ' + formatDateLabel(dateISO) + '.');
+    return item;
+  }
+  function deletePlanSession(id){
+    var item = plan.filter(function(p){ return p.id === id; })[0];
+    plan = plan.filter(function(p){ return p.id !== id; });
+    persistPlan();
+    submitPlanToSheet('delete', {id: id});
+    renderPlan();
+    if(item){ say('Removed ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' from the plan.'); }
+  }
+  // One batched request for the whole copy, however many target weeks —
+  // this is what addBatch exists for. Dates are shifted by whole weeks, so
+  // a Tuesday session stays a Tuesday session.
+  function copyPlanWeek(targetMondays){
+    var source = planItemsInWeek(state.planWeek);
+    if(!source.length || !targetMondays.length){ return 0; }
+    var sourceMonday = new Date(state.planWeek + 'T00:00:00');
+    var created = [];
+    targetMondays.forEach(function(targetISO){
+      var offset = Math.round((new Date(targetISO + 'T00:00:00') - sourceMonday) / 86400000);
+      source.forEach(function(p){
+        created.push({
+          id: newPlanId(), date: isoDate(addDays(new Date(p.date + 'T00:00:00'), offset)),
+          disc: p.disc, title: p.title, intensity: p.intensity, duration: p.duration,
+          key: p.key, notes: p.notes, phase: p.phase
+        });
+      });
+    });
+    plan = plan.concat(created);
+    persistPlan();
+    submitPlanToSheet('addBatch', null, {items: created});
+    renderPlan();
+    say(created.length + ' planned session' + (created.length === 1 ? '' : 's') + ' copied to ' +
+        targetMondays.length + ' week' + (targetMondays.length === 1 ? '' : 's') + '.');
+    return created.length;
+  }
+  // One batched request, by date range rather than by id list — re-entering
+  // a changed week must not cost N separate deletes.
+  function clearPlanWeek(){
+    var dates = planWeekDates(state.planWeek);
+    var from = dates[0], to = dates[6];
+    var removed = planItemsInWeek(state.planWeek).length;
+    if(!removed){ return 0; }
+    plan = plan.filter(function(p){ return !(p.date >= from && p.date <= to); });
+    persistPlan();
+    submitPlanToSheet('deleteWeek', null, {from: from, to: to});
+    planFormOpenFor = null;
+    renderPlan();
+    say(removed + ' planned session' + (removed === 1 ? '' : 's') + ' cleared from this week.');
+    return removed;
+  }
+
+  function planField(labelText, subText, inputEl){
+    var wrap = el('div', 'plan-field');
+    var lbl = el('label', 'field-lbl');
+    lbl.appendChild(document.createTextNode(labelText + ' '));
+    if(subText){ lbl.appendChild(el('span', 'sub', subText)); }
+    lbl.htmlFor = inputEl.id;
+    // Siblings, not nested — same reason as raceField: a label's
+    // margin-bottom has no visible effect around a nested input.
+    wrap.appendChild(lbl);
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+  // A radio chip group, matching the check-in question layout and the race
+  // Commitment toggle. Returns the inputs so the submit handler can read
+  // whichever is checked.
+  function planChoiceGroup(form, legendText, name, opts, gridClass, defaultValue){
+    var wrap = el('fieldset', 'plan-field');
+    var legend = el('legend', 'field-lbl', legendText);
+    wrap.appendChild(legend);
+    var choices = el('div', 'choices ' + gridClass);
+    var inputs = opts.map(function(o){
+      var opt = el('div', 'opt');
+      var input = document.createElement('input');
+      input.type = 'radio'; input.name = name; input.id = name + '-' + o.v;
+      input.value = o.v;
+      // defaultChecked, not .checked — so form.reset() after a successful
+      // add restores the default rather than leaving nothing selected.
+      input.defaultChecked = o.v === defaultValue;
+      opt.appendChild(input);
+      var label = el('label', 'choice', o.label);
+      label.htmlFor = input.id;
+      opt.appendChild(label);
+      choices.appendChild(opt);
+      return input;
+    });
+    wrap.appendChild(choices);
+    form.appendChild(wrap);
+    return inputs;
+  }
+  function checkedValue(inputs, fallback){
+    var hit = inputs.filter(function(i){ return i.checked; })[0];
+    return hit ? hit.value : fallback;
+  }
+
+  function renderPlanForm(root, dateISO, onCancel){
+    var form = document.createElement('form');
+    form.className = 'plan-form';
+    form.setAttribute('aria-label', 'Add a planned session for ' + formatWeekdayDate(dateISO));
+
+    var discInputs = planChoiceGroup(form, 'Which session?', 'plan-disc', PLAN_DISC_OPTS, 'grid3', 'swim');
+
+    var titleInput = document.createElement('input');
+    titleInput.type = 'text'; titleInput.className = 'text-input'; titleInput.id = 'plan-title';
+    titleInput.maxLength = 60;
+    // aria-required, not the `required` attribute. A native `required` makes
+    // the browser block submit with its own transient bubble before the
+    // submit handler ever runs, which makes the specific, persistent,
+    // role="alert" messages below unreachable — and a silently-blocked
+    // submit with no visible reason is exactly the trap decision 22 hit
+    // with type="url" on the race website field.
+    titleInput.setAttribute('aria-required', 'true');
+    titleInput.placeholder = 'e.g. Squad — 8×100 CSS';
+    form.appendChild(planField('What is it', null, titleInput));
+
+    var durInput = document.createElement('input');
+    // type="text" + inputmode="numeric", not type="number" — number inputs
+    // accept 'e'/'+'/'-' and report an empty value for anything they judge
+    // invalid, which hides a typo behind a silently-blocked submit. Parsed
+    // and range-checked below instead.
+    durInput.type = 'text'; durInput.className = 'text-input'; durInput.id = 'plan-duration';
+    durInput.maxLength = 3;
+    durInput.setAttribute('aria-required', 'true');
+    durInput.setAttribute('inputmode', 'numeric');
+    durInput.placeholder = 'e.g. 60';
+    form.appendChild(planField('How long', 'minutes', durInput));
+
+    var intensityInputs = planChoiceGroup(form, 'Meant to be easy or hard?', 'plan-intensity', PLAN_INTENSITY_OPTS, 'grid3', 'easy');
+    var keyInputs = planChoiceGroup(form, 'Key session?', 'plan-key', [
+      {v:'no', label:'Regular'}, {v:'yes', label:'Key session'}
+    ], 'grid2', 'no');
+
+    var notesInput = document.createElement('textarea');
+    notesInput.id = 'plan-notes'; notesInput.rows = 2; notesInput.maxLength = 200;
+    notesInput.placeholder = 'e.g. HR cap 145 on the commute home';
+    form.appendChild(planField('Notes', 'optional', notesInput));
+
+    // Its own class, not .empty-note — that one is styled as a neutral
+    // "nothing here yet" panel, which is the wrong signal for a rejected
+    // submit. This is the form's only error surface (native `required` was
+    // deliberately not used, see above), so it has to read as one.
+    var err = el('p', 'plan-form-error', '');
+    err.id = 'plan-form-error';
+    err.hidden = true;
+    err.setAttribute('role', 'alert');
+    form.appendChild(err);
+
+    var actions = el('div', 'plan-form-actions');
+    var submitBtn = el('button', 'btn btn-primary', 'Add session');
+    submitBtn.type = 'submit';
+    actions.appendChild(submitBtn);
+    var cancelBtn = el('button', 'btn btn-ghost', 'Cancel');
+    cancelBtn.type = 'button';
+    cancelBtn.addEventListener('click', onCancel);
+    actions.appendChild(cancelBtn);
+    form.appendChild(actions);
+
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var title = titleInput.value.trim();
+      var mins = parseInt(durInput.value, 10);
+      if(!title){
+        err.textContent = 'Give the session a name so you recognise it on the day.';
+        err.hidden = false; titleInput.focus(); return;
+      }
+      if(isNaN(mins) || mins < 1 || mins > 999){
+        err.textContent = 'Enter the planned length in whole minutes, between 1 and 999.';
+        err.hidden = false; durInput.focus(); return;
+      }
+      err.hidden = true;
+      addPlanSession(dateISO, {
+        disc: checkedValue(discInputs, 'swim'),
+        title: title,
+        duration: mins,
+        intensity: checkedValue(intensityInputs, 'easy'),
+        key: checkedValue(keyInputs, 'no') === 'yes',
+        notes: notesInput.value
+      });
+      // renderPlan() has already rebuilt the view by here, so re-find the
+      // live form's title field rather than focusing the detached one.
+      var freshTitle = document.getElementById('plan-title');
+      if(freshTitle){ freshTitle.focus(); }
+    });
+
+    root.appendChild(form);
+  }
+
+  function planItemCard(item){
+    var card = document.createElement('details');
+    card.className = 'plan-item';
+    var summary = document.createElement('summary');
+    var dot = el('span', 'plan-item-dot');
+    dot.style.background = 'var(--' + item.disc + ')';
+    dot.setAttribute('aria-hidden', 'true');
+    summary.appendChild(dot);
+    var main = el('div', 'plan-item-main');
+    main.appendChild(el('span', 'plan-item-title', item.title || DISC_LABEL[item.disc] || 'Session'));
+    var metaBits = [DISC_LABEL[item.disc] || item.disc];
+    if(item.duration != null){ metaBits.push(planDurationLabel(item.duration)); }
+    if(item.intensity){ metaBits.push(PLAN_INTENSITY_LABEL[item.intensity] || item.intensity); }
+    main.appendChild(el('span', 'plan-item-meta', metaBits.join(' · ')));
+    summary.appendChild(main);
+    if(item.key){ summary.appendChild(el('span', 'plan-item-key', 'Key')); }
+    // Same rotating chevron as raceCard. Without it nothing signals the card
+    // expands, and the notes (the whole reason to enter a plan into the app)
+    // stay invisible behind a tap the athlete has no reason to try.
+    var chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    chevron.setAttribute('class', 'plan-item-chevron');
+    chevron.setAttribute('viewBox', '0 0 24 24');
+    chevron.setAttribute('fill', 'none');
+    chevron.setAttribute('stroke', 'currentColor');
+    chevron.setAttribute('stroke-width', '2');
+    chevron.setAttribute('stroke-linecap', 'round');
+    chevron.setAttribute('stroke-linejoin', 'round');
+    chevron.setAttribute('aria-hidden', 'true');
+    var chevronPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    chevronPath.setAttribute('d', 'M6 9l6 6 6-6');
+    chevron.appendChild(chevronPath);
+    summary.appendChild(chevron);
+    card.appendChild(summary);
+
+    var body = el('div', 'plan-item-body');
+    if(item.notes){ body.appendChild(el('p', 'plan-item-notes', item.notes)); }
+    var foot = el('div', 'plan-item-foot');
+    var del = el('button', 'plan-item-delete', 'Remove');
+    del.type = 'button';
+    del.setAttribute('aria-label', 'Remove ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' from ' + formatWeekdayDate(item.date));
+    del.addEventListener('click', function(){
+      if(window.confirm('Remove "' + (item.title || DISC_LABEL[item.disc]) + '" from your plan?')){ deletePlanSession(item.id); }
+    });
+    foot.appendChild(del);
+    body.appendChild(foot);
+    card.appendChild(body);
+    return card;
+  }
+
+  function planDayRow(dateISO){
+    var wrap = el('div', 'plan-day' + (dateISO === todayISO() ? ' is-today' : ''));
+    var hd = el('div', 'plan-day-hd');
+    var d = new Date(dateISO + 'T00:00:00');
+    hd.appendChild(el('span', 'plan-day-name', MONTH_DAYS[(d.getDay() + 6) % 7] + (dateISO === todayISO() ? ' · today' : '')));
+    hd.appendChild(el('span', 'plan-day-date', d.getDate() + ' ' + MONTH_NAMES[d.getMonth()]));
+    wrap.appendChild(hd);
+
+    var items = planItemsFor(dateISO);
+    if(items.length){
+      var ul = el('ul', 'plan-item-list');
+      ul.setAttribute('aria-label', 'Planned sessions for ' + formatWeekdayDate(dateISO));
+      items.forEach(function(item){
+        var li = document.createElement('li');
+        li.appendChild(planItemCard(item));
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
+    }
+
+    var isOpen = planFormOpenFor === dateISO;
+    var formWrapId = 'plan-form-' + dateISO;
+    if(!isOpen){
+      var addBtn = el('button', 'plan-day-add', '+ Add session');
+      addBtn.type = 'button';
+      addBtn.setAttribute('aria-expanded', 'false');
+      addBtn.setAttribute('aria-controls', formWrapId);
+      addBtn.setAttribute('aria-label', 'Add a planned session on ' + formatWeekdayDate(dateISO));
+      addBtn.addEventListener('click', function(){
+        planFormOpenFor = dateISO;
+        renderPlan();
+        var titleInput = document.getElementById('plan-title');
+        if(titleInput){ titleInput.focus(); }
+      });
+      wrap.appendChild(addBtn);
+    }
+    var formWrap = el('div', 'plan-form-wrap');
+    formWrap.id = formWrapId;
+    formWrap.hidden = !isOpen;
+    // Only the open day builds a form — the inputs use fixed ids
+    // (plan-title, plan-duration…) so seven hidden copies would be seven
+    // sets of duplicate ids and would break every label association.
+    if(isOpen){
+      renderPlanForm(formWrap, dateISO, function(){
+        planFormOpenFor = null;
+        renderPlan();
+        var backBtn = document.querySelector('.plan-day-add');
+        if(backBtn){ backBtn.focus(); }
+      });
+    }
+    wrap.appendChild(formWrap);
+    return wrap;
+  }
+
+  function planWeekNav(){
+    var nav = el('div', 'plan-week-nav');
+    var prev = el('button', 'plan-week-btn', '‹');
+    prev.type = 'button';
+    prev.setAttribute('aria-label', 'Show the previous week');
+    prev.addEventListener('click', function(){ stepPlanWeek(-7); });
+    nav.appendChild(prev);
+
+    var label = el('div', 'plan-week-nav-label');
+    var monday = new Date(state.planWeek + 'T00:00:00');
+    label.appendChild(el('span', 'plan-week-num', 'Week ' + isoWeekNumber(monday)));
+    // Same phase-pill treatment Month uses on its week headers. The plan
+    // view has no logged sessions to infer a phase from, so it reads the
+    // app's single current phase, exactly as dashWeekPhaseHeader does.
+    var pillClass = PERIOD_PILL_CLASS[state.periodisation];
+    label.appendChild(el('span', 'month-week-pill' + (pillClass ? ' ' + pillClass : ''), PERIOD_LABEL[state.periodisation] || 'Unset phase'));
+    if(state.planWeek === weekKey(new Date())){ label.appendChild(el('span', 'month-week-current', 'this week')); }
+    nav.appendChild(label);
+
+    var next = el('button', 'plan-week-btn', '›');
+    next.type = 'button';
+    next.setAttribute('aria-label', 'Show the next week');
+    next.addEventListener('click', function(){ stepPlanWeek(7); });
+    nav.appendChild(next);
+    return nav;
+  }
+  function stepPlanWeek(days){
+    // Changing week discards a half-filled form for the old week — leaving
+    // it open would attach it to a day that's no longer on screen.
+    planFormOpenFor = null;
+    state.planWeek = isoDate(addDays(new Date(state.planWeek + 'T00:00:00'), days));
+    renderPlan();
+    say('Showing week beginning ' + formatWeekdayDate(state.planWeek) + '.');
+  }
+
+  function planHero(){
+    var wrap = el('div', 'race-hero');
+    wrap.appendChild(el('div', 'race-hero-eyebrow', 'Training plan'));
+    var h = document.createElement('h1');
+    h.className = 'race-hero-headline';
+    h.id = 'plan-h'; h.tabIndex = -1;
+    h.appendChild(document.createTextNode('Plan '));
+    h.appendChild(el('span', 'accent', 'your week'));
+    h.appendChild(document.createTextNode('.'));
+    wrap.appendChild(h);
+    wrap.appendChild(el('p', 'race-hero-sub', 'Type in the week you’ve already written elsewhere, then copy it forward. Synced to your training log Sheet, so it shows on every device.'));
+    var plannedCount = planItemsInWeek(state.planWeek).length;
+    var loggedCount = loggedCountInWeek(state.planWeek);
+    // Both counts are for the week the selector is showing, which isn't
+    // always the current one — so don't hard-label them "this week".
+    var scope = state.planWeek === weekKey(new Date()) ? ' this week' : ' that week';
+    var stats = el('div', 'race-hero-stats');
+    stats.appendChild(raceHeroStat('planned', plannedCount, 'planned' + scope));
+    stats.appendChild(raceHeroStat('logged', loggedCount, 'logged' + scope));
+    wrap.appendChild(stats);
+    return wrap;
+  }
+
+  // "Copy this week to…" — the next MAX_COPY_WEEKS Mondays as checkboxes,
+  // so a repeating block is one action instead of re-typing it.
+  function planCopyTool(){
+    var det = document.createElement('details');
+    det.className = 'plan-copy';
+    det.open = planCopyOpen;
+    det.addEventListener('toggle', function(){ planCopyOpen = det.open; });
+    var summary = document.createElement('summary');
+    summary.textContent = 'Copy this week to…';
+    det.appendChild(summary);
+
+    var form = document.createElement('form');
+    var ul = el('ul', 'plan-copy-list');
+    var boxes = [];
+    for(var i = 1; i <= MAX_COPY_WEEKS; i++){
+      var targetISO = isoDate(addDays(new Date(state.planWeek + 'T00:00:00'), i * 7));
+      var li = document.createElement('li');
+      var lbl = el('label', 'plan-copy-opt');
+      var box = document.createElement('input');
+      box.type = 'checkbox'; box.value = targetISO;
+      box.id = 'plan-copy-' + targetISO;
+      lbl.htmlFor = box.id;
+      lbl.appendChild(box);
+      lbl.appendChild(document.createTextNode(
+        'Week ' + isoWeekNumber(new Date(targetISO + 'T00:00:00')) + ' — from ' + formatWeekdayDate(targetISO)
+      ));
+      li.appendChild(lbl);
+      ul.appendChild(li);
+      boxes.push(box);
+    }
+    form.appendChild(ul);
+    var actions = el('div', 'plan-form-actions');
+    var go = el('button', 'btn btn-primary', 'Copy week');
+    go.type = 'submit';
+    actions.appendChild(go);
+    form.appendChild(actions);
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var targets = boxes.filter(function(b){ return b.checked; }).map(function(b){ return b.value; });
+      if(!targets.length){ say('Pick at least one week to copy into.'); return; }
+      if(!planItemsInWeek(state.planWeek).length){ say('Nothing planned this week to copy.'); return; }
+      copyPlanWeek(targets);
+    });
+    det.appendChild(form);
+    return det;
+  }
+
+  function renderPlan(){
+    var root = els.viewPlan;
+    clear(root);
+    root.appendChild(planHero());
+
+    var back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'dash-phase-change';
+    back.textContent = '← Back to this week';
+    back.addEventListener('click', function(){ showView('dashboard'); });
+    root.appendChild(back);
+
+    root.appendChild(planWeekNav());
+    planWeekDates(state.planWeek).forEach(function(dateISO){
+      root.appendChild(planDayRow(dateISO));
+    });
+
+    var tools = el('div', 'plan-tools');
+    tools.appendChild(planCopyTool());
+    var clearBtn = el('button', 'plan-clear', 'Clear this week');
+    clearBtn.type = 'button';
+    clearBtn.addEventListener('click', function(){
+      var n = planItemsInWeek(state.planWeek).length;
+      if(!n){ say('Nothing planned this week to clear.'); return; }
+      if(window.confirm('Remove all ' + n + ' planned session' + (n === 1 ? '' : 's') + ' from this week?')){ clearPlanWeek(); }
+    });
+    tools.appendChild(clearBtn);
+    root.appendChild(tools);
+  }
+  function goToPlan(){ showView('plan'); }
+
   // ═══════════════════════════════════════════════════════════════
   // WARM UP
   // ═══════════════════════════════════════════════════════════════
@@ -1973,6 +3135,7 @@ if(window.caches && caches.keys){
     viewStrength: document.getElementById('view-strength'),
     viewWarmup: document.getElementById('view-warmup'),
     viewRaces: document.getElementById('view-races'),
+    viewPlan: document.getElementById('view-plan'),
     strengthFrame: document.getElementById('strength-frame'),
     tabStrengthSwim: document.getElementById('tab-strength-swim'),
     tabStrengthRun: document.getElementById('tab-strength-run'),
@@ -2031,6 +3194,86 @@ if(window.caches && caches.keys){
     renderChrome();
   }
 
+  // ── Plan → check-in pre-fill ──────────────────────────────────
+  //
+  // The plan stores real minutes; the check-in asks for one of three buckets
+  // ('30' | '60' | '120', the option values on the duration question — note
+  // they are strings, because that is what pick() writes and what the radios
+  // compare against). Boundaries follow the bucket labels exactly:
+  // "≤ 45 min" / "45–90 min" / "90 min +".
+  function planDurationBucket(mins){
+    var n = parseInt(mins, 10);
+    if(isNaN(n)){ return null; }
+    if(n <= 45){ return '30'; }
+    if(n <= 90){ return '60'; }
+    return '120';
+  }
+  // ═══ a1 IS DELIBERATELY ABSENT FROM THIS FUNCTION — DO NOT ADD IT ═══
+  //
+  // a1 ("did it finish at the effort you intended?") is the sole input to the
+  // intensity-drift signal, and it only means anything as an unprompted
+  // self-report. The plan's `intensity` is the *intent* the athlete set in
+  // advance; a1 is whether they actually held it. Seeding a1 from the plan
+  // would make the app answer its own question and would report zero drift
+  // forever, silently, with no error to notice. The same reasoning rules out
+  // a2, a3, b2, b3 and rpe: all five are outcome reports, not plan facts.
+  // Only disc / intensity / duration are re-statements of something the plan
+  // already knows, and even those stay freely editable afterwards — this is a
+  // shortcut into the form, never an assertion about what happened.
+  function applyPlanPrefill(item){
+    if(!item){ return; }
+    if(item.disc){ state.ans.disc = item.disc; }
+    if(item.intensity){ state.ans.intensity = item.intensity; }
+    var bucket = planDurationBucket(item.duration);
+    if(bucket){
+      state.ans.duration = bucket;
+      // Mirror pick()'s own rule: dropping to a short bucket un-asks the
+      // fuelling question, so a stale a3 must not survive.
+      if(!isLong(bucket)){ delete state.ans.a3; }
+    }
+  }
+  // Land on the first question the pre-fill did not answer, rather than
+  // re-rendering the page just tapped. Falls through to the review screen if
+  // everything happens to be answered already (only reachable when the athlete
+  // taps a planned card after back-tracking through a finished flow).
+  function goToNextUnanswered(){
+    var list = steps();
+    for(var i = 0; i < list.length; i++){
+      for(var j = 0; j < list[i].length; j++){
+        if(!state.ans[list[i][j].k]){ go(i, true); return; }
+      }
+    }
+    go(list.length, true);
+  }
+  function usePlannedSession(item){
+    applyPlanPrefill(item);
+    goToNextUnanswered();
+    say('Pre-filled from your plan: ' + splashTodayName(item) + '. Every answer can still be changed.');
+  }
+  // Entry point from the splash card: a fresh check-in, dated today, seeded
+  // from the tapped session. Check-in is the one tab that requires a phase
+  // (a logged session is stamped with it), so an athlete who has never set one
+  // goes through the picker first and the pre-fill is held until they return —
+  // same rule the Check-in nav tab follows.
+  var pendingPlanPrefill = null;
+  function startCheckInFromPlan(item){
+    exitSplash();
+    if(!state.periodisation){
+      pendingPlanPrefill = item;
+      els.appMain.hidden = true;
+      els.periodScreen.hidden = false;
+      phaseReturnView = 'flow';
+      var h = document.getElementById('period-h');
+      if(h){ h.focus({preventScroll:true}); }
+      return;
+    }
+    exitPeriodScreen();
+    state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
+    applyPlanPrefill(item);
+    showView('flow');
+    goToNextUnanswered();
+  }
+
   function setFlowPhaseLabel(){
     els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
     var pillClass = PERIOD_PILL_CLASS[state.periodisation];
@@ -2084,6 +3327,9 @@ if(window.caches && caches.keys){
     if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
     else if(state.mode === 'review'){ renderReview(c.list); }
     else { renderSaved(); }
+    // Prepended after the questions exist, and only on the date page — see
+    // renderFlowPlanCards(), which no-ops everywhere else.
+    renderFlowPlanCards();
   }
   function choiceGroup(q, idPrefix){
     var wrap = el('div', 'choices-wrap');
@@ -2132,9 +3378,67 @@ if(window.caches && caches.keys){
     input.addEventListener('change', function(){
       if(input.value){ state.ans[q.k] = input.value; }
       renderChrome();
+      // The planned-session cards are scoped to the selected date, so they
+      // have to follow it. Rebuilt in place rather than via render(), which
+      // would recreate this very input and take focus off it mid-edit.
+      renderFlowPlanCards();
     });
     wrap.appendChild(input);
     return wrap;
+  }
+  // Planned sessions for the date currently selected in the flow, shown at the
+  // top of the first page. `notes` is rendered in full and unexpanded — the HR
+  // cap or the squad set is the reason the plan was typed in at all, and it is
+  // wanted at exactly this moment, so it does not sit behind a disclosure the
+  // way the Plan view's own card puts it.
+  function renderFlowPlanCards(){
+    var old = document.getElementById('flow-plan-cards');
+    if(old && old.parentNode){ old.parentNode.removeChild(old); }
+    if(state.mode !== 'ask'){ return; }
+    var list = steps();
+    var page = list[Math.min(state.step, list.length - 1)] || [];
+    var onDatePage = page.some(function(q){ return q.k === 'date'; });
+    if(!onDatePage){ return; }
+
+    var dateISO = state.ans.date || todayISO();
+    var items = planItemsFor(dateISO);
+    if(!items.length){ return; }
+
+    var wrap = el('section', 'flow-plan');
+    wrap.id = 'flow-plan-cards';
+    var eyebrowId = 'flow-plan-eyebrow';
+    var eyebrow = el('p', 'flow-plan-eyebrow',
+      'Planned for ' + (formatDateLabel(dateISO) || '').toLowerCase());
+    eyebrow.id = eyebrowId;
+    wrap.appendChild(eyebrow);
+
+    var ul = el('ul', 'flow-plan-list');
+    ul.setAttribute('aria-labelledby', eyebrowId);
+    items.forEach(function(item){
+      var li = document.createElement('li');
+      var btn = el('button', 'flow-plan-card');
+      btn.type = 'button';
+
+      var hd = el('div', 'flow-plan-hd');
+      var dot = el('span', 'flow-plan-dot');
+      dot.style.background = 'var(--' + item.disc + ')';
+      dot.setAttribute('aria-hidden', 'true');
+      hd.appendChild(dot);
+      hd.appendChild(el('span', 'flow-plan-title', splashTodayName(item)));
+      if(item.key){ hd.appendChild(el('span', 'flow-plan-key', 'Key')); }
+      btn.appendChild(hd);
+
+      var meta = planMetaLine(item, false);   // the Key pill above covers it
+      if(meta){ btn.appendChild(el('span', 'flow-plan-meta', meta)); }
+      if(item.notes){ btn.appendChild(el('span', 'flow-plan-notes', item.notes)); }
+      btn.appendChild(el('span', 'flow-plan-cta', 'Use these details →'));
+
+      btn.addEventListener('click', function(){ usePlannedSession(item); });
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+    els.body.insertBefore(wrap, els.body.firstChild);
   }
   // qList is a page — one or more questions rendered together. Each keeps
   // its own heading/hint/choices exactly as when it was a lone step; only
@@ -2290,13 +3594,17 @@ if(window.caches && caches.keys){
     var isStrength = view === 'strength';
     var isWarmup = view === 'warmup';
     var isRaces = view === 'races';
-    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces;
+    var isPlan = view === 'plan';
+    // isFlow is "none of the named views" — every new view must be added to
+    // this chain, or the check-in flow renders underneath it as well.
+    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan;
     els.viewFlow.hidden = !isFlow;
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
     els.viewStrength.hidden = !isStrength;
     els.viewWarmup.hidden = !isWarmup;
     els.viewRaces.hidden = !isRaces;
+    els.viewPlan.hidden = !isPlan;
     els.tabFlow.setAttribute('aria-selected', String(isFlow));
     els.tabDash.setAttribute('aria-selected', String(isDash));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
@@ -2307,12 +3615,13 @@ if(window.caches && caches.keys){
     if(isStrength){ sizeStrengthFrame(); }
     if(isWarmup){ renderWarmup(); }
     if(isRaces){ renderRaces(); }
+    if(isPlan){ renderPlan(); }
     // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
     if(isFlow){ renderChrome(); }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : 'step-h')))));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : 'step-h'))))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
     refreshVisibleViewFromSheet();
@@ -2339,6 +3648,20 @@ if(window.caches && caches.keys){
       refreshRacesFromSheet().then(function(changed){
         if(changed && !els.viewRaces.hidden){ renderRaces(); }
         renderSplashCountdown();
+      });
+    }
+    if(!els.viewPlan.hidden){
+      refreshPlanFromSheet().then(function(changed){
+        if(!changed || els.viewPlan.hidden){ return; }
+        // Fresh data is already in `plan` and persisted by here — but hold
+        // the redraw while the athlete is part-way through something.
+        // planFormOpenFor / planCopyOpen keep those panels *open* across a
+        // rebuild, but nothing would keep the half-typed values or the
+        // ticked target weeks inside them, so re-rendering underneath the
+        // athlete mid-entry would wipe the work. The view picks the new
+        // data up as soon as the panel is submitted or closed.
+        if(planFormOpenFor || planCopyOpen){ return; }
+        renderPlan();
       });
     }
   }
@@ -2453,6 +3776,19 @@ if(window.caches && caches.keys){
     els.periodScreen.hidden = true;
     els.appMain.hidden = false;
     say('Training phase set to ' + PERIOD_LABEL[v] + '.');
+    // A splash Today-card tap by an athlete with no phase set yet is held in
+    // pendingPlanPrefill across the picker, so the tap still lands where it
+    // was aimed instead of dropping them on a blank check-in.
+    if(pendingPlanPrefill && phaseReturnView === 'flow'){
+      var held = pendingPlanPrefill;
+      pendingPlanPrefill = null;
+      state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
+      applyPlanPrefill(held);
+      showView('flow');
+      goToNextUnanswered();
+      return;
+    }
+    pendingPlanPrefill = null;
     showView(phaseReturnView);
   }
 
@@ -2486,6 +3822,13 @@ if(window.caches && caches.keys){
   // immediately, then refresh from the Sheet and repaint if it changed.
   renderSplashCountdown();
   refreshRacesFromSheet().then(function(changed){ if(changed){ renderSplashCountdown(); } });
+  // Same for the plan: paint today's card from the localStorage cache
+  // immediately so the splash isn't blank while the fetch is in flight, then
+  // repaint once the Sheet answers. Always repaint on resolve, not only when
+  // `changed` is true — a first load with an empty cache paints nothing, and
+  // that is exactly the case the Sheet is about to fill in.
+  renderSplashToday();
+  refreshPlanFromSheet().then(function(){ renderSplashToday(); });
   // An installed PWA (iOS "Add to Home Screen") can resume from a frozen
   // background state instead of a real page load, so a phone left sitting
   // on This week/Month/Races would otherwise never re-check the Sheet after
