@@ -464,24 +464,37 @@ function normalizePlanKey_(raw) {
 // is missing the fields a row is meaningless without. Column order must
 // match PLAN_HEADERS exactly — this and listPlan_ are the only two places
 // that encode the layout.
-function planRow_(item) {
-  if (!item || !item.id || !item.date || !item.disc) { return null; }
+// The contiguous block of columns an update is allowed to touch:
+// PLAN_HEADERS[2..8], i.e. Disc, Title, Intensity, DurationMin, Key, Notes,
+// Phase. ID, Date and CreatedAt sit outside this range *by construction* —
+// an update can't reach them even if it tried, rather than being stopped by
+// a guard a later edit could drop. Date is excluded deliberately: moving a
+// session to another day is the drag-and-drop calendar editor this feature
+// has always excluded (CLAUDE.md, "What not to build"), so delete-and-re-add
+// stays the way to change a date. CreatedAt is excluded so it keeps meaning
+// "when this row was first entered".
+var PLAN_EDITABLE_COL = 3;   // 1-based column of 'Disc'
+var PLAN_EDITABLE_COUNT = 7; // Disc..Phase
+function planEditableCells_(item) {
   var dur = parseInt(item.duration, 10);
   return [
-    item.id,
-    item.date,
     item.disc,
     item.title || '',
     item.intensity || '',
     isNaN(dur) ? '' : dur,
     item.key ? 'TRUE' : 'FALSE',
     item.notes || '',
-    item.phase || '',
-    new Date()
+    item.phase || ''
   ];
 }
+function planRow_(item) {
+  if (!item || !item.id || !item.date || !item.disc) { return null; }
+  // Built from the same helper the update branch writes, so a full-row insert
+  // and an in-place edit can never disagree about column order.
+  return [item.id, item.date].concat(planEditableCells_(item)).concat([new Date()]);
+}
 
-// action: 'add' | 'addBatch' | 'delete' | 'deleteWeek'. Plan ids are
+// action: 'add' | 'addBatch' | 'update' | 'delete' | 'deleteWeek'. Plan ids are
 // generated client-side (see index.html's newPlanId) for the same reason
 // race ids are: a delete must never need to read an id back out of an
 // opaque no-cors add response.
@@ -528,11 +541,47 @@ function handlePlanPost_(body) {
     return { ok: true, added: rows.length };
   }
 
+  // Overwrites one existing row's editable columns in place, located by id.
+  // Takes the document lock for the same reason addBatch and deleteWeek do,
+  // and more urgently: this is a read-then-blind-write (find the row index,
+  // then setValues into it), so a deleteWeek landing in between would shift
+  // rows up and this would overwrite a *different* athlete's session with
+  // this one's fields. A delete racing is recoverable; a silent overwrite of
+  // the wrong row is not, because nothing about the result looks wrong.
+  if (action === 'update') {
+    var upItem = body.item;
+    if (!upItem || !upItem.id || !upItem.disc) { return { ok: false, error: 'plan update requires an item id and disc' }; }
+    // Named apart from addBatch's `lock`: both are `var` in this same
+    // function scope, so reusing the name would be a silent redeclaration.
+    var upLock = LockService.getDocumentLock();
+    upLock.waitLock(20000);
+    try {
+      var upRow = findPlanRow_(sheet, upItem.id);
+      if (!upRow) { return { ok: false, error: 'plan update: no row with id ' + upItem.id }; }
+      sheet.getRange(upRow, PLAN_EDITABLE_COL, 1, PLAN_EDITABLE_COUNT)
+        .setValues([planEditableCells_(upItem)]);
+    } finally {
+      upLock.releaseLock();
+    }
+    return { ok: true, updated: 1 };
+  }
+
   if (action === 'delete') {
     var id = body.item && body.item.id;
     if (!id) { return { ok: false, error: 'plan delete requires an item id' }; }
-    var rowNum = findPlanRow_(sheet, id);
-    if (rowNum) { sheet.deleteRow(rowNum); }
+    // Same read-then-write-by-index hazard as update: unlocked, a delete
+    // landing between another write's row lookup and its setValues would
+    // shift indices and point that write at the wrong row. Named apart from
+    // update's/deleteWeek's lock vars for the same silent-redeclaration
+    // reason noted on those.
+    var delLock = LockService.getDocumentLock();
+    delLock.waitLock(20000);
+    try {
+      var rowNum = findPlanRow_(sheet, id);
+      if (rowNum) { sheet.deleteRow(rowNum); }
+    } finally {
+      delLock.releaseLock();
+    }
     return { ok: true };
   }
 

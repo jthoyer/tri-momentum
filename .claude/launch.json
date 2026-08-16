@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "tri-momentum",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8742"],
+      "port": 8742
+    },
+    {
       "name": "tri-run-strength",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8743"],

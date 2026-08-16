@@ -32,6 +32,7 @@
   --skipped:#993C1D; --skipped-l:#FAECE7;
   --modified:#854F0B; --modified-l:#FAEEDA;
   --dash-good:#0E9A5C; --dash-mid:#E0A100; --dash-bad:#C81E1E;
+  --hero-accent:#F8C44F;
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -299,6 +300,37 @@ section.doc:last-of-type{border-bottom:none}
 .pv-plan-chevron.is-open{transform:rotate(180deg)}
 .pv-plan-add{margin-top:9px; width:100%; padding:12px 14px; border:1px dashed var(--blue-m); border-radius:10px; background:none; color:var(--blue); font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; text-align:center}
 .pv-race-remove{margin-left:auto; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--ink3)}
+.pv-plan-foot{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 14px 14px}
+.pv-plan-edit{font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--blue)}
+.pv-plan-remove{font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--ink3)}
+/* Review → Adherence "This week's plan" compact rows */
+.pv-dashplan{max-width:430px; margin:0 auto; padding:16px; background:var(--bg)}
+.pv-dashplan-label{font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:.9rem}
+.pv-dashplan-sub{font-size:13px; color:var(--ink2); line-height:1.5; margin-bottom:.2rem}
+.pv-dashplan-day{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-top:1px solid var(--bd)}
+.pv-dashplan-day:first-of-type{border-top:none}
+.pv-dashplan-date{flex:none; width:52px; padding-top:13px; font-family:'Outfit',sans-serif; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink3)}
+.pv-dashplan-date.is-today{color:var(--blue); font-weight:600}
+.pv-dashplan-lines{flex:1; min-width:0}
+.pv-dashplan-line{display:flex; align-items:center; gap:8px; min-height:44px}
+.pv-dashplan-dot{flex:none; width:8px; height:8px; border-radius:2px}
+.pv-dashplan-text{flex:1; min-width:0; font-size:13.5px; line-height:1.4; color:var(--ink)}
+.pv-dashplan-empty{flex:1; min-width:0; font-size:13.5px; color:var(--ink3)}
+.pv-dashplan-btn{flex:none; min-width:44px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--blue); text-align:right}
+/* Check-in landing (state.mode 'plan') */
+.pv-landing{max-width:430px; margin:0 auto; padding:18px 16px 22px; background:var(--bg)}
+.pv-landing-eyebrow{font-family:'Outfit',sans-serif; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3)}
+.pv-landing-bar{margin-top:10px; height:4px; border-radius:999px; background:var(--s4)}
+.pv-landing-h{margin-top:18px; font-family:'Outfit',sans-serif; font-size:23px; font-weight:600; letter-spacing:-.3px; line-height:1.25; color:var(--ink)}
+.pv-landing-hint{margin-top:8px; font-size:14px; color:var(--ink2); line-height:1.5}
+.pv-landing-list{list-style:none; display:flex; flex-direction:column; gap:12px; margin-top:1.4rem; padding:0}
+.pv-landing-card{display:block; padding:14px 16px; background:var(--s1); border:1px solid var(--blue-m); border-radius:10px; box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
+/* Already-logged variant: a static record, not an offer — muted fill, no lift,
+   no primary border, and a --done "Logged" marker where the CTA would be. */
+.pv-landing-card.is-logged{background:var(--s3); border-color:rgba(14,16,32,.08); box-shadow:none}
+.pv-landing-card.is-logged .pv-flow-plan-title{color:var(--ink2)}
+.pv-flow-plan-logged{display:block; margin-top:10px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--done)}
+.pv-landing-other{display:block; margin-top:2rem; text-align:center; font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; color:var(--blue)}
 .pv-add-toggle{width:100%; min-height:52px; padding:14px; border-radius:999px; border:1px solid transparent; background:var(--blue); color:#fff; font-family:'Outfit',sans-serif; font-size:16px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer}
 .pv-race-form-preview{margin-top:0; padding:1rem 1.05rem 1.1rem; background:var(--s1); border:0.5px solid var(--bd2); border-radius:14px; display:flex; flex-direction:column; gap:10px}
 .pv-race-form-actions{display:flex; gap:10px}
@@ -841,6 +873,10 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
                 <div class="pv-plan-item-body">
                   <p class="pv-plan-item-notes">Hold CSS pace on the last four. Don't chase lane one.</p>
                 </div>
+                <div class="pv-plan-foot">
+                  <span class="pv-plan-edit">Edit</span>
+                  <span class="pv-plan-remove">Remove</span>
+                </div>
               </div>
               <div class="pv-plan-item">
                 <div class="pv-plan-item-sum">
@@ -856,7 +892,85 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
             </div>
           </div>
         </div>
-        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">The Plan view is where the athlete types in the week they've already written elsewhere — the app never authors or suggests a session, it only stores what was planned so it has something objective to measure the logged week against. Deliberately built out of the Races component language rather than a second one: the session card is the same native <span class="mono">&lt;details&gt;</span> disclosure and the same soft two-layer "lifted card" shadow as a race card, just at <span class="mono">--rmd</span> (10px) instead of <span class="mono">--rlg</span>. The always-visible summary carries a discipline dot filled straight from the <span class="mono">--{disc}</span> token (so it matches the "by session" grid and the rest of the app), the title, an uppercase meta line, and a <b>Key</b> pill on key sessions (--phase-peak on --phase-peak-l, 6.03:1 — same reversed-fill convention as the Month week phase pill). Notes sit behind the expand. <b>Week selector:</b> an --s3 track with 44px <span class="mono">&lsaquo;</span>/<span class="mono">&rsaquo;</span> buttons, reusing the Month week number, phase pill and "this week" tag verbatim — the Plan view has no logged sessions to infer a phase from, so its pill reads the app's single current phase, the same way This week's own header does. <b>Add button:</b> full-width and dashed, in --blue-m rather than --bd3 — --bd3 over the page background only reaches 1.73:1, under the 3:1 non-text bar in Accessibility below, while --blue-m clears it at 3.71:1 and ties the outline to the blue label inside it. Reached from an "Edit plan →" link in This week, <b>not a sixth nav tab</b> — the nav stays five buttons, and Month had already established that a full view can live without one. Synced to the same Google Sheet as the training log and the race calendar, via a third "Plan" tab in the spreadsheet.</p>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">The Plan view is where the athlete types in the week they've already written elsewhere — the app never authors or suggests a session, it only stores what was planned so it has something objective to measure the logged week against. Deliberately built out of the Races component language rather than a second one: the session card is the same native <span class="mono">&lt;details&gt;</span> disclosure and the same soft two-layer "lifted card" shadow as a race card, just at <span class="mono">--rmd</span> (10px) instead of <span class="mono">--rlg</span>. The always-visible summary carries a discipline dot filled straight from the <span class="mono">--{disc}</span> token (so it matches the "by session" grid and the rest of the app), the title, an uppercase meta line, and a <b>Key</b> pill on key sessions (--phase-peak on --phase-peak-l, 6.03:1 — same reversed-fill convention as the Month week phase pill). Notes, <b>Edit</b> and Remove sit behind the expand — the foot is <span class="mono">space-between</span>, not <span class="mono">flex-end</span>, so the safe action and the destructive one sit at opposite ends rather than adjacent, where a mis-tap deletes a session the athlete meant to edit. Edit opens the same add-session form pre-filled, relabelled "Save changes": every field is editable <b>except the date</b>, because moving a session to another day is the drag-and-drop calendar editing this feature has always excluded — delete-and-re-add remains the way to change a date. <b>Week selector:</b> an --s3 track with 44px <span class="mono">&lsaquo;</span>/<span class="mono">&rsaquo;</span> buttons, reusing the Month week number, phase pill and "this week" tag verbatim — the Plan view has no logged sessions to infer a phase from, so its pill reads the app's single current phase, the same way This week's own header does. <b>Add button:</b> full-width and dashed, in --blue-m rather than --bd3 — --bd3 over the page background only reaches 1.73:1, under the 3:1 non-text bar in Accessibility below, while --blue-m clears it at 3.71:1 and ties the outline to the blue label inside it. Reached from an "Edit plan →" link in This week, <b>not a sixth nav tab</b> — the nav stays five buttons, and Month had already established that a full view can live without one. Synced to the same Google Sheet as the training log and the race calendar, via a third "Plan" tab in the spreadsheet.</p>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">Check-in landing</span><span class="spec mono">state.mode 'plan' · no step counter · foot hidden</span></div>
+        <div class="comp-stage">
+          <div class="pv-landing">
+            <p class="pv-landing-eyebrow">Today</p>
+            <div class="pv-landing-bar"></div>
+            <p class="pv-landing-h">Ready to check in?</p>
+            <p class="pv-landing-hint">One of your 2 planned sessions today is still to log.</p>
+            <ul class="pv-landing-list">
+              <li class="pv-landing-card">
+                <div class="pv-flow-plan-hd">
+                  <span class="pv-flow-plan-dot" style="background:var(--swim)"></span>
+                  <span class="pv-flow-plan-title">Swim &mdash; Squad CSS</span>
+                  <span class="pv-plan-key">Key</span>
+                </div>
+                <span class="pv-flow-plan-meta">60 min &middot; Hard / quality</span>
+                <span class="pv-flow-plan-cta">Check in on this &rarr;</span>
+              </li>
+              <li class="pv-landing-card is-logged">
+                <div class="pv-flow-plan-hd">
+                  <span class="pv-flow-plan-dot" style="background:var(--run)"></span>
+                  <span class="pv-flow-plan-title">Run &mdash; Easy shakeout</span>
+                </div>
+                <span class="pv-flow-plan-meta">30 min &middot; Easy / steady</span>
+                <span class="pv-flow-plan-logged">Logged</span>
+              </li>
+            </ul>
+            <span class="pv-landing-other">Log an unplanned session</span>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Check-in is the app's primary interaction, and when today has a planned session the honest opening question is "did you do the one you planned?", not a blank date-and-discipline form. This screen is that default; the generic form becomes a deliberate choice. It is a fourth mode of the existing check-in state machine (<span class="mono">ask | plan | review | saved</span>) rather than a separate view, so one <span class="mono">render()</span> still decides what the flow looks like — which means every branch that previously treated its <span class="mono">else</span> as "ask" needed an explicit <span class="mono">plan</span> case, or the landing would draw under a "Just finished &middot; 1 / 5" progress header. <b>Chrome:</b> eyebrow "Today", <b>no step counter and a 0% bar</b> — the landing sits <i>before</i> step 1, so any counter would misstate where the athlete is — and the sticky Back/Next pair hidden outright rather than disabled, since a greyed "Next" on a screen with no next step reads as breakage. <b>Cards</b> are the same <span class="mono">flowPlanCard()</span> component as the in-flow hint list, at raised weight (--blue-m border, more padding) because here they are the primary action rather than a shortcut above the real question; only the call-to-action wording differs. Each session is its own card with its own action — with two planned, a single shared action would have to guess which, and guessing wrong pre-fills the wrong discipline. <b>"Log an unplanned session"</b> is a named design element, not an oversight: training off-plan is normal, and the signal layer already models it as <span class="mono">extra</span>, never scoring it bad. It drops into the manual flow exactly as it behaved before any plan integration, with nothing pre-filled. Two rules carry over unchanged: <b>a1 is never pre-filled by any path</b>, and the landing only appears when nothing has been entered yet — tapping away to Review and back still resumes an in-progress check-in rather than discarding it. A day with nothing planned never sees this screen at all. <b>A session already logged today is shown but not offered</b> (second card above): muted --s3 fill, no lift, no hover, and a --done "Logged" marker (5.54:1) where the call-to-action would be. It is rendered as a plain <span class="mono">&lt;div&gt;</span> rather than a disabled button, because there is no action to re-enable and a disabled control invites a hunt for the thing that would turn it back on. Which sessions count as logged comes from <span class="mono">planDayResults()</span> — the same matcher the Adherence signal runs on, never a second rule — so the screen and the signal can't disagree. This is not cosmetic: tapping a card for a session already logged writes a duplicate entry, which the matcher then reports as an <i>unplanned</i> <span class="mono">extra</span>, corrupting the signal this screen exists to feed. When <i>every</i> planned session for today is already logged the screen doesn't appear at all, and Check-in falls through to the manual flow.</p>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">Plan week list (Review &rarr; Adherence)</span><span class="spec mono">compact rows · 52px date column · text-button actions</span></div>
+        <div class="comp-stage">
+          <div class="pv-dashplan">
+            <div class="pv-dashplan-label">This week&rsquo;s plan</div>
+            <p class="pv-dashplan-sub">Every day this week, planned or not. Edit opens the Plan view on that day.</p>
+            <div class="pv-dashplan-day">
+              <span class="pv-dashplan-date">Mon 10</span>
+              <div class="pv-dashplan-lines">
+                <div class="pv-dashplan-line">
+                  <span class="pv-dashplan-dot" style="background:var(--swim)"></span>
+                  <span class="pv-dashplan-text">Swim &middot; Squad &mdash; 8&times;100 CSS &middot; 60 min &middot; Hard / quality</span>
+                  <span class="pv-plan-key">Key</span>
+                  <span class="pv-dashplan-btn">Edit</span>
+                </div>
+              </div>
+            </div>
+            <div class="pv-dashplan-day">
+              <span class="pv-dashplan-date">Tue 11</span>
+              <div class="pv-dashplan-lines">
+                <div class="pv-dashplan-line">
+                  <span class="pv-dashplan-empty">Nothing planned</span>
+                  <span class="pv-dashplan-btn">Add</span>
+                </div>
+              </div>
+            </div>
+            <div class="pv-dashplan-day">
+              <span class="pv-dashplan-date">Wed 12</span>
+              <div class="pv-dashplan-lines">
+                <div class="pv-dashplan-line">
+                  <span class="pv-dashplan-dot" style="background:var(--bike)"></span>
+                  <span class="pv-dashplan-text">Bike &mdash; Endurance &middot; 180 min &middot; Easy / steady</span>
+                  <span class="pv-dashplan-btn">Edit</span>
+                </div>
+                <div class="pv-dashplan-line">
+                  <span class="pv-dashplan-dot" style="background:var(--run)"></span>
+                  <span class="pv-dashplan-text">Run &mdash; Brick off the bike &middot; 25 min &middot; Moderate</span>
+                  <span class="pv-plan-key">Key</span>
+                  <span class="pv-dashplan-btn">Edit</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">A low-emphasis, <b>read-only</b> listing of the displayed week's plan, sitting under the Adherence subtab's headline, counts, grid and legend — convenient access to the week's plan without leaving Review, deliberately light enough not to compete with the signal panel above it. All seven days render in order whether or not anything is planned, so a week with an empty plan is still seven rows each offering <b>Add</b> — the shortest path from "never used this" to a first entered session. <b>Compact rows:</b> a fixed 52px date column on the left (weekday + day-of-month, in the app's existing uppercase-tracked --ink3 label style, tinted --blue on today), then a stack of session lines — an 8px <span class="mono">--{disc}</span> dot, a one-line summary, a <b>Key</b> pill where it applies, and a right-aligned text button. <b>A multi-session day stacks its lines under one date label</b> rather than repeating the date (Wed above). <b>The action sits per session, not per day</b> — a day can hold more than one planned session, and one button among two has to guess which the athlete meant, which here would silently overwrite the wrong session's fields; the same reasoning the splash Today card already used for its per-session buttons. Empty days read "Nothing planned" rather than "Rest day": "Rest day" is a claim about <i>today</i> specific to the splash, whereas in a full seven-row listing absence is self-evident. Two implementation rules worth keeping: the summary text comes from <span class="mono">planSummaryLine()</span>, built <i>on top of</i> the existing <span class="mono">planMetaLine()</span> rather than re-listing the fields, so this surface can't word the same facts differently from the splash and check-in cards; and it must <b>not</b> reuse the Plan view's own session card, whose Remove handler redraws the (hidden) Plan view — pressed from Review the session would vanish from the data while staying on screen. Every mutation stays in the Plan view; this section only links there. The region is a real <span class="mono">&lt;section&gt;</span> with its own <span class="mono">aria-label</span>, because the blue eyebrow above it is a <span class="mono">::before</span> on <span class="mono">attr(data-label)</span> — generated content, not a heading — and each button carries a distinct <span class="mono">aria-label</span>, since "Edit" seven rows deep names nothing on its own. Renders regardless of whether Adherence is running its plan-anchored or self-reported computation, and is scoped to <b>This week only</b> — Month spans several week blocks, where a per-week seven-day listing is a different layout problem.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Planned-session card (check-in)</span><span class="spec mono">--s1 card · notes in the open · --blue CTA</span></div>
@@ -1071,7 +1185,8 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
   var brand = [
     ['Blue','Primary CTA, links, focus ring — also the favicon/app icon fill','--blue','#0022FF','#fff'],
     ['Blue tint','Selected state fill, prompt blocks','--blue-l','#E8EFFE','var(--ink3)'],
-    ['Blue mid','Hover / secondary emphasis','--blue-m','#4F7BE8','#fff']
+    ['Blue mid','Hover / secondary emphasis','--blue-m','#4F7BE8','#fff'],
+    ['Hero accent','Eyebrow + headline accent on the dark hero panels — Warm up, and the shared .race-hero used by both Races and Plan','--hero-accent','#F8C44F','var(--ink)']
   ];
   var brandWrap = document.getElementById('sw-brand');
   brand.forEach(function(s){ brandWrap.appendChild(swatch(s[0], s[1], s[2], s[3], s[4])); });

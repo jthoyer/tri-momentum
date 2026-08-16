@@ -30,6 +30,14 @@
   --skipped:#993C1D;--skipped-l:#FAECE7;
   --modified:#854F0B;--modified-l:#FAEEDA;
   --dash-good:#0E9A5C;--dash-mid:#E0A100;--dash-bad:#C81E1E;
+  /* The accent used on the app's dark hero panels — Warm up (#182542) and
+     the shared .race-hero used by Races and Plan (--ink). Was a literal hex
+     repeated in four Warm up rules; tokenised when the same yellow was
+     adopted by .race-hero, so the two can't drift. Contrast measured per the
+     standing rule (decisions 24/26): 9.41:1 on Warm up's navy, 11.67:1 on
+     --ink — both clear 4.5:1 for the 11px eyebrows and 3:1 for the 23/25px
+     headline accents. */
+  --hero-accent:#F8C44F;
   --rmd:10px;--rlg:16px;--rxl:22px;--tabbar-h:84px;--tabbar-lift:0px;
   --fd:'Outfit',sans-serif;--fb:'Outfit',sans-serif;--fm:'Outfit',sans-serif;
 }
@@ -123,6 +131,11 @@ textarea::placeholder{color:var(--ink3)}
 .btn-ghost:hover{background:var(--s3)}
 .btn-ghost:disabled{color:var(--ink3);border-color:var(--bd);cursor:default}
 .btn-ghost:disabled:hover{background:transparent}
+/* Required, not incidental: .flow-foot sets display:flex, which beats the UA
+   stylesheet's [hidden]{display:none}, so without this rule setting .hidden on
+   the foot does nothing at all. Same reason every other [hidden] component in
+   this file carries its own rule. */
+.flow-foot[hidden]{display:none}
 .flow-foot .btn{border-radius:999px}
 .flow-foot .btn-primary{background:#002DFF;border-color:#002DFF}
 .flow-foot .btn-primary:hover{background:#0022CC}
@@ -183,6 +196,29 @@ textarea::placeholder{color:var(--ink3)}
 .flow-plan-meta{display:block;margin-top:4px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
 .flow-plan-notes{display:block;margin-top:8px;font-family:var(--fb);font-size:13.5px;color:var(--ink2);line-height:1.5;overflow-wrap:anywhere}
 .flow-plan-cta{display:block;margin-top:10px;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue)}
+/* An already-logged planned session. Rendered as a static div rather than a
+   disabled button (see flowPlanCard), so it deliberately has no hover, no
+   pointer and no lift — it is a record, not an offer. Muted fill and no
+   shadow keep it visibly behind the sessions still to log. */
+.flow-plan-card.is-logged{background:var(--s3);border-color:var(--bd);box-shadow:none;cursor:default}
+.flow-plan-card.is-logged .flow-plan-title{color:var(--ink2)}
+.flow-plan-logged{display:block;margin-top:10px;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--done)}
+/* Check-in landing (state.mode 'plan'). The cards are the same component as
+   the in-flow hint list; on the landing they carry more weight (blue border,
+   larger gap) because here they are the primary action rather than a shortcut
+   sitting above the real question. */
+.flow-landing-list{gap:12px;margin-top:1.4rem}
+.flow-landing-list .flow-plan-card{padding:14px 16px}
+/* :not(.is-logged) on both — an already-logged session must not pick up the
+   landing list's primary-action emphasis or its hover, or it would read as
+   just as tappable as the ones still to log, which is the whole defect. */
+.flow-landing-list .flow-plan-card:not(.is-logged){border-color:var(--blue-m)}
+.flow-landing-list .flow-plan-card:not(.is-logged):hover{border-color:var(--blue);background:var(--blue-l)}
+/* Secondary by construction: a full-width text button with no fill, well
+   clear of the cards, so "log something else" never competes with the
+   planned session it sits under. */
+.flow-landing-other{display:block;width:100%;min-height:44px;margin-top:2rem;padding:12px 14px;background:none;border:none;font-family:var(--fd);font-size:14px;font-weight:600;color:var(--blue);cursor:pointer;text-align:center}
+.flow-landing-other:hover{color:var(--blue-m);text-decoration:underline}
 
 /* ── One-time training phase screen ── */
 .period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;justify-content:center}
@@ -204,6 +240,33 @@ textarea::placeholder{color:var(--ink3)}
 .dash-section::before{content:attr(data-label);display:block;font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:.9rem}
 .dash-signal-link{display:block;margin-top:14px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 .dash-signal-link:hover{color:var(--blue-m)}
+/* "This week's plan" — the read-only 7-day plan listing under the Adherence
+   subtab. Own dash-plan-* namespace rather than reusing .plan-day/.plan-item:
+   those belong to the Plan view's editable rows, and one selector serving an
+   editable card and a read-only line item is how the two silently drift. */
+.dash-plan-week-sub{margin:-.35rem 0 .2rem;font-size:13px;color:var(--ink2);line-height:1.5}
+.dash-plan-days{list-style:none}
+/* Compact row: fixed-width date column on the left, stacked session lines
+   filling the rest. align-items:flex-start keeps the date pinned to the top
+   line of a multi-session day rather than centring against the stack. */
+.dash-plan-day{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--bd)}
+.dash-plan-days > li:first-child{border-top:none}
+/* Fixed width so all seven date labels form a straight column. padding-top
+   optically aligns the smaller uppercase label with the first session line. */
+.dash-plan-date{flex:none;width:52px;padding-top:13px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.dash-plan-day.is-today .dash-plan-date{color:var(--blue);font-weight:600}
+.dash-plan-lines{flex:1;min-width:0;list-style:none}
+.dash-plan-line{display:flex;align-items:center;gap:8px;min-height:44px}
+.dash-plan-dot{flex:none;width:8px;height:8px;border-radius:2px;background:var(--rest)}
+/* min-width:0 + the wrap rules let a long title wrap instead of pushing the
+   Edit button off the right edge at 320px. */
+.dash-plan-line-text{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+.dash-plan-empty{flex:1;min-width:0;font-size:13.5px;color:var(--ink3)}
+/* Text button, matching .dash-signal-link's weight/size rather than a boxed
+   control — this section is a lower-emphasis addition under the signal panel,
+   not a second hero. min-height carries the 44px target the row height gives. */
+.dash-plan-edit{flex:none;min-width:44px;min-height:44px;padding:0 2px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-align:right;cursor:pointer}
+.dash-plan-edit:hover{color:var(--blue-m)}
 .dash-insight-strip{margin-top:.6rem;padding:.85rem 1rem;border-left:3px solid transparent;border-radius:0 10px 10px 0}
 .dash-insight-strip:first-child{margin-top:0}
 .dash-insight-strip-label{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-bottom:.4rem}
@@ -280,9 +343,14 @@ textarea::placeholder{color:var(--ink3)}
    the reference's orange), and the stat line swapped for this app's own
    commitment counts (locked in / considering) instead of "club events". */
 .race-hero{margin-top:0;padding:1.5rem 1.3rem 1.6rem;background:var(--ink);border-radius:var(--rlg);color:#fff}
-.race-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-m)}
+/* .race-hero is shared: raceHero() and planHero() both build one, so the
+   eyebrow/accent colour here lands on the Races view and the Plan view
+   together. The stat colours below are deliberately NOT part of this
+   treatment — they encode commitment status (green locked in, tangerine
+   considering), so flattening them to the accent would delete information. */
+.race-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--hero-accent)}
 .race-hero-headline{margin-top:.6rem;font-family:var(--fd);font-size:23px;font-weight:600;line-height:1.3;color:#fff}
-.race-hero-headline .accent{color:var(--blue-m)}
+.race-hero-headline .accent{color:var(--hero-accent)}
 .race-hero-sub{margin-top:.7rem;font-size:14px;line-height:1.55;color:rgba(255,255,255,.68)}
 .race-hero-stats{display:flex;flex-wrap:wrap;gap:20px;margin-top:1.3rem;padding-top:1.1rem;border-top:1px solid rgba(255,255,255,.14)}
 .race-hero-stat{font-family:var(--fd);font-size:13.5px;color:rgba(255,255,255,.68)}
@@ -379,9 +447,17 @@ fieldset.plan-field{border:0;min-width:0}
 /* --dash-bad on white is 5.74:1 — clears the 4.5:1 AA bar for body text. */
 .plan-form-error{padding:10px 12px;border-radius:var(--rmd);background:var(--skipped-l);color:var(--dash-bad);font-size:13.5px;font-weight:500;line-height:1.5}
 .plan-form-error[hidden]{display:none}
+/* Same node as the form's error surface, but rendered by the day row after
+   the form it belonged to has been closed — so it needs its own spacing. */
+.plan-day-notice{margin:10px 0 0}
 .plan-item-body{padding:0 14px 14px}
 .plan-item-notes{font-size:13.5px;color:var(--ink2);line-height:1.5}
-.plan-item-foot{display:flex;justify-content:flex-end;margin-top:12px}
+/* space-between, not flex-end: the safe action (Edit) and the destructive one
+   (Remove) sit at opposite ends rather than adjacent, so a mis-tap on a phone
+   doesn't delete a session the athlete meant to edit. */
+.plan-item-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.plan-item-edit{min-height:44px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+.plan-item-edit:hover{color:var(--blue-m)}
 .plan-item-delete{min-height:44px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
 .plan-item-delete:hover{color:var(--run)}
 /* Dashed border in --blue-m, not --bd3: --bd3 over --bg only reaches
@@ -406,18 +482,18 @@ fieldset.plan-field{border:0;min-width:0}
 
 /* ── Warm up ── */
 .warmup-hero{margin-top:1.4rem;padding:1.5rem 1.3rem 1.4rem;border-radius:var(--rxl);background:#182542;color:#fff}
-.warmup-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#F8C44F}
+.warmup-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--hero-accent)}
 .warmup-hero h2{margin-top:9px;font-family:var(--fd);font-size:25px;font-weight:600;line-height:1.22;letter-spacing:-.3px;color:#fff}
-.warmup-hero h2 em{color:#F8C44F;font-style:normal}
+.warmup-hero h2 em{color:var(--hero-accent);font-style:normal}
 .warmup-hero-desc{margin-top:11px;font-size:14px;line-height:1.6;color:#EDF0F7}
 .warmup-hero-meta{display:grid;gap:11px;margin-top:18px;padding:13px 15px;border-radius:var(--rmd);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
 .warmup-hero-meta-item{display:grid;gap:2px;font-size:13px;color:#EDF0F7}
 .warmup-hero-meta-label{display:block;font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)}
 .warmup-hero-progress{margin-top:18px}
 .warmup-hero-progress-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-family:var(--fd);font-size:13.5px;font-weight:600;color:#fff}
-.warmup-hero-progress-pct{color:#F8C44F}
+.warmup-hero-progress-pct{color:var(--hero-accent)}
 .warmup-hero-bar{margin-top:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
-.warmup-hero-bar-fill{height:100%;width:0%;border-radius:999px;background:#F8C44F;transition:width .2s ease}
+.warmup-hero-bar-fill{height:100%;width:0%;border-radius:999px;background:var(--hero-accent);transition:width .2s ease}
 .warmup-hero-sessions{margin-top:10px;font-size:12.5px;color:rgba(255,255,255,.7)}
 .warmup-completion-banner{margin-top:1.4rem;padding:20px 22px;border-radius:var(--rmd);background:var(--done-l);border:1px solid rgba(15,110,86,.25);text-align:center}
 .warmup-completion-title{font-family:var(--fd);font-size:19px;font-weight:600;color:var(--done)}
@@ -1197,7 +1273,7 @@ if(window.caches && caches.keys){
   var state = {
     ans: {date: todayISO()},
     step: 0,
-    mode: 'ask',       // 'ask' | 'review' | 'saved'
+    mode: 'ask',       // 'ask' | 'plan' | 'review' | 'saved'
     note: '',
     periodisation: loadPhase(),
     monthSignal: 'intensity',
@@ -1209,6 +1285,11 @@ if(window.caches && caches.keys){
     warmupLogged: {}
   };
   var phaseReturnView = 'flow';
+  // Whether returning from the phase picker should run the Check-in landing
+  // decision. True only when the picker was a gate on the way *into* Check-in;
+  // the in-flow "Change phase" link sets it false so it still lands back on
+  // the question the athlete was on (decision 19).
+  var phaseReturnWantsLanding = false;
 
   function isLong(v){ return v !== null && v !== undefined && parseInt(v,10) > 45; }
   function asked(q){ return !q.onlyLong || isLong(state.ans.duration); }
@@ -1495,7 +1576,11 @@ if(window.caches && caches.keys){
     var hd = el('div', 'dash-stat-hd');
     hd.appendChild(el('div', 'dash-stat-n', opts.nText));
     wrap.appendChild(hd);
-    if(t.total >= STAT_MIN_N){ wrap.appendChild(renderStatBar(t, opts.bigDesc)); }
+    // opts.hideStatBar suppresses the big-percentage + tri-bar block. It has
+    // to be a flag rather than a deletion because this function is shared:
+    // it draws This week's single card AND every week-block in Month, for all
+    // three signals. Only Month's Fuelling and Adherence sections set it.
+    if(!opts.hideStatBar && t.total >= STAT_MIN_N){ wrap.appendChild(renderStatBar(t, opts.bigDesc)); }
     var counts = el('div', 'dash-counts');
     function countEl(n, label2, color){
       var s = document.createElement('span');
@@ -1859,14 +1944,12 @@ if(window.caches && caches.keys){
     if(!any){ wrap.appendChild(el('p', 'empty-note', 'No sessions with a signal logged yet.')); }
     return wrap;
   }
-  function monthTally(catFn){
-    var t = {good:0, mid:0, bad:0, total:0};
-    monthWeeks().forEach(function(w){
-      var wt = tallyDays(w.days, catFn);
-      t.good += wt.good; t.mid += wt.mid; t.bad += wt.bad; t.total += wt.total;
-    });
-    return t;
-  }
+  // monthTally() lived here: a month-wide roll-up whose only caller was the
+  // aggregate stat bar at the top of Month's Fuelling section. That bar was
+  // removed, so the helper went with it rather than being left as dead code
+  // for the next reader to work out. Note it was Stage-A only (tallyDays over
+  // a catFn) — it never understood the plan-aware Stage B path, so it was not
+  // reusable for Adherence anyway.
   function monthWeekHeader(w){
     var hd = el('div', 'month-week-hd');
     hd.appendChild(el('span', 'month-week-label', 'Week ' + w.weekNum));
@@ -1899,6 +1982,7 @@ if(window.caches && caches.keys){
          goodLabel: opts.goodLabel, midLabel: opts.midLabel,
          badLabel: useB && opts.badLabelB ? opts.badLabelB : opts.badLabel,
          matrixSub: useB && opts.matrixSubB ? opts.matrixSubB : opts.matrixSub,
+         hideStatBar: !!opts.hideStatBar,
          cellFn: useB ? planDashCell : null},
         w.days);
       wrap.appendChild(block);
@@ -1943,12 +2027,15 @@ if(window.caches && caches.keys){
     root.appendChild(renderSignalSubtabs(state.monthSignal, function(v){ state.monthSignal = v; renderTrends(); }));
     var adherenceLegendStageB = false;
     if(state.monthSignal === 'fuelling'){
-      var fuelT = monthTally(fuelCat);
       root.appendChild(renderDisciplineInsights(fuelCat, disciplineFuelHeadline));
-      if(fuelT.total >= STAT_MIN_N){ root.appendChild(renderStatBar(fuelT, 'at race concentration')); }
+      // No stat bar in Month for Fuelling — neither the month-wide aggregate
+      // that used to sit here (with its monthTally(fuelCat)) nor the per-week
+      // one inside each block. This week still shows both, and Month's
+      // Intensity section still shows its per-week one.
       root.appendChild(renderMonthSection('Fuelling', fuelCat, {
         nText: function(t){ return t.total + ' over 45 min'; }, bigDesc: 'at race concentration',
-        goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none', matrixSub: 'over 45 min only'
+        goodLabel: 'race conc.', midLabel: 'lighter', badLabel: 'none', matrixSub: 'over 45 min only',
+        hideStatBar: true
       }, resolveFuelInsight));
     } else if(state.monthSignal === 'adherence'){
       var monthPlan = monthHasPlan();
@@ -1959,7 +2046,8 @@ if(window.caches && caches.keys){
         nTextB: function(t){ return t.total + ' of ' + (t.total + t.pending) + ' planned' + (t.extra ? ' · ' + t.extra + ' unplanned' : ''); },
         bigDesc: 'went as planned',
         goodLabel: 'as planned', midLabel: 'adjusted', badLabel: 'didn’t happen', badLabelB: 'missed',
-        matrixSub: 'by session', matrixSubB: 'planned vs logged'
+        matrixSub: 'by session', matrixSubB: 'planned vs logged',
+        hideStatBar: true // Month only — This week's Adherence card keeps it
       }, resolveAdherenceInsight));
       adherenceLegendStageB = monthPlan;
     } else {
@@ -1971,6 +2059,93 @@ if(window.caches && caches.keys){
     }
     root.appendChild(dashLegend(state.monthSignal, adherenceLegendStageB));
   }
+  // ── "This week's plan" — Adherence subtab, This week only ──────────
+  // A read-only listing of the displayed week's plan, day by day, with a
+  // per-day link into the Plan view. It deliberately does *not* reuse
+  // planItemCard(): that card carries a Remove button whose handler calls
+  // renderPlan(), which draws into the hidden Plan view — pressed from
+  // Review the session would disappear from the data while staying on
+  // screen. Every mutation stays in the Plan view, which is exactly what
+  // the per-day button navigates to.
+  // One compact line: discipline dot, one-line summary, Edit on the right.
+  // The Edit sits on the *session*, not on the day, because a day can hold
+  // more than one — decision 27 established same-day same-discipline doubles
+  // are real here, and decision 29 already refused a day-level tap target for
+  // exactly this reason: with two sessions, one button has to guess which,
+  // and guessing wrong here silently overwrites the wrong session's fields.
+  // Stacked lines keep the day's date label appearing once, as specified.
+  function dashPlanLine(item){
+    var li = el('li', 'dash-plan-line');
+    var dot = el('span', 'dash-plan-dot');
+    // The existing discipline identity tokens (--swim/--bike/--run/--brick/
+    // --strength), same as planItemCard — no new colours.
+    dot.style.background = 'var(--' + item.disc + ')';
+    // Decorative: the discipline is named in words in the summary beside it,
+    // so the dot carries nothing on its own and needs no contrast floor.
+    dot.setAttribute('aria-hidden', 'true');
+    li.appendChild(dot);
+    var text = el('span', 'dash-plan-line-text', planSummaryLine(item));
+    li.appendChild(text);
+    // Kept even though the specified summary is "discipline — title ·
+    // duration": a key session is what decision 30 lets force a week's
+    // severity to bad, so dropping the marker from a plan listing would hide
+    // the one attribute the Adherence signal treats as load-bearing.
+    if(item.key){ li.appendChild(el('span', 'plan-item-key', 'Key')); }
+    var edit = el('button', 'dash-plan-edit', 'Edit');
+    edit.type = 'button';
+    edit.setAttribute('aria-label', 'Edit ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' on ' + formatWeekdayDate(item.date));
+    edit.addEventListener('click', function(){ openPlanEditor(item); });
+    li.appendChild(edit);
+    return li;
+  }
+  function dashPlanDay(dateISO){
+    var row = el('li', 'dash-plan-day' + (dateISO === todayISO() ? ' is-today' : ''));
+    var d = new Date(dateISO + 'T00:00:00');
+    // Weekday + day-of-month only. The month is dropped because all seven
+    // rows are one week and the Adherence panel above already names it; the
+    // uppercase-tracked label style is the app's existing date treatment
+    // (.plan-day-date, .race-month-label), not a new one.
+    var dateLbl = el('span', 'dash-plan-date', MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate());
+    // The visible label is abbreviated; screen readers get the unabbreviated
+    // date so a row is never announced as a bare "Mon 17".
+    dateLbl.setAttribute('aria-label', formatWeekdayDate(dateISO) + (dateISO === todayISO() ? ', today' : ''));
+    row.appendChild(dateLbl);
+
+    var lines = el('ul', 'dash-plan-lines');
+    var items = planItemsFor(dateISO);
+    if(items.length){
+      lines.setAttribute('aria-label', 'Planned sessions for ' + formatWeekdayDate(dateISO));
+      items.forEach(function(item){ lines.appendChild(dashPlanLine(item)); });
+    } else {
+      // "Nothing planned", not "Rest day" — the splash Today card's "Rest
+      // day" asserts something about *today* specifically; in a full 7-day
+      // listing absence per row is already obvious and needs no claim.
+      var empty = el('li', 'dash-plan-line');
+      empty.appendChild(el('span', 'dash-plan-empty', 'Nothing planned'));
+      var add = el('button', 'dash-plan-edit', 'Add');
+      add.type = 'button';
+      add.setAttribute('aria-label', 'Add a planned session on ' + formatWeekdayDate(dateISO));
+      add.addEventListener('click', function(){ goToPlanDay(dateISO); });
+      empty.appendChild(add);
+      lines.appendChild(empty);
+    }
+    row.appendChild(lines);
+    return row;
+  }
+  function dashPlanWeekSection(mondayISO){
+    var wrap = el('section', 'dash-section dash-plan-week');
+    wrap.setAttribute('data-label', 'This week’s plan');
+    // .dash-section's eyebrow is a CSS ::before on attr(data-label) —
+    // generated content, not a heading — so the region carries its own
+    // accessible name rather than depending on it being announced.
+    wrap.setAttribute('aria-label', 'This week’s plan');
+    wrap.appendChild(el('p', 'dash-plan-week-sub', 'Every day this week, planned or not. Edit opens the Plan view on that day.'));
+    var ul = el('ul', 'dash-plan-days');
+    planWeekDates(mondayISO).forEach(function(dateISO){ ul.appendChild(dashPlanDay(dateISO)); });
+    wrap.appendChild(ul);
+    return wrap;
+  }
+
   function renderDashboard(){
     var root = els.viewDash;
     clear(root);
@@ -2026,6 +2201,15 @@ if(window.caches && caches.keys){
       }, days));
     }
     root.appendChild(dashLegend(state.weekSignal, adherenceLegendStageB));
+    // Adherence subtab only, and This week only. Month's Adherence spans
+    // several week blocks, where a 7-day listing per block is a different and
+    // much larger layout problem — deliberately not attempted there.
+    // Independent of the Stage A/B switch above: this is access to the week's
+    // plan, not a reading of it, and is as useful on a week with no plan
+    // entered (seven "Nothing planned" rows, each with an Add) as on one with.
+    if(state.weekSignal === 'adherence'){
+      root.appendChild(dashPlanWeekSection(weekKey(new Date())));
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2407,6 +2591,25 @@ if(window.caches && caches.keys){
     if(item.key && includeKey !== false){ bits.push('Key'); }
     return bits.join(' · ');
   }
+  // The single-line form used by the Review week list: the discipline and
+  // title, then planMetaLine's fields. Built on planMetaLine rather than
+  // re-listing duration/intensity, so this row can never word the same facts
+  // differently from the splash and check-in cards.
+  function planSummaryLine(item){
+    var head = DISC_LABEL[item.disc] || item.disc;
+    if(item.title){
+      // An em-dash separates discipline from title — except when the title
+      // already contains one, which is the common case here rather than an
+      // edge case (the add-session form's own placeholder is "Squad — 8×100
+      // CSS"). Left alone it renders "Swim — Squad — 8×100 CSS", two dashes
+      // both trying to set off a clause: the same punctuation collision
+      // decision 30 fixed in the missed-key-session headline.
+      head += (item.title.indexOf('—') === -1 ? ' — ' : ' · ') + item.title;
+    }
+    // includeKey false — the standalone "Key" pill sits beside this text.
+    var meta = planMetaLine(item, false);
+    return meta ? (head + ' · ' + meta) : head;
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // TRAINING PLAN
@@ -2436,6 +2639,23 @@ if(window.caches && caches.keys){
   // and clear the ticks. Tracked here, and honoured by the re-render guard
   // in refreshVisibleViewFromSheet() alongside planFormOpenFor.
   var planCopyOpen = false;
+  // When set, the open day's form is an *edit* of this planned session rather
+  // than a blank add. Held alongside planFormOpenFor rather than derived from
+  // it, for the same reason planFormOpenFor isn't derived from the DOM:
+  // renderPlan() rebuilds the whole view, including on a background Sheet
+  // refresh, and a half-edited form must not silently turn back into an add.
+  // Only ever non-null while planFormOpenFor is set, so the existing
+  // re-render guard in refreshVisibleViewFromSheet() already covers it.
+  var planEditingId = null;
+  // A save that has to close its own form still owes the athlete a reason.
+  // {date, message} or null, rendered by planDayRow() using the *same*
+  // .plan-form-error / role="alert" node the form itself uses — it just has
+  // to outlive the form, because the form is what's being taken away.
+  // Deliberately not cleared by a render: a background Sheet refresh must
+  // not wipe the message before it has been read. It is cleared by the next
+  // plan action instead (opening a form, changing week, any mutation).
+  var planNotice = null;
+  function clearPlanNotice(){ planNotice = null; }
 
   function planWeekDates(mondayISO){
     var monday = new Date(mondayISO + 'T00:00:00');
@@ -2473,8 +2693,55 @@ if(window.caches && caches.keys){
     plan.push(item);
     persistPlan();
     submitPlanToSheet('add', item);
+    clearPlanNotice();
     renderPlan();
     say('Planned ' + (DISC_LABEL[item.disc] || item.disc) + ' added for ' + formatDateLabel(dateISO) + '.');
+    return item;
+  }
+  // Edits an existing planned session in place. Note what it does NOT change:
+  // `id`, `date` and `phase`. id and date are excluded on both sides — here,
+  // and structurally in Code.gs, where an update writes only the Disc..Phase
+  // column block (see PLAN_EDITABLE_COL). Moving a session to another day is
+  // the drag-and-drop calendar editing this feature has always excluded
+  // (CLAUDE.md, "What not to build"), so delete-and-re-add stays the way to
+  // change a date. `phase` is left alone because it records the phase the
+  // session was *planned* in — retyping its duration months later must not
+  // silently restamp it with whatever phase is current now.
+  function updatePlanSession(id, fields){
+    var item = plan.filter(function(p){ return p.id === id; })[0];
+    // The row is gone — removed on another device, or it only ever existed
+    // in a localStorage cache written before Code.gs was redeployed. A bare
+    // `return null` here left the athlete's edits sitting in an open form
+    // that would never save, with nothing on screen to say so. Say it, then
+    // take the dead form away rather than leaving it to be retyped into.
+    if(!item){
+      planNotice = {
+        date: planFormOpenFor,
+        message: 'This session is no longer in your plan — it may have been removed on another device. Your changes were not saved.'
+      };
+      planFormOpenFor = null;
+      planEditingId = null;
+      renderPlan();
+      say('That session is no longer in your plan. Your changes were not saved.');
+      return null;
+    }
+    // Mutated on the existing object rather than replaced with a freshly
+    // built one, so every field this function doesn't name carries over by
+    // construction — a new field added to a plan item later can't be
+    // silently dropped by an edit.
+    item.disc = fields.disc;
+    item.title = (fields.title || '').trim();
+    item.intensity = fields.intensity || 'easy';
+    item.duration = fields.duration;
+    item.key = !!fields.key;
+    item.notes = (fields.notes || '').trim();
+    persistPlan();
+    submitPlanToSheet('update', item);
+    planFormOpenFor = null;
+    planEditingId = null;
+    clearPlanNotice();
+    renderPlan();
+    say('Updated ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' on ' + formatDateLabel(item.date) + '.');
     return item;
   }
   function deletePlanSession(id){
@@ -2522,6 +2789,7 @@ if(window.caches && caches.keys){
     persistPlan();
     submitPlanToSheet('deleteWeek', null, {from: from, to: to});
     planFormOpenFor = null;
+    planEditingId = null; // the row being edited is one of the ones just removed
     renderPlan();
     say(removed + ' planned session' + (removed === 1 ? '' : 's') + ' cleared from this week.');
     return removed;
@@ -2571,12 +2839,18 @@ if(window.caches && caches.keys){
     return hit ? hit.value : fallback;
   }
 
-  function renderPlanForm(root, dateISO, onCancel){
+  // One form, two modes. `editItem` (optional) switches it from a blank add
+  // to an in-place edit of that planned session — extended rather than forked
+  // so the validation rules, the error surface and the field set can't drift
+  // between adding and editing. The date is shown but never editable in
+  // either mode: see updatePlanSession.
+  function renderPlanForm(root, dateISO, onCancel, editItem){
+    var isEdit = !!editItem;
     var form = document.createElement('form');
     form.className = 'plan-form';
-    form.setAttribute('aria-label', 'Add a planned session for ' + formatWeekdayDate(dateISO));
+    form.setAttribute('aria-label', (isEdit ? 'Edit planned session for ' : 'Add a planned session for ') + formatWeekdayDate(dateISO));
 
-    var discInputs = planChoiceGroup(form, 'Which session?', 'plan-disc', PLAN_DISC_OPTS, 'grid3', 'swim');
+    var discInputs = planChoiceGroup(form, 'Which session?', 'plan-disc', PLAN_DISC_OPTS, 'grid3', isEdit ? editItem.disc : 'swim');
 
     var titleInput = document.createElement('input');
     titleInput.type = 'text'; titleInput.className = 'text-input'; titleInput.id = 'plan-title';
@@ -2589,6 +2863,7 @@ if(window.caches && caches.keys){
     // with type="url" on the race website field.
     titleInput.setAttribute('aria-required', 'true');
     titleInput.placeholder = 'e.g. Squad — 8×100 CSS';
+    if(isEdit){ titleInput.value = editItem.title || ''; }
     form.appendChild(planField('What is it', null, titleInput));
 
     var durInput = document.createElement('input');
@@ -2601,16 +2876,18 @@ if(window.caches && caches.keys){
     durInput.setAttribute('aria-required', 'true');
     durInput.setAttribute('inputmode', 'numeric');
     durInput.placeholder = 'e.g. 60';
+    if(isEdit && editItem.duration != null){ durInput.value = String(editItem.duration); }
     form.appendChild(planField('How long', 'minutes', durInput));
 
-    var intensityInputs = planChoiceGroup(form, 'Meant to be easy or hard?', 'plan-intensity', PLAN_INTENSITY_OPTS, 'grid3', 'easy');
+    var intensityInputs = planChoiceGroup(form, 'Meant to be easy or hard?', 'plan-intensity', PLAN_INTENSITY_OPTS, 'grid3', isEdit ? editItem.intensity : 'easy');
     var keyInputs = planChoiceGroup(form, 'Key session?', 'plan-key', [
       {v:'no', label:'Regular'}, {v:'yes', label:'Key session'}
-    ], 'grid2', 'no');
+    ], 'grid2', (isEdit && editItem.key) ? 'yes' : 'no');
 
     var notesInput = document.createElement('textarea');
     notesInput.id = 'plan-notes'; notesInput.rows = 2; notesInput.maxLength = 200;
     notesInput.placeholder = 'e.g. HR cap 145 on the commute home';
+    if(isEdit){ notesInput.value = editItem.notes || ''; }
     form.appendChild(planField('Notes', 'optional', notesInput));
 
     // Its own class, not .empty-note — that one is styled as a neutral
@@ -2624,7 +2901,7 @@ if(window.caches && caches.keys){
     form.appendChild(err);
 
     var actions = el('div', 'plan-form-actions');
-    var submitBtn = el('button', 'btn btn-primary', 'Add session');
+    var submitBtn = el('button', 'btn btn-primary', isEdit ? 'Save changes' : 'Add session');
     submitBtn.type = 'submit';
     actions.appendChild(submitBtn);
     var cancelBtn = el('button', 'btn btn-ghost', 'Cancel');
@@ -2646,14 +2923,30 @@ if(window.caches && caches.keys){
         err.hidden = false; durInput.focus(); return;
       }
       err.hidden = true;
-      addPlanSession(dateISO, {
-        disc: checkedValue(discInputs, 'swim'),
+      // Fallbacks differ by mode on purpose. Adding falls back to the form's
+      // own defaults; editing falls back to the value the item already holds,
+      // so a session whose intensity or discipline was hand-typed into the
+      // Sheet as something outside the option list round-trips unchanged
+      // rather than being silently rewritten to 'easy'/'swim' by an edit that
+      // never touched that field.
+      var fields = {
+        disc: checkedValue(discInputs, isEdit ? editItem.disc : 'swim'),
         title: title,
         duration: mins,
-        intensity: checkedValue(intensityInputs, 'easy'),
+        intensity: checkedValue(intensityInputs, isEdit ? (editItem.intensity || 'easy') : 'easy'),
         key: checkedValue(keyInputs, 'no') === 'yes',
         notes: notesInput.value
-      });
+      };
+      if(isEdit){
+        // Closes the form and rebuilds the view; focus goes back to the day
+        // rather than a fresh blank form, since the edit is finished.
+        var editedDate = editItem.date;
+        updatePlanSession(editItem.id, fields);
+        var dayRow = document.getElementById('plan-day-' + editedDate);
+        if(dayRow){ dayRow.focus({preventScroll: true}); }
+        return;
+      }
+      addPlanSession(dateISO, fields);
       // renderPlan() has already rebuilt the view by here, so re-find the
       // live form's title field rather than focusing the detached one.
       var freshTitle = document.getElementById('plan-title');
@@ -2700,6 +2993,11 @@ if(window.caches && caches.keys){
     var body = el('div', 'plan-item-body');
     if(item.notes){ body.appendChild(el('p', 'plan-item-notes', item.notes)); }
     var foot = el('div', 'plan-item-foot');
+    var edit = el('button', 'plan-item-edit', 'Edit');
+    edit.type = 'button';
+    edit.setAttribute('aria-label', 'Edit ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' on ' + formatWeekdayDate(item.date));
+    edit.addEventListener('click', function(){ openPlanEditor(item); });
+    foot.appendChild(edit);
     var del = el('button', 'plan-item-delete', 'Remove');
     del.type = 'button';
     del.setAttribute('aria-label', 'Remove ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' from ' + formatWeekdayDate(item.date));
@@ -2714,6 +3012,11 @@ if(window.caches && caches.keys){
 
   function planDayRow(dateISO){
     var wrap = el('div', 'plan-day' + (dateISO === todayISO() ? ' is-today' : ''));
+    // Addressable and programmatically focusable, so goToPlanDay() can land
+    // on a specific day rather than the top of the view. tabIndex -1 keeps it
+    // out of the tab order — it is a scroll/focus target, not a control.
+    wrap.id = 'plan-day-' + dateISO;
+    wrap.tabIndex = -1;
     var hd = el('div', 'plan-day-hd');
     var d = new Date(dateISO + 'T00:00:00');
     hd.appendChild(el('span', 'plan-day-name', MONTH_DAYS[(d.getDay() + 6) % 7] + (dateISO === todayISO() ? ' · today' : '')));
@@ -2732,6 +3035,15 @@ if(window.caches && caches.keys){
       wrap.appendChild(ul);
     }
 
+    // Same class and role as the form's own error surface, hosted by the day
+    // instead — see planNotice. It survives the re-render that closed the
+    // form, which is the whole point of holding it in module state.
+    if(planNotice && planNotice.date === dateISO){
+      var notice = el('p', 'plan-form-error plan-day-notice', planNotice.message);
+      notice.setAttribute('role', 'alert');
+      wrap.appendChild(notice);
+    }
+
     var isOpen = planFormOpenFor === dateISO;
     var formWrapId = 'plan-form-' + dateISO;
     if(!isOpen){
@@ -2742,6 +3054,8 @@ if(window.caches && caches.keys){
       addBtn.setAttribute('aria-label', 'Add a planned session on ' + formatWeekdayDate(dateISO));
       addBtn.addEventListener('click', function(){
         planFormOpenFor = dateISO;
+        planEditingId = null; // an add is never an edit, whatever was open before
+        clearPlanNotice();    // starting a new entry is the athlete moving on
         renderPlan();
         var titleInput = document.getElementById('plan-title');
         if(titleInput){ titleInput.focus(); }
@@ -2755,12 +3069,20 @@ if(window.caches && caches.keys){
     // (plan-title, plan-duration…) so seven hidden copies would be seven
     // sets of duplicate ids and would break every label association.
     if(isOpen){
+      // The item being edited, if any. Looked up by id against *this day's*
+      // items, so a stale planEditingId (e.g. the row was deleted on another
+      // device between opening and rendering) degrades to a blank add form
+      // rather than throwing.
+      var editItem = planEditingId
+        ? items.filter(function(p){ return p.id === planEditingId; })[0] || null
+        : null;
       renderPlanForm(formWrap, dateISO, function(){
         planFormOpenFor = null;
+        planEditingId = null;
         renderPlan();
         var backBtn = document.querySelector('.plan-day-add');
         if(backBtn){ backBtn.focus(); }
-      });
+      }, editItem);
     }
     wrap.appendChild(formWrap);
     return wrap;
@@ -2796,6 +3118,8 @@ if(window.caches && caches.keys){
     // Changing week discards a half-filled form for the old week — leaving
     // it open would attach it to a day that's no longer on screen.
     planFormOpenFor = null;
+    planEditingId = null;
+    clearPlanNotice();
     state.planWeek = isoDate(addDays(new Date(state.planWeek + 'T00:00:00'), days));
     renderPlan();
     say('Showing week beginning ' + formatWeekdayDate(state.planWeek) + '.');
@@ -2901,6 +3225,36 @@ if(window.caches && caches.keys){
     root.appendChild(tools);
   }
   function goToPlan(){ showView('plan'); }
+  // Opens the Plan view at one specific day with that day's form showing.
+  // `editItem` (optional) makes it a pre-filled edit of that session rather
+  // than a blank add. Both entry points — the Plan view's own card and the
+  // Adherence day list in Review — go through here, so the two can't drift.
+  function openPlanDayForm(dateISO, editItem){
+    state.planWeek = weekKey(new Date(dateISO + 'T00:00:00'));
+    // The same module state the Plan view's own "+ Add session" button sets —
+    // not a second mechanism. It also suppresses the background re-render in
+    // refreshVisibleViewFromSheet(), which is correct: a Sheet refresh landing
+    // a moment after arrival must not rebuild the day out from under the form.
+    planFormOpenFor = dateISO;
+    planEditingId = editItem ? editItem.id : null;
+    planCopyOpen = false;
+    clearPlanNotice();
+    // showView() renders the view; when it's already showing, showView would
+    // also scroll to top and steal focus to the hero for no reason, so render
+    // in place instead.
+    if(els.viewPlan.hidden){ showView('plan'); } else { renderPlan(); }
+    // After the render, never before — showView() ends with scrollTo(0,0) and
+    // focuses the hero heading, so doing this first would be undone.
+    var row = document.getElementById('plan-day-' + dateISO);
+    if(row){ row.scrollIntoView({block: 'start'}); }
+    var titleInput = document.getElementById('plan-title');
+    if(titleInput){ titleInput.focus({preventScroll: true}); }
+    say(editItem
+      ? ('Editing ' + (editItem.title || DISC_LABEL[editItem.disc] || 'session') + ' on ' + formatWeekdayDate(dateISO) + '.')
+      : ('Adding a planned session on ' + formatWeekdayDate(dateISO) + '.'));
+  }
+  function goToPlanDay(dateISO){ openPlanDayForm(dateISO, null); }
+  function openPlanEditor(item){ openPlanDayForm(item.date, item); }
 
   // ═══════════════════════════════════════════════════════════════
   // WARM UP
@@ -3263,6 +3617,10 @@ if(window.caches && caches.keys){
       els.appMain.hidden = true;
       els.periodScreen.hidden = false;
       phaseReturnView = 'flow';
+      // The athlete already named a session by tapping the card, so the
+      // landing screen's question is answered — the pendingPlanPrefill branch
+      // in choosePeriod takes them straight to the pre-filled flow.
+      phaseReturnWantsLanding = false;
       var h = document.getElementById('period-h');
       if(h){ h.focus({preventScroll:true}); }
       return;
@@ -3274,6 +3632,152 @@ if(window.caches && caches.keys){
     goToNextUnanswered();
   }
 
+  // ── Check-in landing (state.mode === 'plan') ───────────────────────
+  // Check-in is the app's primary interaction, and when today has a planned
+  // session the honest default is "did you do the one you planned?", not a
+  // blank date/discipline form. This screen is that default. It only ever
+  // appears on a *fresh* open of Check-in with at least one session planned
+  // for today — never mid-flow, never on "Log another", never after a date
+  // change, and never when the athlete already named a session by tapping the
+  // splash Today card (that tap has already made this screen's choice).
+  function todayPlanItems(){ return planItemsFor(todayISO()); }
+  // Splits today's planned sessions into the ones still to log and the ones
+  // already logged — using the *same* greedy matcher the Adherence signal
+  // runs on (planDayResults), never a second rule that could disagree with
+  // it. Offering an already-logged session as an equal "check in on this"
+  // option is not just a cosmetic repeat: tapping it writes a duplicate
+  // entry, the matcher then has two logged entries for one planned session,
+  // and the spare is reported as `extra` — an unplanned session — which
+  // corrupts the exact signal this screen exists to feed.
+  function todayPlanSplit(){
+    var todayI = todayISO();
+    // buildWeek()'s own day object, not a hand-rolled one, so what
+    // planDayResults() is handed here is identical in shape to what every
+    // other caller hands it — and a brand-new object per call, which is
+    // exactly the invariant PLAN_MATCH_CACHE documents as its safety
+    // condition.
+    var day = currentWeekDays().filter(function(d){ return d.date === todayI; })[0];
+    if(!day){ return {open: planItemsFor(todayI), logged: []}; }
+    var r = planDayResults(day);
+    var open = [], logged = [];
+    r.results.forEach(function(res){
+      // Keyed on `entry`, not on `cat`. A session logged as 'didnt' scores
+      // cat 'bad' but still has a real row in the log, and re-logging it
+      // would duplicate it exactly as a 'good' one would.
+      (res.entry ? logged : open).push(res.item);
+    });
+    return {open: open, logged: logged};
+  }
+  function renderPlanLanding(){
+    var split = todayPlanSplit();
+    var items = split.open;
+    var logged = split.logged;
+    var total = items.length + logged.length;
+    var h = el('h1', null, items.length === 1 ? 'Ready to check in?' : 'Which session?');
+    h.id = 'step-h'; h.tabIndex = -1;
+    els.body.appendChild(h);
+    var hintText;
+    if(!logged.length){
+      hintText = items.length === 1
+        ? 'This is what you had planned for today.'
+        : 'You had ' + items.length + ' sessions planned for today.';
+    } else {
+      hintText = items.length === 1
+        ? 'One of your ' + total + ' planned sessions today is still to log.'
+        : items.length + ' of your ' + total + ' planned sessions today are still to log.';
+    }
+    els.body.appendChild(el('p', 'hint', hintText));
+
+    var ul = el('ul', 'flow-plan-list flow-landing-list');
+    items.forEach(function(item){
+      var li = document.createElement('li');
+      li.appendChild(flowPlanCard(item, 'Check in on this →'));
+      ul.appendChild(li);
+    });
+    // Shown rather than hidden, and always after the ones still to log: the
+    // athlete gets the whole day at a glance, and the reason a session isn't
+    // offered is on the card itself instead of being silently absent. Passing
+    // no CTA is what makes it a static, untappable record — see flowPlanCard.
+    logged.forEach(function(item){
+      var li = document.createElement('li');
+      li.appendChild(flowPlanCard(item, null));
+      ul.appendChild(li);
+    });
+    els.body.appendChild(ul);
+
+    // The escape hatch, deliberately named and deliberately secondary — a
+    // session that wasn't on the plan is a normal thing to log, not an error
+    // state, and Adherence already counts it as `extra` rather than scoring
+    // it bad. Copy matches the app's plain button voice ("Add a race",
+    // "+ Add session"): no exclamation, no apology.
+    var other = el('button', 'flow-landing-other', 'Log an unplanned session');
+    other.type = 'button';
+    other.addEventListener('click', startUnplannedCheckIn);
+    els.body.appendChild(other);
+  }
+  // Drops into the manual flow exactly as it behaved before any plan
+  // integration existed: fresh answers, dated today, step 0, nothing
+  // pre-filled — in particular no disc/intensity/duration, and (as
+  // everywhere) no a1. Phase 2's per-date planned cards still appear on the
+  // date page and still follow a date change; suppressing them here would
+  // regress behaviour that is explicitly meant to keep working, and they are
+  // a hint rather than a default in that position anyway.
+  function startUnplannedCheckIn(){
+    state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
+    render();
+    focusHeading();
+    say('Logging an unplanned session. Nothing pre-filled.');
+  }
+  // "Nothing has been entered yet" — the flow is sitting at its initial state
+  // rather than part-way through a check-in. `state.ans` is seeded with a
+  // `date` and nothing else, so any other key means the athlete has answered
+  // something. Review and saved are never pristine by definition.
+  function flowIsPristine(){
+    if(state.mode === 'review' || state.mode === 'saved'){ return false; }
+    if(state.note){ return false; }
+    // A deliberately changed date IS an entered answer. `date` is skipped by
+    // the loop below only because state.ans is *seeded* with today's — but
+    // anything other than that seed was typed by the athlete, and calling it
+    // pristine let startCheckIn() reset state.ans back to {date: todayISO()},
+    // silently discarding a date chosen to log a missed session from earlier
+    // in the week. This is startCheckIn()'s only caller, so tightening the
+    // definition here has no other reader to surprise.
+    if(state.ans.date && state.ans.date !== todayISO()){ return false; }
+    var keys = Object.keys(state.ans);
+    for(var i = 0; i < keys.length; i++){
+      if(keys[i] !== 'date' && state.ans[keys[i]] !== undefined){ return false; }
+    }
+    return true;
+  }
+  // The single decision about where a Check-in open lands. Every entry point
+  // that opens Check-in without naming a session goes through here, so the nav
+  // tab and the return-from-phase-picker path cannot diverge.
+  //
+  // Two things this deliberately does NOT do. It does not reset a check-in
+  // that is already part-way through — tapping away to Review and back has
+  // always resumed where you were, and discarding half-entered answers to show
+  // a landing screen would be a far worse regression than the screen is an
+  // improvement. And it does not touch the no-plan case at all: with nothing
+  // planned today there is nothing to frame around, so it falls through to
+  // exactly the previous behaviour.
+  function startCheckIn(){
+    // `.open`, not the raw planned count: with every planned session for
+    // today already logged there is nothing left to offer, so the landing
+    // screen would be a list of things you cannot do. Falls through to
+    // showView('flow') — exactly the pre-landing behaviour.
+    if(flowIsPristine() && todayPlanSplit().open.length){
+      state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'plan';
+      showView('flow');
+      // showView only refreshes the chrome, not the body — without this the
+      // landing would be announced by the header while the previous screen's
+      // questions were still on it.
+      render();
+      focusHeading();
+      return;
+    }
+    showView('flow');
+  }
+
   function setFlowPhaseLabel(){
     els.phaseLabel.textContent = PERIOD_LABEL[state.periodisation] || 'Phase not set';
     var pillClass = PERIOD_PILL_CLASS[state.periodisation];
@@ -3283,7 +3787,15 @@ if(window.caches && caches.keys){
   function renderChrome(){
     var list = steps();
     var idx = Math.min(state.step, list.length - 1);
-    if(state.mode === 'saved'){
+    if(state.mode === 'plan'){
+      // No step counter and an empty progress bar: the landing screen sits
+      // *before* the flow, so "1 / 6" would be a lie about where they are.
+      els.eyebrow.textContent = 'Today';
+      els.counter.textContent = '';
+      els.barFill.style.width = '0%';
+      els.phaseRow.hidden = false;
+      setFlowPhaseLabel();
+    } else if(state.mode === 'saved'){
       els.eyebrow.textContent = (PERIOD_LABEL[state.periodisation] || 'Phase not set');
       els.counter.textContent = 'logged';
       els.barFill.style.width = '100%';
@@ -3307,6 +3819,11 @@ if(window.caches && caches.keys){
     return {list: list, idx: idx};
   }
   function renderFoot(list, idx){
+    // The landing screen's actions are the cards and the unplanned link, so
+    // the sticky Back/Next pair is hidden outright rather than disabled — a
+    // greyed "Next" on a screen with no next step reads as something broken.
+    els.foot.hidden = state.mode === 'plan';
+    if(state.mode === 'plan'){ return; }
     if(state.mode === 'saved'){
       els.back.disabled = true;
       els.back.textContent = 'Back';
@@ -3324,7 +3841,8 @@ if(window.caches && caches.keys){
   function render(){
     var c = renderChrome();
     clear(els.body);
-    if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
+    if(state.mode === 'plan'){ renderPlanLanding(); }
+    else if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
     else if(state.mode === 'review'){ renderReview(c.list); }
     else { renderSaved(); }
     // Prepended after the questions exist, and only on the date page — see
@@ -3416,29 +3934,49 @@ if(window.caches && caches.keys){
     ul.setAttribute('aria-labelledby', eyebrowId);
     items.forEach(function(item){
       var li = document.createElement('li');
-      var btn = el('button', 'flow-plan-card');
-      btn.type = 'button';
-
-      var hd = el('div', 'flow-plan-hd');
-      var dot = el('span', 'flow-plan-dot');
-      dot.style.background = 'var(--' + item.disc + ')';
-      dot.setAttribute('aria-hidden', 'true');
-      hd.appendChild(dot);
-      hd.appendChild(el('span', 'flow-plan-title', splashTodayName(item)));
-      if(item.key){ hd.appendChild(el('span', 'flow-plan-key', 'Key')); }
-      btn.appendChild(hd);
-
-      var meta = planMetaLine(item, false);   // the Key pill above covers it
-      if(meta){ btn.appendChild(el('span', 'flow-plan-meta', meta)); }
-      if(item.notes){ btn.appendChild(el('span', 'flow-plan-notes', item.notes)); }
-      btn.appendChild(el('span', 'flow-plan-cta', 'Use these details →'));
-
-      btn.addEventListener('click', function(){ usePlannedSession(item); });
-      li.appendChild(btn);
+      li.appendChild(flowPlanCard(item, 'Use these details →'));
       ul.appendChild(li);
     });
     wrap.appendChild(ul);
     els.body.insertBefore(wrap, els.body.firstChild);
+  }
+  // One planned-session card, shared by the in-flow hint list above and the
+  // check-in landing screen below, so the two can never drift into showing
+  // different fields for the same session. Only the call-to-action wording
+  // differs — a hint offers to fill the form in, the landing screen *is* the
+  // way in — so that is the one thing passed in.
+  // A null `ctaText` renders the card as a static, untappable record of a
+  // session that has already been logged, marked "Logged" where the CTA would
+  // be. A <div>, not a disabled <button>, on purpose: there is no action here
+  // to re-enable, and a disabled control invites a hunt for the thing that
+  // would turn it back on.
+  function flowPlanCard(item, ctaText){
+    var isLogged = !ctaText;
+    var btn = el(isLogged ? 'div' : 'button', 'flow-plan-card' + (isLogged ? ' is-logged' : ''));
+    if(!isLogged){ btn.type = 'button'; }
+
+    var hd = el('div', 'flow-plan-hd');
+    var dot = el('span', 'flow-plan-dot');
+    dot.style.background = 'var(--' + item.disc + ')';
+    dot.setAttribute('aria-hidden', 'true');
+    hd.appendChild(dot);
+    hd.appendChild(el('span', 'flow-plan-title', splashTodayName(item)));
+    if(item.key){ hd.appendChild(el('span', 'flow-plan-key', 'Key')); }
+    btn.appendChild(hd);
+
+    var meta = planMetaLine(item, false);   // the Key pill above covers it
+    if(meta){ btn.appendChild(el('span', 'flow-plan-meta', meta)); }
+    if(item.notes){ btn.appendChild(el('span', 'flow-plan-notes', item.notes)); }
+    if(isLogged){
+      btn.appendChild(el('span', 'flow-plan-logged', 'Logged'));
+      return btn;
+    }
+    btn.appendChild(el('span', 'flow-plan-cta', ctaText));
+
+    // usePlannedSession → applyPlanPrefill, which is the a1-guarded function.
+    // Both entry points go through it; neither writes state.ans directly.
+    btn.addEventListener('click', function(){ usePlannedSession(item); });
+    return btn;
   }
   // qList is a page — one or more questions rendered together. Each keeps
   // its own heading/hint/choices exactly as when it was a lone step; only
@@ -3715,12 +4253,19 @@ if(window.caches && caches.keys){
       els.appMain.hidden = true;
       els.periodScreen.hidden = false;
       phaseReturnView = 'flow';
+      // The picker is a gate on the way *in* here, so the landing decision
+      // still applies once a phase is chosen — unlike the in-flow
+      // "Change phase" link, which clears this.
+      phaseReturnWantsLanding = true;
       var h = document.getElementById('period-h');
       if(h){ h.focus({preventScroll:true}); }
       return;
     }
     exitPeriodScreen();
-    showView('flow');
+    // Not showView('flow') directly — startCheckIn decides whether today's
+    // plan earns the landing screen. This is also the path a Check-in tap
+    // from the splash takes, since the nav sits under it.
+    startCheckIn();
   });
   els.tabDash.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('dashboard'); });
   els.tabStrength.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('strength'); });
@@ -3764,6 +4309,12 @@ if(window.caches && caches.keys){
     });
   }
   function openPhasePicker(){
+    // Reached from the in-flow "Change phase" link, so this is a detour out of
+    // a check-in already in progress, not a way into one. Decision 19's rule
+    // is that it returns to the question you were on — so it must NOT come
+    // back through the landing screen, even when the flow happens to be
+    // pristine and today has a plan.
+    phaseReturnWantsLanding = false;
     phaseReturnView = els.viewDash.hidden ? (els.viewTrends.hidden ? 'flow' : 'trends') : 'dashboard';
     els.appMain.hidden = true;
     els.periodScreen.hidden = false;
@@ -3789,6 +4340,17 @@ if(window.caches && caches.keys){
       return;
     }
     pendingPlanPrefill = null;
+    // Only when the picker was a gate *on the way into* Check-in (the nav tab
+    // with no phase set yet) does the landing decision apply — otherwise an
+    // athlete who set their phase on the way in would silently miss the screen
+    // an athlete who already had one would see. The in-flow "Change phase"
+    // link clears this flag, so it still returns to the question you were on.
+    if(phaseReturnView === 'flow' && phaseReturnWantsLanding){
+      phaseReturnWantsLanding = false;
+      startCheckIn();
+      return;
+    }
+    phaseReturnWantsLanding = false;
     showView(phaseReturnView);
   }
 
@@ -3796,12 +4358,18 @@ if(window.caches && caches.keys){
   // WIRING
   // ═══════════════════════════════════════════════════════════════
   els.back.addEventListener('click', function(){
+    // The foot is hidden in 'plan' mode, but guard the handlers too — a
+    // hidden button is still reachable programmatically, and Back from the
+    // landing screen would drop into step 0 with no pre-fill, silently
+    // bypassing the choice the screen exists to offer.
+    if(state.mode === 'plan'){ return; }
     if(state.mode === 'saved'){ return; }
     var list = steps();
     if(state.mode === 'review'){ go(list.length - 1, true); }
     else { go(state.step - 1, true); }
   });
   els.next.addEventListener('click', function(){
+    if(state.mode === 'plan'){ return; }   // see the Back handler above
     if(state.mode === 'saved'){ startNew(); return; }
     if(state.mode === 'review'){ save(); return; }
     go(state.step + 1, true);
