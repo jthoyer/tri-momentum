@@ -180,6 +180,14 @@ textarea::placeholder{color:var(--ink3)}
 .splash-today-name{display:block;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35;overflow-wrap:anywhere}
 .splash-today-meta{display:block;margin-top:2px;font-family:var(--fd);font-size:13px;font-weight:500;color:rgba(255,255,255,.82);overflow-wrap:anywhere}
 .splash-today-rest{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
+/* Already logged: a static record, not an offer. Rendered as a <div> so there
+   is no cursor, no focus ring and nothing to activate — see splashTodayRow().
+   No new colour token: rgba(255,255,255,.82) is the value the card's own
+   eyebrow and meta line already use, measured at 4.93:1 against this card's
+   composited background in decision 29. */
+.splash-today-btn.is-logged{cursor:default}
+.splash-today-btn.is-logged .splash-today-name{color:rgba(255,255,255,.82);font-weight:500}
+.splash-today-logged{display:block;margin-top:4px;font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
 
 /* Planned-session cards at the top of the check-in flow's first page. A
    shortcut into the same form — every value they set stays freely editable,
@@ -2541,16 +2549,25 @@ if(window.caches && caches.keys){
     var existing = document.getElementById('splash-today');
     if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
 
-    var today = todayISO();
     var weekItems = planItemsInWeek(isoDate(mondayOf(new Date())));
     if(!weekItems.length){ return; }
-    var items = planItemsFor(today);
+    // Same split the Check-in landing uses, from the same source — see
+    // todayPlanSplit(), which defers to planDayResults(), the matcher the
+    // Adherence signal itself runs on. Deliberately not a second rule here:
+    // this card had the identical defect the landing screen was fixed for,
+    // and two independent "has it been logged?" tests could disagree.
+    // open.length + logged.length is exactly planItemsFor(today).length, so
+    // the card's three existing states keep their own trigger conditions
+    // untouched — "Rest day" is still "the week has a plan but today has
+    // nothing in it", never "today is planned and already done".
+    var split = todayPlanSplit();
+    var open = split.open, logged = split.logged;
 
     var card = el('div', 'splash-today');
     card.id = 'splash-today';
     card.appendChild(el('p', 'splash-today-eyebrow', 'Today'));
 
-    if(!items.length){
+    if(!open.length && !logged.length){
       card.appendChild(el('p', 'splash-today-rest', 'Rest day'));
       els.splashScreen.appendChild(card);
       return;
@@ -2558,22 +2575,42 @@ if(window.caches && caches.keys){
 
     var list = el('ul', 'splash-today-list');
     list.setAttribute('aria-label', 'Planned sessions for today');
-    items.forEach(function(item){
-      var li = el('li', 'splash-today-item');
-      // Each session is its own button rather than one tap target for the
-      // whole card: with two sessions planned, a single card-level tap would
-      // have to guess which one was just finished, and guessing wrong writes
-      // the wrong discipline into a check-in.
-      var btn = el('button', 'splash-today-btn');
-      btn.type = 'button';
-      btn.appendChild(el('span', 'splash-today-name', splashTodayName(item)));
-      btn.appendChild(el('span', 'splash-today-meta', planMetaLine(item)));
-      btn.addEventListener('click', function(){ startCheckInFromPlan(item); });
-      li.appendChild(btn);
-      list.appendChild(li);
-    });
+    // Still to log first, already logged after — the same order the landing
+    // screen uses. Unlike the landing, an all-logged day still renders the
+    // card rather than disappearing: this is an informational surface as well
+    // as an action prompt (decision 29 already treats "Rest day" as an answer
+    // worth showing), so it keeps telling the athlete what today was.
+    open.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
+    logged.forEach(function(item){ list.appendChild(splashTodayRow(item, true)); });
     card.appendChild(list);
     els.splashScreen.appendChild(card);
+  }
+  // Each session is its own row with its own action rather than one tap target
+  // for the whole card: with two sessions planned, a single card-level tap
+  // would have to guess which one was just finished, and guessing wrong writes
+  // the wrong discipline into a check-in.
+  //
+  // An already-logged session renders as a <div>, not a disabled <button> —
+  // mirroring flowPlanCard()'s own rule, for its own reason: there is no
+  // action here to re-enable, and a disabled control invites a hunt for the
+  // thing that would turn it back on. The visual treatment can't be shared
+  // with flowPlanCard: that card is light-on-light (--s1/--s3 fills, --ink
+  // text) and this one sits on the splash's --blue field, so the two have no
+  // usable colours in common. The copy ("Logged"), the div-not-button rule and
+  // the after-the-open-ones ordering are what's kept identical.
+  function splashTodayRow(item, isLogged){
+    var li = el('li', 'splash-today-item');
+    var row = el(isLogged ? 'div' : 'button', 'splash-today-btn' + (isLogged ? ' is-logged' : ''));
+    if(!isLogged){ row.type = 'button'; }
+    row.appendChild(el('span', 'splash-today-name', splashTodayName(item)));
+    row.appendChild(el('span', 'splash-today-meta', planMetaLine(item)));
+    if(isLogged){
+      row.appendChild(el('span', 'splash-today-logged', 'Logged'));
+    } else {
+      row.addEventListener('click', function(){ startCheckInFromPlan(item); });
+    }
+    li.appendChild(row);
+    return li;
   }
   function splashTodayName(item){
     var disc = DISC_LABEL[item.disc] || item.disc;
@@ -4175,6 +4212,20 @@ if(window.caches && caches.keys){
   // week/Month) would keep showing whatever was cached from before another
   // device added or removed something.
   function refreshVisibleViewFromSheet(){
+    // The splash can still be up here: an installed PWA resumed from a frozen
+    // background never re-boots, so nothing else would re-check the Sheet
+    // while the athlete is sitting on it. That matters more than it used to —
+    // the Today card now decides whether to *offer* a session based on the
+    // log, so a stale card is not merely out of date, it re-opens the exact
+    // duplicate-entry defect the open/logged split exists to close.
+    if(!els.splashScreen.hidden){
+      refreshLogFromSheet().then(function(changed){
+        if(changed && !els.splashScreen.hidden){ renderSplashToday(); }
+      });
+      refreshPlanFromSheet().then(function(changed){
+        if(changed && !els.splashScreen.hidden){ renderSplashToday(); }
+      });
+    }
     if(!els.viewDash.hidden || !els.viewTrends.hidden){
       refreshLogFromSheet().then(function(changed){
         if(!changed){ return; }
@@ -4385,7 +4436,13 @@ if(window.caches && caches.keys){
   // Warm the cache from the Sheet right away so This week/Month have fresh
   // data as soon as they're opened, even though the check-in flow (the
   // default view) doesn't need it itself.
-  refreshLogFromSheet();
+  // Repaints the Today card on resolve as well: since it started splitting
+  // today's plan into still-to-log and already-logged, it reads the *log* as
+  // well as the plan, so a session logged on another device would otherwise
+  // keep being offered here until something else forced a rebuild. Both this
+  // chain and the plan chain below repaint independently — renderSplashToday()
+  // removes and rebuilds its own node, so a double call is idempotent.
+  refreshLogFromSheet().then(function(){ renderSplashToday(); });
   // Same idea for races — paint the cached countdown on the splash
   // immediately, then refresh from the Sheet and repaint if it changed.
   renderSplashCountdown();
