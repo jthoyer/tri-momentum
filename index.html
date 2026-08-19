@@ -67,6 +67,7 @@ a:focus,button:focus,input:focus,textarea:focus{outline:3px solid var(--blue);ou
 h1{font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:var(--ink)}
 h1:focus,h1:focus-visible{outline:none}
 .flow-body h2{font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:var(--ink)}
+.q-set h2:focus,.q-set h2:focus-visible{outline:none}
 .hint{color:var(--ink2);font-size:14px;line-height:1.6;margin-top:10px;clear:both}
 .choices-wrap{margin-top:2.5rem;clear:both}
 .q-set .choices-wrap{margin-top:1.25rem}
@@ -3553,6 +3554,7 @@ if(window.caches && caches.keys){
   }
 
   function go(i, announce){
+    clearAutoProgress();
     var list = steps();
     var target = Math.max(0, i);
     if(i >= list.length){
@@ -3583,6 +3585,50 @@ if(window.caches && caches.keys){
     state.ans[q.k] = value;
     if(q.k === 'duration' && !isLong(value)){ delete state.ans.a3; }
     renderChrome();
+    scheduleAutoProgress();
+  }
+
+  // ── Auto-progress ─────────────────────────────────────────────
+  //
+  // A page can hold more than one question (see PAGE_GROUPS). Answering one
+  // no longer requires a manual "Next" tap: it scrolls/focuses the next
+  // unanswered question on the same page, or — once every question on the
+  // page has an answer — advances to the next page (or Review, past the
+  // last page) exactly as tapping Next would. Debounced rather than
+  // immediate, because a radio group also fires 'change' on every arrow-key
+  // press while a keyboard user is still choosing between options — an
+  // immediate jump would fling them onward mid-navigation. The timer is
+  // cancelled by any manual navigation (go() clears it first), so a tap on
+  // Back/Next/a review row can never race a still-pending auto-advance.
+  var AUTO_PROGRESS_DELAY = 450;
+  var autoProgressTimer = null;
+  function clearAutoProgress(){
+    if(autoProgressTimer){ clearTimeout(autoProgressTimer); autoProgressTimer = null; }
+  }
+  function scheduleAutoProgress(){
+    clearAutoProgress();
+    autoProgressTimer = setTimeout(function(){
+      autoProgressTimer = null;
+      runAutoProgress();
+    }, AUTO_PROGRESS_DELAY);
+  }
+  function runAutoProgress(){
+    if(state.mode !== 'ask'){ return; }
+    var page = steps()[state.step];
+    if(!page){ return; }
+    for(var i = 0; i < page.length; i++){
+      if(!state.ans[page[i].k]){ focusQuestion(page[i]); return; }
+    }
+    go(state.step + 1, true);
+  }
+  // Moves attention to a question further down the current page — mirrors
+  // focusHeading()'s scroll-to-top-and-focus pattern, but for a mid-page
+  // target rather than the page's own h1.
+  function focusQuestion(q){
+    var h = document.getElementById('step-h-' + q.k);
+    if(!h){ return; }
+    h.focus({preventScroll: true});
+    h.scrollIntoView({behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center'});
   }
 
   // ── Plan → check-in pre-fill ──────────────────────────────────
@@ -4024,7 +4070,8 @@ if(window.caches && caches.keys){
       var fs = el('fieldset', 'q-set' + (q.hint ? '' : ' no-hint'));
       var lg = document.createElement('legend');
       var h = el(i === 0 ? 'h1' : 'h2', null, q.legend);
-      if(i === 0){ h.id = 'step-h'; h.tabIndex = -1; }
+      h.id = i === 0 ? 'step-h' : 'step-h-' + q.k;
+      h.tabIndex = -1;
       lg.appendChild(h);
       fs.appendChild(lg);
       if(q.hint){
