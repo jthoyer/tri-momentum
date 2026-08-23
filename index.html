@@ -190,6 +190,13 @@ textarea::placeholder{color:var(--ink3)}
 .splash-today-btn.is-logged .splash-today-name{color:rgba(255,255,255,.82);font-weight:500}
 .splash-today-logged{display:block;margin-top:4px;font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
 
+/* "Earlier this week" — still-open sessions from earlier days in the current
+   week, appended below Today inside the same card. Reuses .splash-today-list/
+   -item/-btn/-name/-meta wholesale (same tap flow, same focus ring, same
+   verified contrast) — only the date label above the name is new. */
+.splash-prev{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.22)}
+.splash-prev-date{display:block;font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.82);margin-bottom:2px}
+
 /* Planned-session cards at the top of the check-in flow's first page. A
    shortcut into the same form — every value they set stays freely editable,
    and none of them is ever a1 (see CLAUDE.md decision 29). */
@@ -2534,12 +2541,21 @@ if(window.caches && caches.keys){
     els.splashCountdown.hidden = false;
   }
 
-  // Splash "Today" card — sibling of the countdown above, three states:
+  // Splash "Today" card — sibling of the countdown above. Today's own state
+  // is one of three:
   //
   //   sessions planned today   → one tappable line per session
   //   week has a plan, today doesn't → "Rest day" (a real, useful answer —
   //                              a planned rest is not the same as no plan)
   //   week has no plan at all  → node removed from the DOM entirely
+  //
+  // A fourth, independent section — "Earlier this week" — appends below
+  // whichever of those three renders, listing any still-open (not yet
+  // logged) sessions from earlier days in the same week, each tappable into
+  // the same check-in flow a today row uses (see startCheckInFromPlan,
+  // splashPreviousOpenItems). It is independent of Today's own state on
+  // purpose: a rest day today says nothing about whether Monday's session
+  // ever got logged, so the two must be able to appear together.
   //
   // The third state is a removal rather than the countdown's [hidden] toggle
   // on purpose: an athlete who has never entered a plan should find no trace
@@ -2563,6 +2579,11 @@ if(window.caches && caches.keys){
     // nothing in it", never "today is planned and already done".
     var split = todayPlanSplit();
     var open = split.open, logged = split.logged;
+    // Still-open sessions from earlier days in the same week — see
+    // splashPreviousOpenItems(). This no longer returns on the Rest-day
+    // branch below: a rest day today doesn't mean nothing is owed from
+    // earlier in the week, so both sections have to be able to coexist.
+    var prevOpen = splashPreviousOpenItems();
 
     var card = el('div', 'splash-today');
     card.id = 'splash-today';
@@ -2570,20 +2591,31 @@ if(window.caches && caches.keys){
 
     if(!open.length && !logged.length){
       card.appendChild(el('p', 'splash-today-rest', 'Rest day'));
-      els.splashScreen.appendChild(card);
-      return;
+    } else {
+      var list = el('ul', 'splash-today-list');
+      list.setAttribute('aria-label', 'Planned sessions for today');
+      // Still to log first, already logged after — the same order the landing
+      // screen uses. Unlike the landing, an all-logged day still renders the
+      // card rather than disappearing: this is an informational surface as
+      // well as an action prompt (decision 29 already treats "Rest day" as an
+      // answer worth showing), so it keeps telling the athlete what today was.
+      open.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
+      logged.forEach(function(item){ list.appendChild(splashTodayRow(item, true)); });
+      card.appendChild(list);
     }
 
-    var list = el('ul', 'splash-today-list');
-    list.setAttribute('aria-label', 'Planned sessions for today');
-    // Still to log first, already logged after — the same order the landing
-    // screen uses. Unlike the landing, an all-logged day still renders the
-    // card rather than disappearing: this is an informational surface as well
-    // as an action prompt (decision 29 already treats "Rest day" as an answer
-    // worth showing), so it keeps telling the athlete what today was.
-    open.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
-    logged.forEach(function(item){ list.appendChild(splashTodayRow(item, true)); });
-    card.appendChild(list);
+    if(prevOpen.length){
+      var prevWrap = el('div', 'splash-prev');
+      prevWrap.appendChild(el('p', 'splash-today-eyebrow', 'Earlier this week'));
+      var prevList = el('ul', 'splash-today-list');
+      prevList.setAttribute('aria-label', 'Planned sessions earlier this week still to log');
+      // Chronological (Monday first) — currentWeekDays() is already in that
+      // order and splashPreviousOpenItems() walks it without re-sorting.
+      prevOpen.forEach(function(item){ prevList.appendChild(splashPrevRow(item)); });
+      prevWrap.appendChild(prevList);
+      card.appendChild(prevWrap);
+    }
+
     els.splashScreen.appendChild(card);
   }
   // Each session is its own row with its own action rather than one tap target
@@ -2616,6 +2648,48 @@ if(window.caches && caches.keys){
   function splashTodayName(item){
     var disc = DISC_LABEL[item.disc] || item.disc;
     return item.title ? (disc + ' — ' + item.title) : disc;
+  }
+  // Still-open (not-yet-logged) sessions from days before today in the
+  // current week — the same week the "no plan anywhere this week" check
+  // above is scoped to, so this never reaches back further than the card
+  // already shows. Uses dayPlanSplit() per day rather than a hand-rolled
+  // "any log entry that day" test, for the same reason todayPlanSplit()
+  // does: a second rule could disagree with the Adherence matcher about
+  // what's already logged, and tapping a session that's secretly already
+  // logged would write a duplicate — the exact defect decisions 32(b)/34
+  // fixed on the other two plan surfaces.
+  function splashPreviousOpenItems(){
+    var todayI = todayISO();
+    var out = [];
+    currentWeekDays().forEach(function(d){
+      if(d.date >= todayI){ return; }
+      dayPlanSplit(d.date).open.forEach(function(item){ out.push(item); });
+    });
+    return out;
+  }
+  // One row per earlier-week session still to log — same shape as
+  // splashTodayRow(item, false) with a day label stacked above the name, so
+  // tapping it can't be mistaken for tapping a today row. Always a <button>:
+  // splashPreviousOpenItems() only ever returns open sessions, never logged
+  // ones, so there is no is-logged state to render here.
+  function splashPrevRow(item){
+    var li = el('li', 'splash-today-item');
+    var row = el('button', 'splash-today-btn');
+    row.type = 'button';
+    var d = new Date(item.date + 'T00:00:00');
+    var dateLbl = el('span', 'splash-prev-date', MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate());
+    // Visible label is abbreviated ("MON 18"); screen readers get the full
+    // weekday date, the same split decision 31's dashPlanDay() uses.
+    dateLbl.setAttribute('aria-label', formatWeekdayDate(item.date));
+    row.appendChild(dateLbl);
+    row.appendChild(el('span', 'splash-today-name', splashTodayName(item)));
+    row.appendChild(el('span', 'splash-today-meta', planMetaLine(item)));
+    // Same flow as tapping a today row: startCheckInFromPlan() dates the
+    // check-in from item.date rather than assuming today, so this lands on a
+    // fresh check-in dated the day the session was actually planned for.
+    row.addEventListener('click', function(){ startCheckInFromPlan(item); });
+    li.appendChild(row);
+    return li;
   }
   // "60 min · Hard / quality · Key" — the same fields planItemCard() shows in
   // the Plan view, in the same order, so the two surfaces read identically.
@@ -3687,8 +3761,10 @@ if(window.caches && caches.keys){
     goToNextUnanswered();
     say('Pre-filled from your plan: ' + splashTodayName(item) + '. Every answer can still be changed.');
   }
-  // Entry point from the splash card: a fresh check-in, dated today, seeded
-  // from the tapped session. Check-in is the one tab that requires a phase
+  // Entry point from the splash card — both the Today rows and the "Earlier
+  // this week" rows share this one function: a fresh check-in, dated the
+  // tapped session's own day (item.date, not necessarily today), seeded from
+  // the tapped session. Check-in is the one tab that requires a phase
   // (a logged session is stamped with it), so an athlete who has never set one
   // goes through the picker first and the pre-fill is held until they return —
   // same rule the Check-in nav tab follows.
@@ -3709,7 +3785,7 @@ if(window.caches && caches.keys){
       return;
     }
     exitPeriodScreen();
-    state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
+    state.ans = {date: item.date}; state.note = ''; state.step = 0; state.mode = 'ask';
     applyPlanPrefill(item);
     showView('flow');
     goToNextUnanswered();
@@ -3724,23 +3800,25 @@ if(window.caches && caches.keys){
   // change, and never when the athlete already named a session by tapping the
   // splash Today card (that tap has already made this screen's choice).
   function todayPlanItems(){ return planItemsFor(todayISO()); }
-  // Splits today's planned sessions into the ones still to log and the ones
+  // Splits a day's planned sessions into the ones still to log and the ones
   // already logged — using the *same* greedy matcher the Adherence signal
   // runs on (planDayResults), never a second rule that could disagree with
   // it. Offering an already-logged session as an equal "check in on this"
   // option is not just a cosmetic repeat: tapping it writes a duplicate
   // entry, the matcher then has two logged entries for one planned session,
   // and the spare is reported as `extra` — an unplanned session — which
-  // corrupts the exact signal this screen exists to feed.
-  function todayPlanSplit(){
-    var todayI = todayISO();
+  // corrupts the exact signal this screen exists to feed. Generalised from
+  // today-only to any dateISO so the splash's "Earlier this week" rows
+  // (splashPreviousOpenItems) can run the identical check against past days
+  // rather than a hand-rolled one.
+  function dayPlanSplit(dateISO){
     // buildWeek()'s own day object, not a hand-rolled one, so what
     // planDayResults() is handed here is identical in shape to what every
     // other caller hands it — and a brand-new object per call, which is
     // exactly the invariant PLAN_MATCH_CACHE documents as its safety
     // condition.
-    var day = currentWeekDays().filter(function(d){ return d.date === todayI; })[0];
-    if(!day){ return {open: planItemsFor(todayI), logged: []}; }
+    var day = currentWeekDays().filter(function(d){ return d.date === dateISO; })[0];
+    if(!day){ return {open: planItemsFor(dateISO), logged: []}; }
     var r = planDayResults(day);
     var open = [], logged = [];
     r.results.forEach(function(res){
@@ -3751,6 +3829,7 @@ if(window.caches && caches.keys){
     });
     return {open: open, logged: logged};
   }
+  function todayPlanSplit(){ return dayPlanSplit(todayISO()); }
   function renderPlanLanding(){
     var split = todayPlanSplit();
     var items = split.open;
@@ -4114,7 +4193,7 @@ if(window.caches && caches.keys){
     lbl.appendChild(el('span', 'sub', 'Optional — not scored, just surfaced back to you.'));
     frag.appendChild(lbl);
     var ta = document.createElement('textarea');
-    ta.id = 'note'; ta.rows = 2; ta.maxLength = 140;
+    ta.id = 'note'; ta.rows = 2; ta.maxLength = 280;
     ta.placeholder = 'e.g. left calf tight from 20 min · gut off after gel 4';
     ta.value = state.note;
     ta.addEventListener('input', function(){ state.note = ta.value; });
@@ -4425,13 +4504,16 @@ if(window.caches && caches.keys){
     els.periodScreen.hidden = true;
     els.appMain.hidden = false;
     say('Training phase set to ' + PERIOD_LABEL[v] + '.');
-    // A splash Today-card tap by an athlete with no phase set yet is held in
-    // pendingPlanPrefill across the picker, so the tap still lands where it
-    // was aimed instead of dropping them on a blank check-in.
+    // A splash card tap (Today or Earlier-this-week) by an athlete with no
+    // phase set yet is held in pendingPlanPrefill across the picker, so the
+    // tap still lands where it was aimed instead of dropping them on a blank
+    // check-in. Dated from the held session's own day, same as
+    // startCheckInFromPlan() — not always today, once Earlier-this-week rows
+    // can hold it too.
     if(pendingPlanPrefill && phaseReturnView === 'flow'){
       var held = pendingPlanPrefill;
       pendingPlanPrefill = null;
-      state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
+      state.ans = {date: held.date}; state.note = ''; state.step = 0; state.mode = 'ask';
       applyPlanPrefill(held);
       showView('flow');
       goToNextUnanswered();
