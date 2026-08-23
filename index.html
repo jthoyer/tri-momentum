@@ -190,12 +190,25 @@ textarea::placeholder{color:var(--ink3)}
 .splash-today-btn.is-logged .splash-today-name{color:rgba(255,255,255,.82);font-weight:500}
 .splash-today-logged{display:block;margin-top:4px;font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
 
-/* "Earlier this week" — still-open sessions from earlier days in the current
-   week, appended below Today inside the same card. Reuses .splash-today-list/
-   -item/-btn/-name/-meta wholesale (same tap flow, same focus ring, same
-   verified contrast) — only the date label above the name is new. */
+/* "Earlier this week" — a day-at-a-time carousel over still-open sessions
+   from earlier days in the current week, appended below Today inside the
+   same card. One day showing at once (not a flat list) because a day can
+   hold more than one still-open session — see splashPrevDays(). Reuses
+   .splash-today-list/-item/-btn/-name/-meta wholesale for each day's rows
+   (same tap flow, same focus ring, same verified contrast). */
 .splash-prev{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.22)}
-.splash-prev-date{display:block;font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.82);margin-bottom:2px}
+.splash-prev-nav{margin-top:2px;display:flex;align-items:center;justify-content:center;gap:10px}
+.splash-prev-nav-btn{flex:none;width:44px;height:44px;padding:0;border-radius:50%;background:rgba(255,255,255,.14);border:none;font-family:var(--fd);font-size:19px;font-weight:600;line-height:1;color:#fff;cursor:pointer}
+.splash-prev-nav-btn:focus,.splash-prev-nav-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+/* Dimmed, not removed: the day-before-today end and the Monday end both
+   need to read as "nowhere further to go" without the row of controls
+   jumping around as you page. */
+.splash-prev-nav-btn.is-disabled{opacity:.35;cursor:default}
+.splash-prev-day-label{min-width:76px;font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.82)}
+.splash-prev-list{margin-top:10px}
+.splash-prev-dots{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px}
+.splash-prev-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)}
+.splash-prev-dot.active{width:14px;border-radius:3px;background:#fff}
 
 /* Planned-session cards at the top of the check-in flow's first page. A
    shortcut into the same form — every value they set stays freely editable,
@@ -2550,18 +2563,26 @@ if(window.caches && caches.keys){
   //   week has no plan at all  → node removed from the DOM entirely
   //
   // A fourth, independent section — "Earlier this week" — appends below
-  // whichever of those three renders, listing any still-open (not yet
-  // logged) sessions from earlier days in the same week, each tappable into
-  // the same check-in flow a today row uses (see startCheckInFromPlan,
-  // splashPreviousOpenItems). It is independent of Today's own state on
-  // purpose: a rest day today says nothing about whether Monday's session
-  // ever got logged, so the two must be able to appear together.
+  // whichever of those three renders: a day-at-a-time carousel over any
+  // still-open (not yet logged) sessions from earlier days in the same
+  // week, each tappable into the same check-in flow a today row uses (see
+  // startCheckInFromPlan, splashPrevDays). It is independent of Today's own
+  // state on purpose: a rest day today says nothing about whether Monday's
+  // session ever got logged, so the two must be able to appear together.
   //
   // The third state is a removal rather than the countdown's [hidden] toggle
   // on purpose: an athlete who has never entered a plan should find no trace
   // of the feature on the splash, not an empty shell. Rebuilt from scratch on
   // every call, so a Sheet refresh landing while the splash is still up
   // repaints it correctly without any diffing.
+  //
+  // Which day the carousel is showing is module state, not derived from the
+  // DOM — the same reason planFormOpenFor/raceFormOpen are: a rebuild (every
+  // Sheet refresh, every prev/next tap) must not silently snap the carousel
+  // back to its first day. Clamped in splashPrevCarousel() against whatever
+  // the current list of missed days actually is, since that list can shrink
+  // (a session gets logged) or grow between renders.
+  var splashPrevDayIndex = 0;
   function renderSplashToday(){
     var existing = document.getElementById('splash-today');
     if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
@@ -2579,11 +2600,11 @@ if(window.caches && caches.keys){
     // nothing in it", never "today is planned and already done".
     var split = todayPlanSplit();
     var open = split.open, logged = split.logged;
-    // Still-open sessions from earlier days in the same week — see
-    // splashPreviousOpenItems(). This no longer returns on the Rest-day
+    // Still-open sessions from earlier days in the same week, grouped by
+    // day — see splashPrevDays(). This no longer returns on the Rest-day
     // branch below: a rest day today doesn't mean nothing is owed from
     // earlier in the week, so both sections have to be able to coexist.
-    var prevOpen = splashPreviousOpenItems();
+    var prevDays = splashPrevDays();
 
     var card = el('div', 'splash-today');
     card.id = 'splash-today';
@@ -2604,17 +2625,7 @@ if(window.caches && caches.keys){
       card.appendChild(list);
     }
 
-    if(prevOpen.length){
-      var prevWrap = el('div', 'splash-prev');
-      prevWrap.appendChild(el('p', 'splash-today-eyebrow', 'Earlier this week'));
-      var prevList = el('ul', 'splash-today-list');
-      prevList.setAttribute('aria-label', 'Planned sessions earlier this week still to log');
-      // Chronological (Monday first) — currentWeekDays() is already in that
-      // order and splashPreviousOpenItems() walks it without re-sorting.
-      prevOpen.forEach(function(item){ prevList.appendChild(splashPrevRow(item)); });
-      prevWrap.appendChild(prevList);
-      card.appendChild(prevWrap);
-    }
+    if(prevDays.length){ card.appendChild(splashPrevCarousel(prevDays)); }
 
     els.splashScreen.appendChild(card);
   }
@@ -2650,46 +2661,109 @@ if(window.caches && caches.keys){
     return item.title ? (disc + ' — ' + item.title) : disc;
   }
   // Still-open (not-yet-logged) sessions from days before today in the
-  // current week — the same week the "no plan anywhere this week" check
-  // above is scoped to, so this never reaches back further than the card
-  // already shows. Uses dayPlanSplit() per day rather than a hand-rolled
-  // "any log entry that day" test, for the same reason todayPlanSplit()
-  // does: a second rule could disagree with the Adherence matcher about
-  // what's already logged, and tapping a session that's secretly already
-  // logged would write a duplicate — the exact defect decisions 32(b)/34
-  // fixed on the other two plan surfaces.
-  function splashPreviousOpenItems(){
+  // current week, grouped one entry per day — the same week the "no plan
+  // anywhere this week" check above is scoped to, so this never reaches back
+  // further than the card already shows. Uses dayPlanSplit() per day rather
+  // than a hand-rolled "any log entry that day" test, for the same reason
+  // todayPlanSplit() does: a second rule could disagree with the Adherence
+  // matcher about what's already logged, and tapping a session that's
+  // secretly already logged would write a duplicate — the exact defect
+  // decisions 32(b)/34 fixed on the other two plan surfaces.
+  //
+  // Ordered most-recent-missed-day first, oldest last — the day before today
+  // is the freshest miss and the one worth seeing without paging, so it's
+  // index 0; "next" pages backwards in time from there. currentWeekDays()
+  // is Monday-first, so this walks it forward and reverses the result rather
+  // than trying to walk it backward directly.
+  function splashPrevDays(){
     var todayI = todayISO();
     var out = [];
     currentWeekDays().forEach(function(d){
       if(d.date >= todayI){ return; }
-      dayPlanSplit(d.date).open.forEach(function(item){ out.push(item); });
+      var open = dayPlanSplit(d.date).open;
+      if(open.length){ out.push({date: d.date, items: open}); }
     });
+    out.reverse();
     return out;
   }
-  // One row per earlier-week session still to log — same shape as
-  // splashTodayRow(item, false) with a day label stacked above the name, so
-  // tapping it can't be mistaken for tapping a today row. Always a <button>:
-  // splashPreviousOpenItems() only ever returns open sessions, never logged
-  // ones, so there is no is-logged state to render here.
-  function splashPrevRow(item){
-    var li = el('li', 'splash-today-item');
-    var row = el('button', 'splash-today-btn');
-    row.type = 'button';
-    var d = new Date(item.date + 'T00:00:00');
-    var dateLbl = el('span', 'splash-prev-date', MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate());
-    // Visible label is abbreviated ("MON 18"); screen readers get the full
-    // weekday date, the same split decision 31's dashPlanDay() uses.
-    dateLbl.setAttribute('aria-label', formatWeekdayDate(item.date));
-    row.appendChild(dateLbl);
-    row.appendChild(el('span', 'splash-today-name', splashTodayName(item)));
-    row.appendChild(el('span', 'splash-today-meta', planMetaLine(item)));
-    // Same flow as tapping a today row: startCheckInFromPlan() dates the
-    // check-in from item.date rather than assuming today, so this lands on a
-    // fresh check-in dated the day the session was actually planned for.
-    row.addEventListener('click', function(){ startCheckInFromPlan(item); });
-    li.appendChild(row);
-    return li;
+  // The "Earlier this week" card content: one day showing at a time, since
+  // a day can hold more than one still-open session (dayPlanSplit's `open`
+  // array) and a flat list would bury that under whichever day happened to
+  // sort first. Left/right steps splashPrevDayIndex and re-renders the whole
+  // splash card — the same rebuild-and-announce pattern stepPlanWeek() uses,
+  // not a manual refocus, since renderSplashToday() rebuilds this node from
+  // scratch on every call anyway.
+  function splashPrevCarousel(days){
+    // Clamped here, not at the call site: this is the one function that
+    // knows both the stored index and the day list it has to fit inside,
+    // and it runs on every render (including the ones triggered by a
+    // background Sheet refresh that can change how many days there are).
+    if(splashPrevDayIndex >= days.length){ splashPrevDayIndex = Math.max(0, days.length - 1); }
+    var idx = splashPrevDayIndex;
+    var day = days[idx];
+
+    var wrap = el('div', 'splash-prev');
+    wrap.appendChild(el('p', 'splash-today-eyebrow', 'Earlier this week'));
+
+    var dateLbl = el('span', 'splash-prev-day-label', formatSplashPrevDate(day.date));
+    dateLbl.setAttribute('aria-label', formatWeekdayDate(day.date));
+
+    if(days.length > 1){
+      var atNewest = idx === 0;
+      var atOldest = idx === days.length - 1;
+      var nav = el('div', 'splash-prev-nav');
+
+      var prevBtn = el('button', 'splash-prev-nav-btn' + (atNewest ? ' is-disabled' : ''), '‹');
+      prevBtn.type = 'button';
+      prevBtn.setAttribute('aria-label', 'More recent day');
+      if(!atNewest){
+        prevBtn.addEventListener('click', function(){
+          splashPrevDayIndex--;
+          renderSplashToday();
+          say('Showing ' + formatWeekdayDate(days[splashPrevDayIndex].date) + '.');
+        });
+      }
+      nav.appendChild(prevBtn);
+      nav.appendChild(dateLbl);
+      var nextBtn = el('button', 'splash-prev-nav-btn' + (atOldest ? ' is-disabled' : ''), '›');
+      nextBtn.type = 'button';
+      nextBtn.setAttribute('aria-label', 'Earlier day');
+      if(!atOldest){
+        nextBtn.addEventListener('click', function(){
+          splashPrevDayIndex++;
+          renderSplashToday();
+          say('Showing ' + formatWeekdayDate(days[splashPrevDayIndex].date) + '.');
+        });
+      }
+      nav.appendChild(nextBtn);
+      wrap.appendChild(nav);
+    } else {
+      // One missed day, nothing to page through — the arrows would both be
+      // permanently dimmed dead controls, so skip the nav row entirely.
+      wrap.appendChild(dateLbl);
+    }
+
+    var list = el('ul', 'splash-today-list splash-prev-list');
+    list.setAttribute('aria-label', 'Planned sessions still to log on ' + formatWeekdayDate(day.date));
+    day.items.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
+    wrap.appendChild(list);
+
+    if(days.length > 1){
+      var dots = el('div', 'splash-prev-dots');
+      days.forEach(function(_, i){
+        dots.appendChild(el('span', 'splash-prev-dot' + (i === idx ? ' active' : '')));
+      });
+      wrap.appendChild(dots);
+    }
+
+    return wrap;
+  }
+  // "MON 18" — the abbreviated weekday + day-of-month label the carousel nav
+  // shows; the unabbreviated date goes on the label's aria-label instead
+  // (formatWeekdayDate), the same split decision 31's dashPlanDay() uses.
+  function formatSplashPrevDate(dateISO){
+    var d = new Date(dateISO + 'T00:00:00');
+    return MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate();
   }
   // "60 min · Hard / quality · Key" — the same fields planItemCard() shows in
   // the Plan view, in the same order, so the two surfaces read identically.
@@ -3808,9 +3882,9 @@ if(window.caches && caches.keys){
   // entry, the matcher then has two logged entries for one planned session,
   // and the spare is reported as `extra` — an unplanned session — which
   // corrupts the exact signal this screen exists to feed. Generalised from
-  // today-only to any dateISO so the splash's "Earlier this week" rows
-  // (splashPreviousOpenItems) can run the identical check against past days
-  // rather than a hand-rolled one.
+  // today-only to any dateISO so the splash's "Earlier this week" carousel
+  // (splashPrevDays) can run the identical check against past days rather
+  // than a hand-rolled one.
   function dayPlanSplit(dateISO){
     // buildWeek()'s own day object, not a hand-rolled one, so what
     // planDayResults() is handed here is identical in shape to what every
