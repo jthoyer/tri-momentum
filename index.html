@@ -197,6 +197,12 @@ textarea::placeholder{color:var(--ink3)}
    .splash-today-list/-item/-btn/-name/-meta wholesale for each day's rows
    (same tap flow, same focus ring, same verified contrast). */
 .splash-prev{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.22)}
+/* Today's own section is skipped outright when the current week has no
+   plan at all yet (see renderSplashToday()) — a lingering miss from last
+   week can still justify the card, so this can end up the card's only
+   child. Without this it'd carry a divider and top gap with nothing above
+   it to divide from. */
+.splash-prev:first-child{margin-top:0;padding-top:0;border-top:none}
 .splash-prev-nav{margin-top:2px;display:flex;align-items:center;justify-content:center;gap:10px}
 .splash-prev-nav-btn{flex:none;width:44px;height:44px;padding:0;border-radius:50%;background:rgba(255,255,255,.14);border:none;font-family:var(--fd);font-size:19px;font-weight:600;line-height:1;color:#fff;cursor:pointer}
 .splash-prev-nav-btn:focus,.splash-prev-nav-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
@@ -1248,6 +1254,19 @@ if(window.caches && caches.keys){
   }
 
   function currentWeekDays(){ return buildWeek(mondayOf(new Date())); }
+  // Same shape as a currentWeekDays() entry, but for any date — not just
+  // the current Mon–Sun week. dayPlanSplit() needs the real day object
+  // (with .entries, the logged sessions for that date) to run
+  // planDayResults() correctly; without it, a date outside the current
+  // week falls back to "everything's still open" with no reference to the
+  // log at all, which is exactly the untested-against-the-log gap
+  // decisions 32(b)/34 fixed on the splash Today card and Check-in
+  // landing — needed here too once splashPrevDays() started reaching one
+  // day into the previous week to always include yesterday.
+  function weekDayFor(dateISO){
+    var monday = mondayOf(new Date(dateISO + 'T00:00:00'));
+    return buildWeek(monday).filter(function(d){ return d.date === dateISO; })[0];
+  }
 
   function monthWeekLabel(weekNum, phaseKey, isCurrent){
     var parts = ['Week ' + weekNum, PERIOD_LABEL[phaseKey] || phaseKey || 'Unset phase'];
@@ -2560,19 +2579,26 @@ if(window.caches && caches.keys){
   //   sessions planned today   → one tappable line per session
   //   week has a plan, today doesn't → "Rest day" (a real, useful answer —
   //                              a planned rest is not the same as no plan)
-  //   week has no plan at all  → node removed from the DOM entirely
+  //   week has no plan at all  → this section is skipped entirely (not even
+  //                              the "Today" eyebrow), though the card
+  //                              itself can still exist for the section below
   //
   // A fourth, independent section — "Earlier this week" — appends below
   // whichever of those three renders: a day-at-a-time carousel over any
-  // still-open (not yet logged) sessions from earlier days in the same
-  // week, each tappable into the same check-in flow a today row uses (see
-  // startCheckInFromPlan, splashPrevDays). It is independent of Today's own
-  // state on purpose: a rest day today says nothing about whether Monday's
-  // session ever got logged, so the two must be able to appear together.
+  // still-open (not yet logged) sessions from earlier days, each tappable
+  // into the same check-in flow a today row uses (see startCheckInFromPlan,
+  // splashPrevDays). It is independent of Today's own state on purpose: a
+  // rest day today says nothing about whether Monday's session ever got
+  // logged, so the two must be able to appear together — and it reaches one
+  // day further back than "the current week" whenever today is the start of
+  // a new one, so it can still show yesterday even when Today's own section
+  // has nothing to say because the new week has no plan yet.
   //
-  // The third state is a removal rather than the countdown's [hidden] toggle
-  // on purpose: an athlete who has never entered a plan should find no trace
-  // of the feature on the splash, not an empty shell. Rebuilt from scratch on
+  // The card itself disappears entirely — not the countdown's [hidden]
+  // toggle — only when *neither* section has anything: no plan anywhere in
+  // the current week AND no lingering open session from yesterday. An
+  // athlete who has never entered a plan should find no trace of the
+  // feature on the splash, not an empty shell. Rebuilt from scratch on
   // every call, so a Sheet refresh landing while the splash is still up
   // repaints it correctly without any diffing.
   //
@@ -2588,7 +2614,15 @@ if(window.caches && caches.keys){
     if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
 
     var weekItems = planItemsInWeek(isoDate(mondayOf(new Date())));
-    if(!weekItems.length){ return; }
+    // Still-open sessions from earlier days, grouped by day — see
+    // splashPrevDays(). Computed before the early-return below (unlike
+    // weekItems, which only speaks for the current Mon–Sun week) because on
+    // the very first day of a new week, yesterday belongs to the *previous*
+    // week: splashPrevDays() can find something to show even when the
+    // current week has nothing planned yet, and the card has to render for
+    // that case too.
+    var prevDays = splashPrevDays();
+    if(!weekItems.length && !prevDays.length){ return; }
     // Same split the Check-in landing uses, from the same source — see
     // todayPlanSplit(), which defers to planDayResults(), the matcher the
     // Adherence signal itself runs on. Deliberately not a second rule here:
@@ -2600,29 +2634,32 @@ if(window.caches && caches.keys){
     // nothing in it", never "today is planned and already done".
     var split = todayPlanSplit();
     var open = split.open, logged = split.logged;
-    // Still-open sessions from earlier days in the same week, grouped by
-    // day — see splashPrevDays(). This no longer returns on the Rest-day
-    // branch below: a rest day today doesn't mean nothing is owed from
-    // earlier in the week, so both sections have to be able to coexist.
-    var prevDays = splashPrevDays();
 
     var card = el('div', 'splash-today');
     card.id = 'splash-today';
-    card.appendChild(el('p', 'splash-today-eyebrow', 'Today'));
 
-    if(!open.length && !logged.length){
-      card.appendChild(el('p', 'splash-today-rest', 'Rest day'));
-    } else {
-      var list = el('ul', 'splash-today-list');
-      list.setAttribute('aria-label', 'Planned sessions for today');
-      // Still to log first, already logged after — the same order the landing
-      // screen uses. Unlike the landing, an all-logged day still renders the
-      // card rather than disappearing: this is an informational surface as
-      // well as an action prompt (decision 29 already treats "Rest day" as an
-      // answer worth showing), so it keeps telling the athlete what today was.
-      open.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
-      logged.forEach(function(item){ list.appendChild(splashTodayRow(item, true)); });
-      card.appendChild(list);
+    // Today's own section only renders when the current week actually has a
+    // plan (weekItems.length) — a lingering miss from last week can justify
+    // the card existing at all (the guard above), but "Rest day" specifically
+    // asserts "the week has a plan and today isn't in it" (decision 29), and
+    // that would be a lie about a week with nothing planned in it yet.
+    if(weekItems.length){
+      card.appendChild(el('p', 'splash-today-eyebrow', 'Today'));
+      if(!open.length && !logged.length){
+        card.appendChild(el('p', 'splash-today-rest', 'Rest day'));
+      } else {
+        var list = el('ul', 'splash-today-list');
+        list.setAttribute('aria-label', 'Planned sessions for today');
+        // Still to log first, already logged after — the same order the
+        // landing screen uses. Unlike the landing, an all-logged day still
+        // renders the card rather than disappearing: this is an
+        // informational surface as well as an action prompt (decision 29
+        // already treats "Rest day" as an answer worth showing), so it
+        // keeps telling the athlete what today was.
+        open.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
+        logged.forEach(function(item){ list.appendChild(splashTodayRow(item, true)); });
+        card.appendChild(list);
+      }
     }
 
     if(prevDays.length){ card.appendChild(splashPrevCarousel(prevDays)); }
@@ -2660,15 +2697,13 @@ if(window.caches && caches.keys){
     var disc = DISC_LABEL[item.disc] || item.disc;
     return item.title ? (disc + ' — ' + item.title) : disc;
   }
-  // Still-open (not-yet-logged) sessions from days before today in the
-  // current week, grouped one entry per day — the same week the "no plan
-  // anywhere this week" check above is scoped to, so this never reaches back
-  // further than the card already shows. Uses dayPlanSplit() per day rather
-  // than a hand-rolled "any log entry that day" test, for the same reason
-  // todayPlanSplit() does: a second rule could disagree with the Adherence
-  // matcher about what's already logged, and tapping a session that's
-  // secretly already logged would write a duplicate — the exact defect
-  // decisions 32(b)/34 fixed on the other two plan surfaces.
+  // Still-open (not-yet-logged) sessions from days before today, grouped one
+  // entry per day. Uses dayPlanSplit() per day rather than a hand-rolled
+  // "any log entry that day" test, for the same reason todayPlanSplit()
+  // does: a second rule could disagree with the Adherence matcher about
+  // what's already logged, and tapping a session that's secretly already
+  // logged would write a duplicate — the exact defect decisions 32(b)/34
+  // fixed on the other two plan surfaces.
   //
   // Ordered most-recent-missed-day first, oldest last — the day before today
   // is the freshest miss and the one worth seeing without paging, so it's
@@ -2683,6 +2718,17 @@ if(window.caches && caches.keys){
       var open = dayPlanSplit(d.date).open;
       if(open.length){ out.push({date: d.date, items: open}); }
     });
+    // currentWeekDays() only covers the current Mon–Sun week, so on the
+    // first day of a new week "yesterday" — the previous week's Sunday —
+    // never appears in the loop above at all, even though it's the single
+    // day someone is most likely to want to catch up on. Checked separately
+    // rather than widening the loop, since yesterday is the only day that
+    // can ever fall outside the current week's range from here.
+    var yesterdayISO = isoDate(addDays(new Date(), -1));
+    if(yesterdayISO < isoDate(mondayOf(new Date()))){
+      var yOpen = dayPlanSplit(yesterdayISO).open;
+      if(yOpen.length){ out.push({date: yesterdayISO, items: yOpen}); }
+    }
     out.reverse();
     return out;
   }
@@ -3886,12 +3932,14 @@ if(window.caches && caches.keys){
   // (splashPrevDays) can run the identical check against past days rather
   // than a hand-rolled one.
   function dayPlanSplit(dateISO){
-    // buildWeek()'s own day object, not a hand-rolled one, so what
+    // weekDayFor()'s own day object, not a hand-rolled one, so what
     // planDayResults() is handed here is identical in shape to what every
     // other caller hands it — and a brand-new object per call, which is
     // exactly the invariant PLAN_MATCH_CACHE documents as its safety
-    // condition.
-    var day = currentWeekDays().filter(function(d){ return d.date === dateISO; })[0];
+    // condition. Works for any date, not just the current week, so this
+    // stays correct when splashPrevDays() reaches into yesterday even
+    // though yesterday can fall in the previous Mon–Sun week.
+    var day = weekDayFor(dateISO);
     if(!day){ return {open: planItemsFor(dateISO), logged: []}; }
     var r = planDayResults(day);
     var open = [], logged = [];
