@@ -756,8 +756,10 @@ if(window.caches && caches.keys){
     {
       k:'a1', layout:'list', tick:true,
       legend:'Did it finish at the effort you intended?',
-      hint:'You set a ceiling this morning — did you stop at it?',
+      hint:'Compare it to the effort you set out to hold this morning — above, at, or below.',
       opts:[
+        {v:'wellunder', label:'Well under'},
+        {v:'slightunder', label:'Slightly under'},
         {v:'intent', label:'At intent'},
         {v:'slight', label:'Slightly over'},
         {v:'well', label:'Well over'},
@@ -1370,7 +1372,11 @@ if(window.caches && caches.keys){
   // SIGNALS
   // ═══════════════════════════════════════════════════════════════
   var DASH_DISCIPLINES = ['swim','bike','run','brick','strength'];
-  var DRIFT_CAT = {intent:'good', slight:'mid', well:'bad'};
+  var DRIFT_CAT = {intent:'good', slight:'mid', well:'bad', slightunder:'mid', wellunder:'bad'};
+  // Mirrors DRIFT_CAT's severity (mid/bad) with the direction the drift ran —
+  // 'over' or 'under' — so headline copy can say which one happened instead
+  // of assuming "over" now that under-intent is a real answer.
+  var DRIFT_DIR = {slight:'over', well:'over', slightunder:'under', wellunder:'under'};
   var FUEL_CAT  = {race:'good', lighter:'mid', no:'bad'};
   // Adherence reads a2 ("Did you do it as planned?"), which the check-in has
   // always captured and written to the Sheet's VsPlan column but which nothing
@@ -1381,6 +1387,13 @@ if(window.caches && caches.keys){
   var NUMBER_WORDS = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine'];
   function numWord(n){ return (n >= 0 && n < 10) ? NUMBER_WORDS[n] : String(n); }
   function driftCat(session){ return session ? (DRIFT_CAT[session.a1] || null) : null; }
+  function driftDir(session){ return session ? (DRIFT_DIR[session.a1] || null) : null; }
+  // 'off' when a tally mixes both directions — a count can't honestly say
+  // "over" or "under" if it's actually both.
+  function driftDirWord(overN, underN){
+    if(overN > 0 && underN > 0){ return 'off'; }
+    return underN > 0 ? 'under' : 'over';
+  }
   function fuelCat(session){
     if(!session || !isLong(session.duration)) return null;
     return FUEL_CAT[session.a3] || null;
@@ -1498,12 +1511,23 @@ if(window.caches && caches.keys){
     return t;
   }
 
-  function tallyDays(days, catFn){
-    var t = {good:0, mid:0, bad:0, total:0};
+  // dirFn is optional and only meaningful for Intensity drift — it splits the
+  // mid/bad counts into over/under so headline copy can say which one
+  // happened instead of assuming "over" now that under-intent is answerable.
+  // Signals that don't pass it (Fuelling, Adherence) just leave those fields
+  // at zero, unread by anything.
+  function tallyDays(days, catFn, dirFn){
+    var t = {good:0, mid:0, bad:0, total:0, midOver:0, midUnder:0, badOver:0, badUnder:0};
     days.forEach(function(d){
       if(!d.session){ return; }
       var c = catFn(d.session);
-      if(c){ t[c]++; t.total++; }
+      if(c){
+        t[c]++; t.total++;
+        if(dirFn && (c === 'mid' || c === 'bad')){
+          var dir = dirFn(d.session);
+          if(dir === 'under'){ t[c + 'Under']++; } else if(dir === 'over'){ t[c + 'Over']++; }
+        }
+      }
     });
     return t;
   }
@@ -1684,7 +1708,7 @@ if(window.caches && caches.keys){
   // vocabulary, which is a different set of states — not different words for
   // the same ones.
   var LEGEND_LABELS = {
-    intensity: ['at intent', 'slightly over', 'well over'],
+    intensity: ['at intent', 'slightly off', 'well off'],
     fuelling:  ['race conc.', 'lighter', 'none'],
     adherence: ['as planned', 'adjusted', 'didn’t happen']
   };
@@ -1717,6 +1741,10 @@ if(window.caches && caches.keys){
   function accumulateFacts(units){
     var badCount = 0, goodCount = 0, total = 0, compoundPairs = 0, firstPair = null;
     var bounceBackPairs = 0, firstBounceBack = null, prevBad = null, curStreak = 0, goodStreak = 0;
+    // Over/under split of the bad-severity units — undefined `u.dir` (every
+    // signal but Intensity drift) just leaves both at zero, unread by
+    // anything else, so this stays a no-op for Fuelling/Adherence.
+    var badOverCount = 0, badUnderCount = 0;
     units.forEach(function(u){
       total++;
       if(u.cat === 'good'){
@@ -1724,30 +1752,34 @@ if(window.caches && caches.keys){
         if(curStreak > goodStreak){ goodStreak = curStreak; }
         if(prevBad){
           bounceBackPairs++;
-          if(!firstBounceBack){ firstBounceBack = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: u.day, disc2: DISC_LABEL[u.disc]}; }
+          if(!firstBounceBack){ firstBounceBack = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: u.day, disc2: DISC_LABEL[u.disc], dir1: prevBad.dir}; }
         }
         prevBad = null;
       } else if(u.cat === 'bad'){
         curStreak = 0; badCount++;
+        if(u.dir === 'under'){ badUnderCount++; } else if(u.dir === 'over'){ badOverCount++; }
         if(prevBad){
           compoundPairs++;
-          if(!firstPair){ firstPair = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: u.day, disc2: DISC_LABEL[u.disc]}; }
+          if(!firstPair){ firstPair = {day1: prevBad.day, disc1: DISC_LABEL[prevBad.disc], day2: u.day, disc2: DISC_LABEL[u.disc], dir1: prevBad.dir, dir2: u.dir}; }
         }
-        prevBad = {day: u.day, disc: u.disc};
+        prevBad = {day: u.day, disc: u.disc, dir: u.dir};
       } else {
         curStreak = 0; prevBad = null;
       }
     });
-    return {badCount:badCount, goodCount:goodCount, total:total, compoundPairs:compoundPairs, firstPair:firstPair, bounceBackPairs:bounceBackPairs, firstBounceBack:firstBounceBack, goodStreak:goodStreak};
+    return {badCount:badCount, goodCount:goodCount, total:total, compoundPairs:compoundPairs, firstPair:firstPair, bounceBackPairs:bounceBackPairs, firstBounceBack:firstBounceBack, goodStreak:goodStreak, badOverCount:badOverCount, badUnderCount:badUnderCount};
   }
-  function computeSignalFacts(weeks, catFn){
+  // dirFn is optional — see tallyDays' comment. Only Intensity drift passes one.
+  function computeSignalFacts(weeks, catFn, dirFn){
     var units = [];
     weeks.forEach(function(w){
       w.days.forEach(function(d){
         if(!d.session){ return; }
         var cat = catFn(d.session);
         if(cat === null){ return; }
-        units.push({day: d.day, disc: d.session.disc, cat: cat});
+        var unit = {day: d.day, disc: d.session.disc, cat: cat};
+        if(dirFn){ unit.dir = dirFn(d.session); }
+        units.push(unit);
       });
     });
     return accumulateFacts(units);
@@ -1777,19 +1809,29 @@ if(window.caches && caches.keys){
     return f;
   }
 
+  // 'well under'/'well over' for a single known direction — every bad-cat
+  // unit has one (DRIFT_DIR covers both bad values, 'well' and 'wellunder'),
+  // so this only needs a fallback for facts objects with no direction data.
+  function driftMag(dir){ return dir === 'under' ? 'well under' : 'well over'; }
   var DRIFT_INSIGHT_RULES = [
     {id:'compound_drift_2plus', priority:10, severity:'bad',
       match:function(f){ return f.compoundPairs >= 2; },
-      headline:function(f){ return numWord(f.compoundPairs) + ' times this week, a session that ran well over intent was followed by another one running well over intent — that’s the pattern that turns into a niggle or a missed session, so check whether recovery between them is long enough.'; }},
+      // Aggregates 2+ pairs that may run in either direction, so this can't
+      // name one direction without risking being wrong about half of them —
+      // "off" stays true regardless of which way any given pair drifted.
+      headline:function(f){ return numWord(f.compoundPairs) + ' times this week, a session that ran well off the effort you intended was followed by another one running well off intent again — that’s the pattern that turns into a niggle or a missed session, so check whether recovery between them is long enough.'; }},
     {id:'compound_drift_1', priority:20, severity:'bad',
       match:function(f){ return f.compoundPairs === 1; },
-      headline:function(f){ return 'Your ' + f.firstPair.disc1 + ' on ' + f.firstPair.day1 + ' ran well over intent, and the ' + f.firstPair.disc2 + ' on ' + f.firstPair.day2 + ' that followed did too — one data point, worth watching before it becomes a pattern.'; }},
+      headline:function(f){
+        var d1 = driftMag(f.firstPair.dir1), d2 = driftMag(f.firstPair.dir2);
+        return 'Your ' + f.firstPair.disc1 + ' on ' + f.firstPair.day1 + ' ran ' + d1 + ' intent, and the ' + f.firstPair.disc2 + ' on ' + f.firstPair.day2 + ' that followed ' + (d1 === d2 ? 'did too' : ('ran ' + d2 + ' intent instead')) + ' — one data point, worth watching before it becomes a pattern.';
+      }},
     {id:'bounce_back_drift', priority:25, severity:'mid',
       match:function(f){ return f.badCount > 0 && f.compoundPairs === 0 && f.bounceBackPairs > 0; },
-      headline:function(f){ return 'Your ' + f.firstBounceBack.disc1 + ' on ' + f.firstBounceBack.day1 + ' ran well over intent, but the ' + f.firstBounceBack.disc2 + ' on ' + f.firstBounceBack.day2 + ' right after landed back at intent — recovery did its job.'; }},
+      headline:function(f){ return 'Your ' + f.firstBounceBack.disc1 + ' on ' + f.firstBounceBack.day1 + ' ran ' + driftMag(f.firstBounceBack.dir1) + ' intent, but the ' + f.firstBounceBack.disc2 + ' on ' + f.firstBounceBack.day2 + ' right after landed back at intent — recovery did its job.'; }},
     {id:'isolated_drift_no_compound', priority:30, severity:'mid',
       match:function(f){ return f.badCount > 0 && f.compoundPairs === 0; },
-      headline:function(f){ return numWord(f.badCount) + (f.badCount === 1 ? ' session ran' : ' sessions ran') + ' well over intent this week, but recovery held — no back-to-back pattern.'; }},
+      headline:function(f){ return numWord(f.badCount) + (f.badCount === 1 ? ' session ran' : ' sessions ran') + ' well ' + driftDirWord(f.badOverCount, f.badUnderCount) + ' intent this week, but recovery held — no back-to-back pattern.'; }},
     {id:'clean_week_no_data', priority:45,
       match:function(f){ return f.total === 0; }, severity:'mid',
       headline:function(){ return 'No sessions logged yet this week.'; }},
@@ -1912,13 +1954,19 @@ if(window.caches && caches.keys){
     });
     return consistent ? day : null;
   }
-  function disciplineTally(disc, catFn){
-    var t = {good:0, mid:0, bad:0, total:0};
+  function disciplineTally(disc, catFn, dirFn){
+    var t = {good:0, mid:0, bad:0, total:0, midOver:0, midUnder:0, badOver:0, badUnder:0};
     monthWeeks().forEach(function(w){
       w.days.forEach(function(d){
         if(!d.session || d.session.disc !== disc){ return; }
         var c = catFn(d.session);
-        if(c){ t[c]++; t.total++; }
+        if(c){
+          t[c]++; t.total++;
+          if(dirFn && (c === 'mid' || c === 'bad')){
+            var dir = dirFn(d.session);
+            if(dir === 'under'){ t[c + 'Under']++; } else if(dir === 'over'){ t[c + 'Over']++; }
+          }
+        }
       });
     });
     return t;
@@ -1947,10 +1995,10 @@ if(window.caches && caches.keys){
   function disciplineDriftHeadline(disc, t, weekday){
     var one  = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_SINGULAR_NOUN[disc]) : DISC_SINGULAR_NOUN[disc];
     var many = weekday ? (WEEKDAY_FULL[weekday] + ' ' + DISC_PLURAL_NOUN[disc])   : DISC_PLURAL_NOUN[disc];
-    if(t.bad === t.total){ return 'Every ' + one + ' this month ran well over intent.'; }
-    if(t.mid === t.total){ return 'Every ' + one + ' this month ran slightly over intent.'; }
-    if(t.bad){ return numWord(t.bad) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' ran well over intent this month.'; }
-    if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' ran slightly over intent this month.'; }
+    if(t.bad === t.total){ return 'Every ' + one + ' this month ran well ' + driftDirWord(t.badOver, t.badUnder) + ' intent.'; }
+    if(t.mid === t.total){ return 'Every ' + one + ' this month ran slightly ' + driftDirWord(t.midOver, t.midUnder) + ' intent.'; }
+    if(t.bad){ return numWord(t.bad) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' ran well ' + driftDirWord(t.badOver, t.badUnder) + ' intent this month.'; }
+    if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + ' ran slightly ' + driftDirWord(t.midOver, t.midUnder) + ' intent this month.'; }
     return 'Every ' + one + ' this month finished at the effort you intended.';
   }
   function disciplineFuelHeadline(disc, t, weekday){
@@ -1971,12 +2019,12 @@ if(window.caches && caches.keys){
     if(t.mid){ return numWord(t.mid) + ' of ' + numWord(t.total).toLowerCase() + ' ' + many + (t.mid === 1 ? ' was' : ' were') + ' shortened or substituted this month.'; }
     return 'Every ' + one + ' this month went as planned.';
   }
-  function renderDisciplineInsights(catFn, headlineFn, tallyFn){
+  function renderDisciplineInsights(catFn, headlineFn, tallyFn, dirFn){
     var wrap = el('div', 'dash-section');
     wrap.setAttribute('data-label', 'By discipline');
     var any = false;
     DASH_DISCIPLINES.forEach(function(disc){
-      var t = tallyFn ? tallyFn(disc) : disciplineTally(disc, catFn);
+      var t = tallyFn ? tallyFn(disc) : disciplineTally(disc, catFn, dirFn);
       if(!t.total){ return; }
       any = true;
       var weekday = disciplineWeekday(disc);
@@ -2010,7 +2058,7 @@ if(window.caches && caches.keys){
     if(w.isCurrent){ hd.appendChild(el('span', 'month-week-current', 'this week')); }
     return hd;
   }
-  function renderMonthSection(label, catFn, opts, resolveInsight){
+  function renderMonthSection(label, catFn, opts, resolveInsight, dirFn){
     var wrap = el('div', 'dash-section');
     wrap.setAttribute('data-label', label);
     var weeks = monthWeeks();
@@ -2021,9 +2069,9 @@ if(window.caches && caches.keys){
       // both weeks the athlete planned and weeks they didn't, and each should
       // be reported the most precise way its own data allows.
       var useB = !!opts.planAware && daysHavePlan(w.days);
-      var t = useB ? tallyPlanDays(w.days) : tallyDays(w.days, catFn);
+      var t = useB ? tallyPlanDays(w.days) : tallyDays(w.days, catFn, dirFn);
       var facts = useB ? computePlanSignalFacts([{wk:w.wk, days:w.days}])
-                       : computeSignalFacts([{wk:w.wk, days:w.days}], catFn);
+                       : computeSignalFacts([{wk:w.wk, days:w.days}], catFn, dirFn);
       var rule = resolveInsight(facts);
       renderSignalBody(block, t, catFn, {severity: rule.severity, headline: rule.headline(facts)},
         {nText: useB && opts.nTextB ? opts.nTextB(t) : opts.nText(t), bigDesc: opts.bigDesc,
@@ -2099,11 +2147,11 @@ if(window.caches && caches.keys){
       }, resolveAdherenceInsight));
       adherenceLegendStageB = monthPlan;
     } else {
-      root.appendChild(renderDisciplineInsights(driftCat, disciplineDriftHeadline));
+      root.appendChild(renderDisciplineInsights(driftCat, disciplineDriftHeadline, null, driftDir));
       root.appendChild(renderMonthSection('Intensity drift', driftCat, {
         nText: function(t){ return t.total + ' session' + (t.total === 1 ? '' : 's'); }, bigDesc: 'finished at intent',
-        goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over', matrixSub: 'by session'
-      }, resolveDriftInsight));
+        goodLabel: 'at intent', midLabel: 'slightly off', badLabel: 'well off', matrixSub: 'by session'
+      }, resolveDriftInsight, driftDir));
     }
     root.appendChild(dashLegend(state.monthSignal, adherenceLegendStageB));
   }
@@ -2240,12 +2288,12 @@ if(window.caches && caches.keys){
       }, days));
       adherenceLegendStageB = useB;
     } else {
-      var driftT = tallyDays(days, driftCat);
-      var driftFacts = computeSignalFacts([{wk:'This week', days:days}], driftCat);
+      var driftT = tallyDays(days, driftCat, driftDir);
+      var driftFacts = computeSignalFacts([{wk:'This week', days:days}], driftCat, driftDir);
       var driftRule = resolveDriftInsight(driftFacts);
       root.appendChild(dashSignalSection('Intensity drift', driftT, driftCat, {severity: driftRule.severity, headline: driftRule.headline(driftFacts)}, {
         nText: driftT.total + ' session' + (driftT.total === 1 ? '' : 's'), bigDesc: 'finished at intent',
-        goodLabel: 'at intent', midLabel: 'slightly over', badLabel: 'well over', matrixSub: 'by session', signal: 'intensity', weekLabel: weekLabel
+        goodLabel: 'at intent', midLabel: 'slightly off', badLabel: 'well off', matrixSub: 'by session', signal: 'intensity', weekLabel: weekLabel
       }, days));
     }
     root.appendChild(dashLegend(state.weekSignal, adherenceLegendStageB));
