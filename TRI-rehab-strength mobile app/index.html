@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>TRI-rehab-strength</title>
+<meta name="description" content="Soleus-focused bent-knee rehab progression for Achilles and calf-strain recovery, with progress tracking." />
+<meta name="theme-color" content="#182542" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Rehab Strength" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="shell">
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="TRI-rehab-strength home">
+      <b>TRI-rehab-strength</b>
+    </a>
+    <button class="text-button" id="resetButton" type="button">Reset session</button>
+  </header>
+
+  <div class="completion-banner hidden" id="completionBanner" role="status">
+    <p class="completion-title">Well done! Session complete &#127881;</p>
+    <p class="completion-sub">All 3 exercises logged &mdash; that&rsquo;s session #<span id="completionCount">0</span>.</p>
+    <button class="primary-button" id="completionResetButton" type="button">Reset &amp; go again</button>
+  </div>
+
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <p class="eyebrow">REHAB STRENGTH &middot; ACHILLES &amp; CALF</p>
+      <h1>Bent-knee <em>soleus</em> strengthening</h1>
+      <p>Isolate the soleus &mdash; the muscle beneath your calf that shares the Achilles tendon &mdash; with knee-bent loading a standard straight-leg calf raise misses entirely.</p>
+
+      <div class="session-meta">
+        <div class="session-meta-item"><span class="meta-label">Structure</span><span>3 exercises, low-impact to advanced &mdash; work through in order as symptoms allow, 3 sets each</span></div>
+        <div class="session-meta-item"><span class="meta-label">Equipment</span><span>A heavy dumbbell (or a pair), or a calf-raise machine; a step for the advanced variation</span></div>
+      </div>
+
+      <div class="progress-block">
+        <div class="progress-top">
+          <span class="progress-count"><span id="progressDone">0</span> / <span id="progressTotal">0</span> exercises logged</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="sessions-completed"><span id="sessionsCompleted">0</span> sessions completed all-time</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="phase-card" id="phaseMain" aria-labelledby="phaseMainTitle">
+    <div class="card-header">
+      <div><p class="eyebrow phase-eyebrow">PROGRESSION &middot; 3 EXERCISES</p><h2 id="phaseMainTitle">Soleus strengthening progression</h2></div>
+      <span class="phase-progress" id="phaseMainProgress">0/9</span>
+    </div>
+    <p class="card-intro">All three are performed with the knee bent &mdash; a straight knee shifts the load onto the gastrocnemius and misses the soleus entirely. Progress from Exercise 1 toward Exercise 3 as symptoms allow.</p>
+    <div class="exercise-list" id="phaseMainList"></div>
+  </section>
+
+  <section class="info-card" aria-labelledby="remindersTitle">
+    <h2 id="remindersTitle">Key technique reminders</h2>
+    <ol class="reminder-list">
+      <li><strong>The bent-knee principle:</strong> the soleus sits beneath the larger, visible gastrocnemius, and both attach to the Achilles tendon &mdash; strengthening it matters for tendon health, not just calf strength.</li>
+      <li><strong>Straight vs. bent:</strong> a straight-knee calf raise trains the gastrocnemius. Only a bent-knee movement isolates and loads the soleus.</li>
+      <li><strong>Load (seated raise):</strong> pick a weight where reps 8&ndash;15 are hard but controlled, not shaky.</li>
+      <li><strong>Full range (step raise):</strong> don't let the working knee straighten as your ankle rises &mdash; that's when the work quietly shifts back onto the gastrocnemius.</li>
+    </ol>
+  </section>
+
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

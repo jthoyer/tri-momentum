@@ -1,0 +1,92 @@
+:root{--ink:#182542;--muted:#566177;--line:#d9dfe8;--canvas:#f7f8fa;--yellow:#f8c44f;--green:#116b43;--green-bg:#e8f6ee;--navy-bg:#eef2fb;--brand-blue:#00a3e0}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/1.5 "DM Sans",Arial,sans-serif}
+.shell{width:min(760px,calc(100% - 40px));margin:auto;padding-bottom:60px}
+
+.topbar{min-height:96px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:500;text-decoration:none}
+.brand b{font-family:Outfit,sans-serif;font-size:16px}
+.brand-logo{display:block;height:56px;width:auto}
+.text-button{min-width:44px;min-height:44px;padding:0 10px;border:0;background:transparent;color:var(--muted);font:700 14px "DM Sans";cursor:pointer}
+.text-button:hover{color:var(--ink)}
+
+.completion-banner{margin-top:18px;padding:20px 22px;border-radius:9px;background:var(--green-bg);border:1px solid #bfe3cf;text-align:center}
+.completion-banner.hidden{display:none}
+.completion-title{margin:0;font:700 19px Outfit;color:var(--green)}
+.completion-sub{margin:6px 0 0;color:var(--ink);font-size:13.5px}
+.completion-banner .primary-button{margin-top:14px}
+
+.hero{border-radius:9px;overflow:hidden;background:var(--ink);color:#fff}
+.hero-copy{padding:36px 32px 32px}
+.eyebrow{margin:0 0 9px;color:#f6cf69;font-size:12px;font-weight:700;letter-spacing:1.2px}
+.hero h1{margin:0;font-family:Outfit,sans-serif;font-size:clamp(1.85rem,5vw,2.6rem);line-height:1.1;letter-spacing:-1px}
+.hero h1 em{color:var(--yellow);font-style:normal}
+.hero-copy>p:not(.eyebrow){max-width:480px;margin:14px 0 0;color:#edf0f7;line-height:1.6}
+
+.session-meta{display:grid;gap:12px;margin:24px 0 0;padding:16px 18px;border-radius:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
+.session-meta-item{display:grid;gap:2px;font-size:13.5px;color:#edf0f7}
+.meta-label{color:rgba(255,255,255,.6);font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+
+.progress-block{margin-top:22px}
+.progress-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.progress-count{font:700 15px "DM Sans";color:#fff}
+.progress-pct{font:700 15px Outfit;color:var(--yellow)}
+.progress-bar{margin-top:8px;height:10px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
+.progress-fill{height:100%;width:0%;border-radius:999px;background:var(--yellow);transition:width .25s ease}
+.sessions-completed{margin:10px 0 0;color:rgba(255,255,255,.7);font-size:12.5px}
+
+.phase-card{margin-top:22px;border:1px solid var(--line);border-radius:9px;background:#fff;overflow:hidden}
+.card-header{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:18px 20px 4px}
+.card-header h2{margin:2px 0 0;font:700 20px Outfit;letter-spacing:-.3px}
+.phase-eyebrow{color:var(--brand-blue);margin-bottom:4px}
+.phase-progress{flex-shrink:0;margin-top:4px;padding:4px 11px;border-radius:999px;background:var(--navy-bg);color:var(--ink);font:700 12.5px "DM Sans"}
+.phase-progress.all-done{background:var(--green-bg);color:var(--green)}
+.card-intro{margin:6px 20px 14px;color:var(--muted);font-size:13.5px}
+
+.exercise-list{display:flex;flex-direction:column;gap:26px;padding:6px 20px 24px}
+.exercise-row{display:flex;gap:14px;padding:24px 22px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(24,37,66,.04),0 10px 24px -10px rgba(24,37,66,.16);transition:background .2s ease,box-shadow .2s ease}
+.exercise-row.active{box-shadow:0 0 0 2px rgba(0,163,224,.35),0 10px 24px -10px rgba(24,37,66,.16)}
+.exercise-row.checked{background:var(--green-bg);box-shadow:0 1px 2px rgba(17,107,67,.05),0 10px 24px -10px rgba(17,107,67,.18)}
+
+.check-btn{flex-shrink:0;width:32px;height:32px;margin-top:2px;border-radius:999px;border:2px solid #aab5c6;background:#fff;color:transparent;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.check-btn:hover{border-color:var(--green)}
+.check-btn.checked{border-color:var(--green);background:var(--green);color:#fff}
+.check-btn:focus-visible{outline:3px solid #285ba8;outline-offset:2px}
+
+.exercise-body{min-width:0;flex:1}
+.exercise-top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 14px}
+.exercise-name{margin:0;font:600 15.5px Outfit;letter-spacing:-.1px}
+.exercise-row.checked .exercise-name{color:var(--muted);text-decoration:line-through;text-decoration-color:#a9b6c9}
+.exercise-dose{flex-shrink:0;color:var(--brand-blue);font-size:12.5px;font-weight:700;white-space:nowrap}
+.exercise-cue{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+
+.round-checks{display:flex;gap:10px;margin-top:16px}
+.round-btn{min-width:44px;min-height:32px;padding:0 4px;border-radius:8px;border:2px solid #aab5c6;background:#fff;color:var(--muted);font:700 12px "DM Sans";cursor:pointer}
+.round-btn:hover{border-color:var(--green)}
+.round-btn.checked{border-color:var(--green);background:var(--green);color:#fff}
+.round-btn:focus-visible{outline:3px solid #285ba8;outline-offset:2px}
+
+.info-card{margin-top:22px;padding:22px 24px;border-radius:9px;background:var(--navy-bg);border:1px solid #d7e0f5}
+.info-card h2{margin:0 0 12px;font:700 18px Outfit}
+.reminder-list{margin:0;padding-left:20px;display:grid;gap:8px;color:var(--ink);font-size:14px;line-height:1.5}
+.reminder-list li::marker{color:var(--brand-blue);font-weight:700}
+
+.primary-button{min-height:48px;padding:12px 22px;border:0;border-radius:9px;background:var(--yellow);color:var(--ink);font:700 15px "DM Sans";cursor:pointer}
+.primary-button span{margin-left:8px}
+.primary-button:hover{filter:brightness(0.97)}
+.primary-button:focus-visible{outline:3px solid #285ba8;outline-offset:3px}
+.primary-button:disabled{opacity:.55;cursor:default}
+
+@media(max-width:520px){
+  .shell{width:min(100% - 24px,760px)}
+  .hero-copy{padding:28px 20px 26px}
+  .session-meta{padding:14px 15px}
+  .card-header{padding:16px 16px 4px}
+  .card-intro{margin:6px 16px 12px}
+  .exercise-list{padding:4px 16px 18px;gap:18px}
+  .exercise-row{padding:18px 16px}
+  .round-checks{flex-wrap:wrap}
+  .info-card{padding:20px 18px}
+  .completion-banner{padding:18px}
+}

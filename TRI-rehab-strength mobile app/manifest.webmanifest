@@ -1,0 +1,13 @@
+{
+  "name": "TRI-rehab-strength",
+  "short_name": "Rehab Strength",
+  "description": "Soleus-focused bent-knee rehab progression for Achilles and calf-strain recovery, with progress tracking.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#182542",
+  "theme_color": "#182542",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

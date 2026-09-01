@@ -653,6 +653,7 @@ fieldset.plan-field{border:0;min-width:0}
     <div class="signal-subtabs" id="strength-subtabs" role="tablist" aria-label="Strength discipline">
       <button type="button" class="signal-subtab" id="tab-strength-swim" role="tab" aria-selected="true">Swim</button>
       <button type="button" class="signal-subtab" id="tab-strength-run" role="tab" aria-selected="false">Ride / Run</button>
+      <button type="button" class="signal-subtab" id="tab-strength-rehab" role="tab" aria-selected="false">Rehab</button>
     </div>
     <iframe class="strength-frame" id="strength-frame" src="TRI-swim-strength mobile app/index.html" title="Swim strength session" loading="lazy"></iframe>
   </div>
@@ -3773,6 +3774,7 @@ if(window.caches && caches.keys){
     strengthFrame: document.getElementById('strength-frame'),
     tabStrengthSwim: document.getElementById('tab-strength-swim'),
     tabStrengthRun: document.getElementById('tab-strength-run'),
+    tabStrengthRehab: document.getElementById('tab-strength-rehab'),
     viewTabs: document.getElementById('view-tabs'),
     appMain: document.getElementById('app-main'),
     splashScreen: document.getElementById('view-splash'),
@@ -4621,12 +4623,14 @@ if(window.caches && caches.keys){
   els.strengthFrame.addEventListener('load', sizeStrengthFrame);
   window.addEventListener('resize', function(){ if(!els.viewStrength.hidden){ sizeStrengthFrame(); } });
 
-  // Strength tab holds two same-origin mini-apps (swim dryland vs. ride/run
-  // circuit) in one iframe; switching disciplines just swaps the src rather
-  // than juggling two iframes, since only one is ever visible at a time.
+  // Strength tab holds three same-origin mini-apps (swim dryland, ride/run
+  // circuit, soleus rehab progression) in one iframe; switching disciplines
+  // just swaps the src rather than juggling three iframes, since only one
+  // is ever visible at a time.
   var STRENGTH_APPS = {
     swim: { src: 'TRI-swim-strength mobile app/index.html', title: 'Swim strength session' },
-    run:  { src: 'TRI-run-strength mobile app/index.html', title: 'Ride and run strength session' }
+    run:  { src: 'TRI-run-strength mobile app/index.html', title: 'Ride and run strength session' },
+    rehab: { src: 'TRI-rehab-strength mobile app/index.html', title: 'Soleus rehab session' }
   };
   function setStrengthDiscipline(disc){
     var cfg = STRENGTH_APPS[disc];
@@ -4636,9 +4640,11 @@ if(window.caches && caches.keys){
     }
     els.tabStrengthSwim.setAttribute('aria-selected', String(disc === 'swim'));
     els.tabStrengthRun.setAttribute('aria-selected', String(disc === 'run'));
+    els.tabStrengthRehab.setAttribute('aria-selected', String(disc === 'rehab'));
   }
   els.tabStrengthSwim.addEventListener('click', function(){ setStrengthDiscipline('swim'); });
   els.tabStrengthRun.addEventListener('click', function(){ setStrengthDiscipline('run'); });
+  els.tabStrengthRehab.addEventListener('click', function(){ setStrengthDiscipline('rehab'); });
 
   // ═══════════════════════════════════════════════════════════════
   // TRAINING PHASE PICKER — asked once on first use; re-openable from the
