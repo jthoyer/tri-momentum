@@ -515,6 +515,13 @@ fieldset.plan-field{border:0;min-width:0}
 .plan-clear{align-self:flex-start;min-height:44px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer}
 .plan-clear:hover{color:var(--run)}
 
+/* ── Phase plan — reuses .plan-item for card chrome and .plan-item-delete
+   for Remove; only the row's own flex layout and the <select> are new. ── */
+.phaseplan-list{margin-top:1rem}
+.phaseplan-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px}
+.phaseplan-date{min-height:44px}
+.phaseplan-select{min-height:44px;padding:10px 12px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:14px;color:var(--ink);background:var(--s1)}
+
 /* ── Warm up ── */
 .warmup-hero{margin-top:1.4rem;padding:1.5rem 1.3rem 1.4rem;border-radius:var(--rxl);background:#182542;color:#fff}
 .warmup-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--hero-accent)}
@@ -668,6 +675,10 @@ fieldset.plan-field{border:0;min-width:0}
        role="region" rather than "tabpanel" precisely because no tab owns
        it — it's labelled by its own heading instead. -->
   <div class="dash" id="view-plan" role="region" aria-labelledby="plan-h" hidden></div>
+
+  <!-- Phase Plan — same no-nav-tab treatment as Plan/Month above, reached
+       from the "Edit phase plan →" link in This week. -->
+  <div class="dash" id="view-phaseplan" role="region" aria-labelledby="phaseplan-h" hidden></div>
 
   </div>
   <!-- /#app-main -->
@@ -915,7 +926,8 @@ if(window.caches && caches.keys){
   // no server of our own.
   // ═══════════════════════════════════════════════════════════════
   var LOG_KEY = 'triMomentumLog_v1';
-  var PHASE_KEY = 'triMomentumPhase_v1';
+  var PHASE_KEY = 'triMomentumPhase_v1'; // legacy — superseded by PHASE_PLAN_KEY, kept only for one-off migration
+  var PHASE_PLAN_KEY = 'triMomentumPhasePlan_v1';
   var WARMUP_SESSIONS_KEY = 'triMomentumWarmupSessions_v1';
   var RACES_KEY = 'triMomentumRaces_v1';
   var PLAN_KEY = 'triMomentumPlan_v1';
@@ -939,9 +951,17 @@ if(window.caches && caches.keys){
     if(!storageOk){ return null; }
     try{ return window.localStorage.getItem(PHASE_KEY) || null; } catch(e){ return null; }
   }
-  function persistPhase(v){
+  function loadPhasePlan(){
+    if(!storageOk){ return null; }
+    try{
+      var raw = window.localStorage.getItem(PHASE_PLAN_KEY);
+      var arr = raw ? JSON.parse(raw) : null;
+      return Array.isArray(arr) ? arr : null;
+    } catch(e){ return null; }
+  }
+  function persistPhasePlan(){
     if(!storageOk){ return; }
-    try{ window.localStorage.setItem(PHASE_KEY, v); } catch(e){}
+    try{ window.localStorage.setItem(PHASE_PLAN_KEY, JSON.stringify(phasePlan)); } catch(e){}
   }
   // All-time "mark complete" counts per warm-up discipline — same idea as
   // the Strength mini-apps' sessionsCompleted counter, kept device-local
@@ -1159,6 +1179,82 @@ if(window.caches && caches.keys){
 
   var plan = loadPlan(); // cached copy; replaced by refreshPlanFromSheet() as soon as the Sheet responds
 
+  // ═══════════════════════════════════════════════════════════════
+  // TRAINING PHASE PLAN — dated blocks, each running until the next one
+  // starts, replacing the old single once-ever phase value. Device-local
+  // only (no Sheet tab): the single value it replaces was never synced
+  // either, so this isn't a step down from what shipped before — only each
+  // logged session's own stamped `phase` (see save()) has ever travelled
+  // via the Sheet. Add a Sheet tab later, on the Races/Plan precedent, if
+  // cross-device phase planning is actually needed.
+  // ═══════════════════════════════════════════════════════════════
+  var phasePlan = loadPhasePlan();
+  if(!phasePlan){
+    // One-off migration: fold the old single value into a single open-ended
+    // block dated well in the past, so an existing user's current phase
+    // carries over exactly as it was until they actually touch the new
+    // Phase Plan editor. A brand-new user has no legacy value, so they start
+    // with an empty plan and see the same first-run picker as before.
+    var legacyPhase = loadPhase();
+    phasePlan = legacyPhase ? [{id: 'legacy', from: '2020-01-01', phase: legacyPhase}] : [];
+    persistPhasePlan();
+  }
+  function newPhaseBlockId(){ return 'ph' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  // Blocks are keyed by `from` only — each one runs until the next block's
+  // `from` (exclusive), so the list can never describe two phases for one
+  // day and there is no from/to overlap to validate against. Returns null
+  // when `dateISO` falls before every block (nothing planned back that far).
+  function resolvePhaseForDate(dateISO){
+    var sorted = phasePlan.slice().sort(function(a, b){ return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
+    var found = null;
+    for(var i = 0; i < sorted.length; i++){
+      if(sorted[i].from <= dateISO){ found = sorted[i]; } else { break; }
+    }
+    return found ? found.phase : null;
+  }
+  // state.periodisation is kept as the resolved *today's phase* rather than
+  // ripped out — every existing reader (Month, the dashboard header, the
+  // flow chrome, save()) already reads it, so recomputing it in place after
+  // any Phase Plan edit is the entire integration, with nothing downstream
+  // to change.
+  function recomputeCurrentPhase(){
+    state.periodisation = resolvePhaseForDate(todayISO());
+  }
+  // What "Change phase" has always meant: a new phase starting right now,
+  // never a retroactive edit — that's what the fuller Phase Plan editor is
+  // for. Overwrites today's block if one was already added today (e.g. a
+  // second change of mind on the same day) rather than stacking duplicates.
+  function setPhaseFromToday(v){
+    var today = todayISO();
+    var existing = phasePlan.filter(function(b){ return b.from === today; })[0];
+    if(existing){ existing.phase = v; }
+    else{ phasePlan.push({id: newPhaseBlockId(), from: today, phase: v}); }
+    persistPhasePlan();
+    recomputeCurrentPhase();
+  }
+  function addPhaseBlock(fromISO, v){
+    phasePlan.push({id: newPhaseBlockId(), from: fromISO, phase: v});
+    persistPhasePlan();
+    recomputeCurrentPhase();
+  }
+  function updatePhaseBlock(id, fields){
+    var b = phasePlan.filter(function(x){ return x.id === id; })[0];
+    if(!b){ return; }
+    if(fields.from !== undefined){ b.from = fields.from; }
+    if(fields.phase !== undefined){ b.phase = fields.phase; }
+    persistPhasePlan();
+    recomputeCurrentPhase();
+  }
+  // Always keeps at least one block once any exist — an empty plan and a
+  // "nothing set" first-run state need to stay the same thing, and every
+  // date needs an answer once the athlete has started planning at all.
+  function deletePhaseBlock(id){
+    if(phasePlan.length <= 1){ return; }
+    phasePlan = phasePlan.filter(function(b){ return b.id !== id; });
+    persistPhasePlan();
+    recomputeCurrentPhase();
+  }
+
   // ── Dates ─────────────────────────────────────────────────────
   var MONTH_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   function isoDate(d){
@@ -1326,7 +1422,7 @@ if(window.caches && caches.keys){
     step: 0,
     mode: 'ask',       // 'ask' | 'plan' | 'review' | 'saved'
     note: '',
-    periodisation: loadPhase(),
+    periodisation: resolvePhaseForDate(todayISO()), // today's phase, resolved from phasePlan — see recomputeCurrentPhase()
     monthSignal: 'intensity',
     weekSignal: 'intensity',
     planWeek: weekKey(new Date()),  // Monday (ISO) of the week the Plan view is showing
@@ -2259,6 +2355,12 @@ if(window.caches && caches.keys){
     planLink.textContent = 'Edit plan →';
     planLink.addEventListener('click', function(){ goToPlan(); });
     root.appendChild(planLink);
+    var phasePlanLink = document.createElement('button');
+    phasePlanLink.type = 'button';
+    phasePlanLink.className = 'dash-signal-link';
+    phasePlanLink.textContent = 'Edit phase plan →';
+    phasePlanLink.addEventListener('click', function(){ goToPhasePlan(); });
+    root.appendChild(phasePlanLink);
     var days = currentWeekDays();
     var weekLabel = 'Week ' + isoWeekNumber(mondayOf(new Date()));
     var adherenceLegendStageB = false;
@@ -3506,6 +3608,102 @@ if(window.caches && caches.keys){
     root.appendChild(tools);
   }
   function goToPlan(){ showView('plan'); }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE PLAN — dated Base/Taper·Build 1·Build 2·Peak blocks, each running
+  // until the next one starts. Reached the same way Plan is: an
+  // "Edit phase plan →" link in This week, no bottom-nav tab of its own.
+  // ═══════════════════════════════════════════════════════════════
+  function phaseBlockRow(b){
+    var row = el('li', 'plan-item phaseplan-row');
+
+    var dateInput = document.createElement('input');
+    dateInput.type = 'date'; dateInput.className = 'date-input phaseplan-date';
+    dateInput.value = b.from;
+    dateInput.setAttribute('aria-label', 'Phase start date');
+    dateInput.addEventListener('change', function(){
+      if(!dateInput.value){ dateInput.value = b.from; return; }
+      updatePhaseBlock(b.id, {from: dateInput.value});
+      renderPhasePlan();
+    });
+    row.appendChild(dateInput);
+
+    var select = document.createElement('select');
+    select.className = 'phaseplan-select';
+    select.setAttribute('aria-label', 'Phase from ' + formatWeekdayDate(b.from));
+    PERIOD.forEach(function(p){
+      var opt = document.createElement('option');
+      opt.value = p.v; opt.textContent = p.label;
+      if(p.v === b.phase){ opt.selected = true; }
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', function(){
+      updatePhaseBlock(b.id, {phase: select.value});
+      renderPhasePlan();
+    });
+    row.appendChild(select);
+
+    var pillClass = PERIOD_PILL_CLASS[b.phase];
+    row.appendChild(el('span', 'month-week-pill' + (pillClass ? ' ' + pillClass : ''), PERIOD_LABEL[b.phase] || 'Unset'));
+
+    // Always keeping at least one block once any exist (deletePhaseBlock's
+    // own rule) means the last remaining row simply has no Remove button —
+    // an affordance that would silently do nothing is worse than none.
+    if(phasePlan.length > 1){
+      var del = el('button', 'plan-item-delete', 'Remove');
+      del.type = 'button';
+      del.setAttribute('aria-label', 'Remove the phase starting ' + formatWeekdayDate(b.from));
+      del.addEventListener('click', function(){
+        if(window.confirm('Remove the phase starting ' + formatWeekdayDate(b.from) + '?')){
+          deletePhaseBlock(b.id);
+          renderPhasePlan();
+        }
+      });
+      row.appendChild(del);
+    }
+    return row;
+  }
+  function renderPhasePlan(){
+    var root = els.viewPhasePlan;
+    clear(root);
+
+    var hero = el('div', 'race-hero');
+    hero.appendChild(el('div', 'race-hero-eyebrow', 'Training phase'));
+    var h = document.createElement('h1');
+    h.className = 'race-hero-headline';
+    h.id = 'phaseplan-h'; h.tabIndex = -1;
+    h.appendChild(document.createTextNode('Plan '));
+    h.appendChild(el('span', 'accent', 'your phases'));
+    h.appendChild(document.createTextNode('.'));
+    hero.appendChild(h);
+    hero.appendChild(el('p', 'race-hero-sub', 'Each phase runs until the next one starts — no gaps, no overlaps. This is what This week, Month and check-in all read today’s phase from.'));
+    root.appendChild(hero);
+
+    var back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'dash-phase-change';
+    back.textContent = '← Back to this week';
+    back.addEventListener('click', function(){ showView('dashboard'); });
+    root.appendChild(back);
+
+    var sorted = phasePlan.slice().sort(function(a, b){ return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
+    var list = el('ul', 'plan-item-list phaseplan-list');
+    sorted.forEach(function(b){ list.appendChild(phaseBlockRow(b)); });
+    root.appendChild(list);
+
+    var addBtn = el('button', 'plan-clear', '+ Add a phase');
+    addBtn.type = 'button';
+    addBtn.addEventListener('click', function(){
+      // Starts today by default — both the date and the phase are editable
+      // on the row straight after adding it.
+      addPhaseBlock(todayISO(), 'base');
+      renderPhasePlan();
+      var rows = root.querySelectorAll('.phaseplan-date');
+      if(rows.length){ rows[rows.length - 1].focus(); }
+    });
+    root.appendChild(addBtn);
+  }
+  function goToPhasePlan(){ showView('phaseplan'); }
   // Opens the Plan view at one specific day with that day's form showing.
   // `editItem` (optional) makes it a pre-filled edit of that session rather
   // than a blank add. Both entry points — the Plan view's own card and the
@@ -3771,6 +3969,7 @@ if(window.caches && caches.keys){
     viewWarmup: document.getElementById('view-warmup'),
     viewRaces: document.getElementById('view-races'),
     viewPlan: document.getElementById('view-plan'),
+    viewPhasePlan: document.getElementById('view-phaseplan'),
     strengthFrame: document.getElementById('strength-frame'),
     tabStrengthSwim: document.getElementById('tab-strength-swim'),
     tabStrengthRun: document.getElementById('tab-strength-run'),
@@ -4468,9 +4667,10 @@ if(window.caches && caches.keys){
     var isWarmup = view === 'warmup';
     var isRaces = view === 'races';
     var isPlan = view === 'plan';
+    var isPhasePlan = view === 'phaseplan';
     // isFlow is "none of the named views" — every new view must be added to
     // this chain, or the check-in flow renders underneath it as well.
-    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan;
+    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan;
     els.viewFlow.hidden = !isFlow;
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
@@ -4478,6 +4678,7 @@ if(window.caches && caches.keys){
     els.viewWarmup.hidden = !isWarmup;
     els.viewRaces.hidden = !isRaces;
     els.viewPlan.hidden = !isPlan;
+    els.viewPhasePlan.hidden = !isPhasePlan;
     els.tabFlow.setAttribute('aria-selected', String(isFlow));
     els.tabDash.setAttribute('aria-selected', String(isDash));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
@@ -4489,12 +4690,13 @@ if(window.caches && caches.keys){
     if(isWarmup){ renderWarmup(); }
     if(isRaces){ renderRaces(); }
     if(isPlan){ renderPlan(); }
+    if(isPhasePlan){ renderPhasePlan(); }
     // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
     if(isFlow){ renderChrome(); }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : 'step-h'))))));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : 'step-h')))))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
     refreshVisibleViewFromSheet();
@@ -4675,8 +4877,7 @@ if(window.caches && caches.keys){
     if(h){ h.focus({preventScroll:true}); }
   }
   function choosePeriod(v){
-    state.periodisation = v;
-    persistPhase(v);
+    setPhaseFromToday(v);
     els.periodScreen.hidden = true;
     els.appMain.hidden = false;
     say('Training phase set to ' + PERIOD_LABEL[v] + '.');
