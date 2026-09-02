@@ -2392,12 +2392,6 @@ if(window.caches && caches.keys){
     planLink.textContent = 'Edit plan →';
     planLink.addEventListener('click', function(){ goToPlan(); });
     root.appendChild(planLink);
-    var phasePlanLink = document.createElement('button');
-    phasePlanLink.type = 'button';
-    phasePlanLink.className = 'dash-signal-link';
-    phasePlanLink.textContent = 'Edit phase plan →';
-    phasePlanLink.addEventListener('click', function(){ goToPhasePlan(); });
-    root.appendChild(phasePlanLink);
     var days = currentWeekDays();
     var weekLabel = 'Week ' + isoWeekNumber(mondayOf(new Date()));
     var adherenceLegendStageB = false;
@@ -2836,6 +2830,13 @@ if(window.caches && caches.keys){
       {cls: 'phase-peak', label: 'Peak'}
     ]);
     wrap.appendChild(legend);
+
+    var phasePlanLink = document.createElement('button');
+    phasePlanLink.type = 'button';
+    phasePlanLink.className = 'dash-signal-link';
+    phasePlanLink.textContent = 'Edit phase plan →';
+    phasePlanLink.addEventListener('click', function(){ goToPhasePlan(); });
+    wrap.appendChild(phasePlanLink);
 
     return wrap;
   }
@@ -3832,8 +3833,8 @@ if(window.caches && caches.keys){
     var back = document.createElement('button');
     back.type = 'button';
     back.className = 'dash-phase-change';
-    back.textContent = '← Back to this week';
-    back.addEventListener('click', function(){ showView('dashboard'); });
+    back.textContent = '← Back to races';
+    back.addEventListener('click', function(){ showView('races'); });
     root.appendChild(back);
 
     var sorted = phasePlan.slice().sort(function(a, b){ return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
