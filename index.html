@@ -470,7 +470,9 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
-.race-cal-legend{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:12px}
+.race-cal-legend{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.race-cal-legend-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.race-cal-legend-label{flex:none;font-family:var(--fd);font-size:11px;font-weight:600;color:var(--ink)}
 .race-cal-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
 .race-cal-legend-dot{flex:none;width:9px;height:9px;border-radius:3px}
 .race-cal-legend-dot.locked{background:var(--done)}
@@ -2812,18 +2814,27 @@ if(window.caches && caches.keys){
     wrap.appendChild(scroller);
 
     var legend = el('div', 'race-cal-legend');
-    function addLegendItem(cls, label){
-      var item = el('div', 'race-cal-legend-item');
-      item.appendChild(el('span', 'race-cal-legend-dot ' + cls));
-      item.appendChild(document.createTextNode(label));
-      legend.appendChild(item);
+    function legendRow(labelText, items){
+      var row = el('div', 'race-cal-legend-row');
+      row.appendChild(el('span', 'race-cal-legend-label', labelText));
+      items.forEach(function(it){
+        var item = el('div', 'race-cal-legend-item');
+        item.appendChild(el('span', 'race-cal-legend-dot ' + it.cls));
+        item.appendChild(document.createTextNode(it.label));
+        row.appendChild(item);
+      });
+      legend.appendChild(row);
     }
-    addLegendItem('locked', 'Locked in');
-    addLegendItem('considering', 'Considering');
-    addLegendItem('current', 'This week');
-    addLegendItem('phase-base', 'Base / Taper');
-    addLegendItem('phase-build', 'Build');
-    addLegendItem('phase-peak', 'Peak');
+    legendRow('Races:', [
+      {cls: 'locked', label: 'Locked in'},
+      {cls: 'considering', label: 'Considering'},
+      {cls: 'current', label: 'This week'}
+    ]);
+    legendRow('Phase:', [
+      {cls: 'phase-base', label: 'Base / Taper'},
+      {cls: 'phase-build', label: 'Build'},
+      {cls: 'phase-peak', label: 'Peak'}
+    ]);
     wrap.appendChild(legend);
 
     return wrap;
