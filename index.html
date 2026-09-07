@@ -2945,6 +2945,19 @@ if(window.caches && caches.keys){
   }
   function renderRaces(){
     var root = els.viewRaces;
+    // renderRaces() fully rebuilds the view — including a brand-new
+    // .race-cal-scroll element, which defaults to scrollLeft 0 — so any
+    // re-render (the background Sheet refresh in particular, which fires
+    // moments after a fresh view-open once refreshRacesFromSheet() resolves
+    // with real data) would otherwise silently snap the week-grid back to
+    // January even though showView()'s scrollRaceCalToCurrentWeek() had
+    // just centred it on "this week". Carrying the previous scroll
+    // position across the rebuild is what makes that centring stick. On a
+    // genuinely fresh open (view was hidden, so there is no prior
+    // scroller) this is a no-op and scrollRaceCalToCurrentWeek() does the
+    // initial centring as before.
+    var prevScroller = root.querySelector('.race-cal-scroll');
+    var prevScrollLeft = prevScroller ? prevScroller.scrollLeft : null;
     clear(root);
     root.appendChild(raceHero(function(){
       raceFormOpen = true;
@@ -2960,6 +2973,10 @@ if(window.caches && caches.keys){
     root.appendChild(formWrap);
 
     root.appendChild(raceCalendarSection());
+    if(prevScrollLeft !== null){
+      var scroller = root.querySelector('.race-cal-scroll');
+      if(scroller){ scroller.scrollLeft = prevScrollLeft; }
+    }
 
     root.appendChild(raceListSection('Upcoming', upcomingRaces(), {
       emptyText: 'No upcoming races yet — add one above.', markFirstAsNext: true
