@@ -41,6 +41,7 @@
 --phase-base: #0F6E56;  --phase-base-l: #E1F5EE;   /* green */
 --phase-build: #A64C09; --phase-build-l: #FFF1E0;  /* tangerine — darkened from #D9660B, which failed WCAG AA (3.23:1 on --phase-build-l); this clears 5.17:1 */
 --phase-peak: #993C1D;  --phase-peak-l: #FAECE7;   /* red — shares --run's hex, but is its own token */
+--phase-taper: #5B3A93; --phase-taper-l: #F0EAFA;   /* violet — 7.22:1 on its own tint, 8.50:1 on white */
 
 /* Hero accent — the highlight on the app's dark hero panels */
 --hero-accent: #F8C44F;  /* 9.41:1 on Warm up's #182542, 11.67:1 on --ink (.race-hero) */

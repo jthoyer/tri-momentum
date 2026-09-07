@@ -28,6 +28,7 @@
   --phase-base:#0F6E56; --phase-base-l:#E1F5EE;
   --phase-build:#A64C09; --phase-build-l:#FFF1E0;
   --phase-peak:#993C1D; --phase-peak-l:#FAECE7;
+  --phase-taper:#5B3A93; --phase-taper-l:#F0EAFA;
   --done:#0F6E56; --done-l:#E1F5EE;
   --skipped:#993C1D; --skipped-l:#FAECE7;
   --modified:#854F0B; --modified-l:#FAEEDA;
@@ -211,6 +212,7 @@ section.doc:last-of-type{border-bottom:none}
 .pv-month-pill.phase-base{background:var(--phase-base); color:var(--phase-base-l)}
 .pv-month-pill.phase-build{background:var(--phase-build); color:var(--phase-build-l)}
 .pv-month-pill.phase-peak{background:var(--phase-peak); color:var(--phase-peak-l)}
+.pv-month-pill.phase-taper{background:var(--phase-taper); color:var(--phase-taper-l)}
 .pv-month-current{font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600; color:var(--blue); background:var(--blue-l); padding:3px 10px; border-radius:999px}
 
 .pv-grid{display:grid; grid-template-columns:52px repeat(7,1fr); gap:5px; align-items:center}
@@ -510,7 +512,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
     </div>
     <div class="spec-row">
       <div class="spec-meta"><b>Eyebrow / tag</b>14px / uppercase<br>Outfit, 0.1em tracking</div>
-      <div class="spec-sample"><p class="type-eyebrow-sample">Just finished · Base / Taper</p></div>
+      <div class="spec-sample"><p class="type-eyebrow-sample">Just finished · Base</p></div>
     </div>
     <div class="spec-row">
       <div class="spec-meta"><b>Body copy</b>13&ndash;15px / 400<br>line-height 1.55&ndash;1.65 · ink2</div>
@@ -587,10 +589,11 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
     <table class="tbl">
       <thead><tr><th>Phase</th><th>Token</th><th>Colour</th></tr></thead>
       <tbody>
-        <tr><td>Base / Taper</td><td class="tbl-key">--phase-base</td><td><span class="tbl-sw" style="background:var(--phase-base)"></span></td></tr>
+        <tr><td>Base</td><td class="tbl-key">--phase-base</td><td><span class="tbl-sw" style="background:var(--phase-base)"></span></td></tr>
         <tr><td>Build 1</td><td class="tbl-key">--phase-build</td><td><span class="tbl-sw" style="background:var(--phase-build)"></span></td></tr>
         <tr><td>Build 2</td><td class="tbl-key">--phase-build</td><td><span class="tbl-sw" style="background:var(--phase-build)"></span></td></tr>
         <tr><td>Peak</td><td class="tbl-key">--phase-peak</td><td><span class="tbl-sw" style="background:var(--phase-peak)"></span></td></tr>
+        <tr><td>Taper</td><td class="tbl-key">--phase-taper</td><td><span class="tbl-sw" style="background:var(--phase-taper)"></span></td></tr>
       </tbody>
     </table>
     </div>
@@ -670,7 +673,7 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
         </div>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
-        <div class="comp-hd"><span class="name">Month week phase pill</span><span class="spec mono">reversed fill · --phase-base/build/peak</span></div>
+        <div class="comp-hd"><span class="name">Month week phase pill</span><span class="spec mono">reversed fill · --phase-base/build/peak/taper</span></div>
         <div class="comp-stage">
           <div class="pv-month-hd">
             <span class="pv-month-label">Week 31</span>
@@ -682,7 +685,8 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
           </div>
           <div class="pv-month-hd" style="margin-top:10px">
             <span class="pv-month-label">Week 33</span>
-            <span class="pv-month-pill phase-base">Base / Taper</span>
+            <span class="pv-month-pill phase-base">Base</span>
+            <span class="pv-month-pill phase-taper">Taper</span>
             <span class="pv-month-current">this week</span>
           </div>
         </div>
@@ -1229,7 +1233,8 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
   DISCIPLINES.forEach(function(d){ discWrap.appendChild(swatch(d[0], 'Mark colour', d[1], d[2], '#fff')); });
 
   var PHASES = [
-    ['Base / Taper','--phase-base','#0F6E56'],
+    ['Base','--phase-base','#0F6E56'],
+    ['Taper','--phase-taper','#5B3A93'],
     ['Build','--phase-build','#A64C09'],
     ['Peak','--phase-peak','#993C1D']
   ];

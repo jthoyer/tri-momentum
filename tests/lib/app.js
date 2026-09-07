@@ -43,6 +43,16 @@ function extractFunction(name, src = inlineScript()) {
   throw new Error('unbalanced braces reading function: ' + name);
 }
 
+// Pull a `var NAME = <literal>;` declaration out of the file. Used so a test
+// never hardcodes a constant the app owns — a preamble that says
+// PHASE_BUILD_ORDER is four phases long would keep passing after the app grew
+// a fifth, and prove nothing.
+function extractConst(name, src = inlineScript()) {
+  const m = new RegExp('var ' + name + ' = ([^;]+);').exec(src);
+  if (!m) throw new Error('constant not found in index.html: ' + name);
+  return 'var ' + name + ' = ' + m[1] + ';';
+}
+
 // Evaluate a set of extracted functions in isolation, with whatever module-level
 // constants they close over supplied as a preamble.
 function loadFunctions(names, preamble = '') {
@@ -92,4 +102,4 @@ function chromiumPath() {
   return fs.existsSync(bin) ? bin : undefined;
 }
 
-module.exports = { ROOT, INDEX, readIndex, inlineScript, extractFunction, loadFunctions, serveApp, chromiumPath };
+module.exports = { ROOT, INDEX, readIndex, inlineScript, extractFunction, extractConst, loadFunctions, serveApp, chromiumPath };

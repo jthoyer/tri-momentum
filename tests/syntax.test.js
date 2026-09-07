@@ -9,7 +9,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { ROOT, readIndex, inlineScript } = require('./lib/app');
+const { ROOT, readIndex, inlineScript, extractConst } = require('./lib/app');
 
 test('index.html inline script parses', () => {
   assert.doesNotThrow(() => new Function(inlineScript()));
@@ -38,6 +38,37 @@ test('every view in the showView chain is excluded from isFlow', () => {
   assert.ok(declared.length >= 7, 'expected several view flags, found ' + declared.length);
   for (const flag of declared) {
     assert.ok(chain[1].includes('!' + flag), `isFlow does not exclude ${flag}`);
+  }
+});
+
+test('every phase value has a pill class and a colour rule for it', () => {
+  // A phase added to PERIOD without a PERIOD_PILL_CLASS entry falls through to
+  // the grey default everywhere a phase renders — Month week pills, the race
+  // calendar band, the phase editor — with no error. Adding Taper is what made
+  // this reachable (CLAUDE.md decision 45).
+  const src = inlineScript();
+  const css = (readIndex().match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+  const period = new Function(extractConst('PERIOD', src) + 'return PERIOD;')();
+  const pillClass = new Function(extractConst('PERIOD_PILL_CLASS', src) + 'return PERIOD_PILL_CLASS;')();
+
+  assert.ok(period.length >= 4, 'expected at least four phases, found ' + period.length);
+  for (const { v, label } of period) {
+    assert.ok(label && label.trim(), `phase ${v} has no label`);
+    const cls = pillClass[v];
+    assert.ok(cls, `phase ${v} has no PERIOD_PILL_CLASS entry — its pill renders grey`);
+    // The three places a phase colour is actually painted.
+    for (const sel of ['.month-week-pill.', '.race-cal-phase.', '.race-cal-legend-dot.']) {
+      assert.ok(css.includes(sel + cls + '{'), `no CSS rule for ${sel}${cls}`);
+    }
+  }
+  // The race-calendar legend must caption every distinct phase colour, or a
+  // band appears in a colour the legend never explains.
+  const legendClasses = new Set(Object.values(pillClass));
+  for (const cls of legendClasses) {
+    assert.ok(
+      new RegExp("cls: '" + cls + "'").test(src),
+      `${cls} is a phase colour but the race-calendar legend never lists it`
+    );
   }
 });
 
