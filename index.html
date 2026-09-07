@@ -475,7 +475,13 @@ textarea::placeholder{color:var(--ink3)}
    this week's phase directly — setPhaseForWeek() writes an ordinary
    phasePlan block dated this week's Monday, the same model the Phase Plan
    editor and "Change phase" both already write to. */
-.race-cal-phase-row{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+/* Same "22px, then 7 date columns" template as the day/weekday rows above,
+   so the label+bar starts under Monday, not under the week number. Top
+   margin stays 0 — the gap to this row's own dates stays as tight as
+   condensing left it; only the gap to the NEXT week's dates below opens up,
+   via the bottom margin. */
+.race-cal-phase-row{display:grid;grid-template-columns:22px repeat(7,1fr);margin:0 0 10px}
+.race-cal-phase-inner{grid-column:2 / -1;display:flex;align-items:center;gap:8px}
 .race-cal-phase{flex:1;height:7px;border-radius:4px}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
@@ -2892,11 +2898,19 @@ if(window.caches && caches.keys){
   }
   function raceCalPhaseRow(week){
     var row = el('div', 'race-cal-phase-row');
+    // A leading empty cell in the same 22px column the week number sits in
+    // above, so the label/bar that follows starts under Monday rather than
+    // under the week number — the row is a grid with the same
+    // "22px, then 7 date columns" template as the day/weekday rows above it,
+    // and this inner flex container is the one child living in that second
+    // area (grid-column 2/-1).
+    row.appendChild(el('span', null));
+    var inner = el('div', 'race-cal-phase-inner');
     var weekLabel = 'the week of ' + formatWeekdayDate(week.mondayISO);
     // Label/edit control first, colour bar last — flipped from the initial
     // build on request, and the bar is flex:1 so it fills the rest of the
-    // row's width (the same width as the day grid above) rather than the
-    // fixed 20px stub it started as.
+    // inner row's width (the same width as the day grid above) rather than
+    // the fixed 20px stub it started as.
     if(raceCalEditWeek === week.mondayISO){
       var select = document.createElement('select');
       select.className = 'race-cal-phase-select';
@@ -2913,7 +2927,7 @@ if(window.caches && caches.keys){
         renderRaces();
         say('Phase for ' + weekLabel + ' set to ' + PERIOD_LABEL[select.value] + '.');
       });
-      row.appendChild(select);
+      inner.appendChild(select);
     } else {
       var editBtn = document.createElement('button');
       editBtn.type = 'button';
@@ -2925,12 +2939,13 @@ if(window.caches && caches.keys){
         raceCalEditWeek = week.mondayISO;
         renderRaces();
       });
-      row.appendChild(editBtn);
+      inner.appendChild(editBtn);
     }
     var pillClass = PERIOD_PILL_CLASS[week.phase];
     var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
     bar.setAttribute('aria-hidden', 'true');
-    row.appendChild(bar);
+    inner.appendChild(bar);
+    row.appendChild(inner);
     return row;
   }
   // A real month calendar, race weeks and the current training phase
