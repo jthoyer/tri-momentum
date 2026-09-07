@@ -465,7 +465,7 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-week.locked{background:var(--done)}
 .race-cal-week.considering{background:var(--phase-build)}
 .race-cal-week.is-current{background:var(--blue)}
-.race-cal-num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--fm);font-size:7px;font-weight:600;color:var(--ink3)}
+.race-cal-num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--fm);font-size:9px;font-weight:600;color:var(--ink3)}
 .race-cal-week.locked .race-cal-num,.race-cal-week.considering .race-cal-num{color:#fff}
 .race-cal-week.is-current .race-cal-num{color:#fff}
 .race-cal-phase{height:10px;border-radius:2px}
@@ -2810,7 +2810,12 @@ if(window.caches && caches.keys){
     wrap.appendChild(hd);
 
     var grid = el('div', 'race-cal-grid');
-    grid.style.gridTemplateColumns = 'repeat(' + weeks.length + ', 24px)';
+    // Same width as a day column in the This week/Month "by session" grid
+    // (roughly a 7th of the content width once its 52px label column and
+    // gaps are subtracted) — the two grids read as the same unit of time
+    // at a glance instead of weeks looking like a cramped afterthought
+    // next to days.
+    grid.style.gridTemplateColumns = 'repeat(' + weeks.length + ', 40px)';
 
     // Month labels, grouped by consecutive weeks whose Monday falls in the
     // same calendar month. A 1-week run — the December sliver most years
@@ -2921,8 +2926,22 @@ if(window.caches && caches.keys){
   // must stay a silent in-place redraw with no scroll/focus jump (see
   // refreshVisibleViewFromSheet above).
   function scrollRaceCalToCurrentWeek(){
-    var cur = els.viewRaces.querySelector('.race-cal-week.is-current');
-    if(cur){ cur.scrollIntoView({behavior: 'auto', inline: 'center', block: 'nearest'}); }
+    // Deferred a frame: showView() has just flipped els.viewRaces.hidden to
+    // false and rebuilt the grid moments before this runs, so the scroller's
+    // layout (scrollWidth/clientWidth) isn't settled yet — centring against
+    // that stale layout is what left "this week" wherever the browser's
+    // pre-layout guess happened to land, not centred. rAF runs after the
+    // browser's next layout/paint, so the maths below sees real sizes.
+    // Computed manually rather than via scrollIntoView({inline:'center'}),
+    // which only scrolls the scroller closest to the target and can still
+    // disagree with it on what "centre" means across browsers.
+    requestAnimationFrame(function(){
+      var cur = els.viewRaces.querySelector('.race-cal-week.is-current');
+      var scroller = els.viewRaces.querySelector('.race-cal-scroll');
+      if(!cur || !scroller){ return; }
+      var target = cur.offsetLeft - (scroller.clientWidth / 2) + (cur.offsetWidth / 2);
+      scroller.scrollLeft = Math.max(0, target);
+    });
   }
   function renderRaces(){
     var root = els.viewRaces;
