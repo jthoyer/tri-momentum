@@ -85,7 +85,9 @@ describe('plan back from a race', { concurrency: false }, () => {
 
   test('it preselects the nearest upcoming race and sensible defaults', async () => {
     const weeks = await page.$$eval('.phasebuild-week input', (ns) => ns.map((n) => n.value));
-    assert.deepStrictEqual(weeks, ['4', '4', '4', '3']);
+    assert.deepStrictEqual(weeks, ['4', '4', '4', '3', '1']);
+    const labels = await page.$$eval('.phasebuild-week label', (ns) => ns.map((n) => n.textContent));
+    assert.deepStrictEqual(labels, ['Base', 'Build 1', 'Build 2', 'Peak', 'Taper']);
     const sel = await page.$eval('#phasebuild-race', (n) => n.options[n.selectedIndex].textContent);
     assert.ok(sel.startsWith('Nepean Tri'), sel);
     assert.strictEqual(await page.$$eval('#phasebuild-race option', (n) => n.length), 2);
@@ -93,19 +95,31 @@ describe('plan back from a race', { concurrency: false }, () => {
 
   test('the preview shows the whole cycle plus the post-race block', async () => {
     const r = await rows();
-    assert.strictEqual(r.length, 5);
-    assert.strictEqual(r[3].pill, 'Peak');
-    assert.strictEqual(r[3].name, 'Mon 28 Sep – Sun 18 Oct');
-    assert.strictEqual(r[3].meta, '3 weeks · ends race week');
-    assert.strictEqual(r[4].meta, 'Ongoing · after the race');
+    assert.deepStrictEqual(r.map((x) => x.pill), ['Base', 'Build 1', 'Build 2', 'Peak', 'Taper', 'Base']);
+    // The whole point of the cycle: race week is a taper week, base follows.
+    assert.strictEqual(r[4].name, 'Mon 12 Oct – Sun 18 Oct');
+    assert.strictEqual(r[4].meta, '1 week · ends race week');
+    assert.strictEqual(r[5].name, 'From Mon 19 Oct');
+    assert.strictEqual(r[5].meta, 'Ongoing · after the race');
     // The pill carries the phase name; the row body must not repeat it.
     assert.ok(r.every((x) => !x.name.includes(x.pill)));
+  });
+
+  test('Taper renders in its own colour, not Base\'s', async () => {
+    const fills = await page.$$eval('#phasebuild-preview .month-week-pill', (ns) =>
+      ns.map((n) => ({ text: n.textContent, bg: getComputedStyle(n).backgroundColor }))
+    );
+    const taper = fills.find((f) => f.text === 'Taper');
+    const base = fills.find((f) => f.text === 'Base');
+    assert.ok(taper && base);
+    assert.notStrictEqual(taper.bg, base.bg, 'Taper and Base render identically');
+    assert.strictEqual(taper.bg, 'rgb(91, 58, 147)');
   });
 
   test('it names the exact blocks it will replace, before the button is pressed', async () => {
     const warn = await page.textContent('.phasebuild-warn');
     assert.match(warn, /replaces 1 phase block /);
-    assert.ok(warn.includes('Mon 6 Jul') && warn.includes('Mon 19 Oct'), warn);
+    assert.ok(warn.includes('Mon 29 Jun') && warn.includes('Mon 19 Oct'), warn);
   });
 
   test('typing a week count recomputes without stealing focus', async () => {
@@ -114,8 +128,8 @@ describe('plan back from a race', { concurrency: false }, () => {
     await page.waitForTimeout(150);
     assert.strictEqual(await page.evaluate(() => document.activeElement.id), 'phasebuild-w-peak');
     const r = await rows();
-    assert.strictEqual(r[3].meta, '5 weeks · ends race week');
-    assert.ok(r[3].name.startsWith('Mon 14 Sep'), r[3].name);
+    assert.strictEqual(r[3].meta, '5 weeks');
+    assert.ok(r[3].name.startsWith('Mon 7 Sep'), r[3].name);
     await page.fill('#phasebuild-w-peak', '3');
     await page.waitForTimeout(150);
   });
@@ -132,7 +146,7 @@ describe('plan back from a race', { concurrency: false }, () => {
   });
 
   test('with nothing to add the action is hidden, not a dead button', async () => {
-    for (const k of ['base', 'build1', 'build2', 'peak']) await page.fill('#phasebuild-w-' + k, '0');
+    for (const k of ['base', 'build1', 'build2', 'peak', 'taper']) await page.fill('#phasebuild-w-' + k, '0');
     await page.waitForTimeout(200);
     assert.ok(await page.isVisible('.phasebuild-empty'));
     assert.strictEqual((await rows()).length, 0);
@@ -141,6 +155,7 @@ describe('plan back from a race', { concurrency: false }, () => {
     await page.fill('#phasebuild-w-build1', '4');
     await page.fill('#phasebuild-w-build2', '4');
     await page.fill('#phasebuild-w-peak', '3');
+    await page.fill('#phasebuild-w-taper', '1');
     await page.waitForTimeout(200);
     assert.ok(await page.isVisible('#phasebuild-actions'));
   });
@@ -149,17 +164,17 @@ describe('plan back from a race', { concurrency: false }, () => {
     await page.uncheck('.phasebuild-toggle input');
     await page.waitForTimeout(150);
     let r = await rows();
-    assert.strictEqual(r.length, 4);
-    assert.strictEqual(r[3].pill, 'Peak');
+    assert.strictEqual(r.length, 5);
+    assert.strictEqual(r[4].pill, 'Taper');
     await page.check('.phasebuild-toggle input');
     await page.waitForTimeout(150);
-    assert.strictEqual((await rows()).length, 5);
+    assert.strictEqual((await rows()).length, 6);
   });
 
   test('switching race re-dates the whole cycle', async () => {
     await page.selectOption('#phasebuild-race', 'r2');
     await page.waitForTimeout(150);
-    assert.strictEqual((await rows())[3].name, 'Mon 1 Feb – Sun 21 Feb');
+    assert.strictEqual((await rows())[4].name, 'Mon 15 Feb – Sun 21 Feb');
     await page.selectOption('#phasebuild-race', 'r1');
     await page.waitForTimeout(150);
   });
@@ -174,14 +189,18 @@ describe('plan back from a race', { concurrency: false }, () => {
     const plan = await storedPlan();
     assert.ok(plan.some((b) => b.from === '2020-01-01'), 'legacy block was dropped');
     assert.ok(!plan.some((b) => b.from === '2026-08-15'), 'in-span block survived');
-    assert.strictEqual(plan.length, 6);
+    assert.strictEqual(plan.length, 7);
     assert.strictEqual(new Set(plan.map((b) => b.from)).size, plan.length, 'duplicate dates written');
     assert.strictEqual(new Set(plan.map((b) => b.id)).size, plan.length, 'duplicate ids written');
 
     const dates = await page.$$eval('.phaseplan-row', (ns) => ns.map((n) => n.querySelector('.phaseplan-date').value));
     assert.deepStrictEqual(dates, [
-      '2020-01-01', '2026-07-06', '2026-08-03', '2026-08-31', '2026-09-28', '2026-10-19',
+      '2020-01-01', '2026-06-29', '2026-07-27', '2026-08-24', '2026-09-21', '2026-10-12', '2026-10-19',
     ]);
+    const phases = await page.$$eval('.phaseplan-row', (ns) =>
+      ns.map((n) => n.querySelector('.phaseplan-select').value)
+    );
+    assert.deepStrictEqual(phases, ['base', 'base', 'build1', 'build2', 'peak', 'taper', 'base']);
   });
 
   test('undo restores the previous plan exactly', async () => {

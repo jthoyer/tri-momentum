@@ -26,6 +26,7 @@
   --phase-base:#0F6E56;--phase-base-l:#E1F5EE;
   --phase-build:#A64C09;--phase-build-l:#FFF1E0; /* darkened from #D9660B — original failed WCAG AA (3.23:1 on --phase-build-l); this clears 5.17:1 */
   --phase-peak:#993C1D;--phase-peak-l:#FAECE7;
+  --phase-taper:#5B3A93;--phase-taper-l:#F0EAFA; /* 7.22:1 on --phase-taper-l, 8.50:1 on white */
   --done:#0F6E56;--done-l:#E1F5EE;
   --skipped:#993C1D;--skipped-l:#FAECE7;
   --modified:#854F0B;--modified-l:#FAEEDA;
@@ -319,6 +320,7 @@ textarea::placeholder{color:var(--ink3)}
 .month-week-pill.phase-base{background:var(--phase-base);color:var(--phase-base-l)}
 .month-week-pill.phase-build{background:var(--phase-build);color:var(--phase-build-l)}
 .month-week-pill.phase-peak{background:var(--phase-peak);color:var(--phase-peak-l)}
+.month-week-pill.phase-taper{background:var(--phase-taper);color:var(--phase-taper-l)}
 .month-week-current{font-family:var(--fd);font-size:11.5px;font-weight:600;color:var(--blue);background:var(--blue-l);padding:3px 10px;border-radius:999px}
 .dash-stat-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .dash-stat-n{font-family:var(--fm);font-size:11.5px;color:var(--ink3);white-space:nowrap}
@@ -470,6 +472,7 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
+.race-cal-phase.phase-taper{background:var(--phase-taper)}
 .race-cal-legend{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 .race-cal-legend-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
 .race-cal-legend-label{flex:none;font-family:var(--fd);font-size:11px;font-weight:600;color:var(--ink)}
@@ -481,6 +484,7 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-legend-dot.phase-base{background:var(--phase-base)}
 .race-cal-legend-dot.phase-build{background:var(--phase-build)}
 .race-cal-legend-dot.phase-peak{background:var(--phase-peak)}
+.race-cal-legend-dot.phase-taper{background:var(--phase-taper)}
 /* ── Training plan ───────────────────────────────────────────────────
    The athlete's own planned sessions, transcribed by hand. Deliberately
    reuses the Races component language rather than inventing a second one:
@@ -896,18 +900,23 @@ if(window.caches && caches.keys){
   var DISC_LABEL = {swim:'Swim',bike:'Bike',run:'Run',brick:'Brick',strength:'Strength'};
 
   var PERIOD = [
-    {v:'base',   label:'Base / Taper'},
+    {v:'base',   label:'Base'},
     {v:'build1', label:'Build 1'},
     {v:'build2', label:'Build 2'},
-    {v:'peak',   label:'Peak'}
+    {v:'peak',   label:'Peak'},
+    {v:'taper',  label:'Taper'}
   ];
   var PERIOD_LABEL = {};
   PERIOD.forEach(function(p){ PERIOD_LABEL[p.v] = p.label; });
-  var PERIOD_PILL_CLASS = {base:'phase-base', build1:'phase-build', build2:'phase-build', peak:'phase-peak'};
+  var PERIOD_PILL_CLASS = {base:'phase-base', build1:'phase-build', build2:'phase-build', peak:'phase-peak', taper:'phase-taper'};
   // Some Sheet rows predate the app writing the raw phase key (e.g. 'base') and
   // instead hold the picker's label text (e.g. 'base / taper') — normalise those
   // back to a known key so Month's phase pill still resolves instead of falling
   // back to the grey "Unset phase" pill.
+  // 'Base / Taper' was one combined phase until Taper was split out. Rows
+  // stamped with the old label still resolve to base — nothing in the stored
+  // data says which of those weeks were taper weeks, so inventing one would
+  // be a guess dressed as a fact.
   var PHASE_ALIASES = {'base / taper':'base', 'base/taper':'base'};
   function normalizePhaseKey(raw){
     var k = String(raw).trim().toLowerCase();
@@ -2865,9 +2874,10 @@ if(window.caches && caches.keys){
       {cls: 'current', label: 'This week'}
     ]);
     legendRow('Phase:', [
-      {cls: 'phase-base', label: 'Base / Taper'},
+      {cls: 'phase-base', label: 'Base'},
       {cls: 'phase-build', label: 'Build'},
-      {cls: 'phase-peak', label: 'Peak'}
+      {cls: 'phase-peak', label: 'Peak'},
+      {cls: 'phase-taper', label: 'Taper'}
     ]);
     wrap.appendChild(legend);
 
@@ -3940,13 +3950,14 @@ if(window.caches && caches.keys){
   // Chronological cycle order. The list is walked *backwards* from race
   // week when dating blocks, so the last phase with any weeks in it always
   // ends on race week — which is the one fact the whole screen exists to
-  // guarantee.
-  var PHASE_BUILD_ORDER = ['base', 'build1', 'build2', 'peak'];
-  var PHASE_BUILD_DEFAULT_WEEKS = {base: 4, build1: 4, build2: 4, peak: 3};
+  // guarantee. Taper sits last for exactly that reason: race week is a taper
+  // week, and Base picks up again the Monday after.
+  var PHASE_BUILD_ORDER = ['base', 'build1', 'build2', 'peak', 'taper'];
+  var PHASE_BUILD_DEFAULT_WEEKS = {base: 4, build1: 4, build2: 4, peak: 3, taper: 1};
   var PHASE_BUILD_MAX = 26;
   var phaseBuildRaceId = null;
   var phaseBuildWeeks = null;   // seeded lazily, then kept across visits
-  var phaseBuildAfter = true;   // "return to Base / Taper after the race"
+  var phaseBuildAfter = true;   // "go back to Base after the race"
   // Snapshot of phasePlan taken immediately before a build is applied, so
   // the one destructive thing this screen does is reversible. Held here
   // rather than in the editor because the editor is only where it's *shown*
@@ -4182,7 +4193,7 @@ if(window.caches && caches.keys){
       renderPhaseBuildPreview();
     });
     toggle.appendChild(check);
-    toggle.appendChild(document.createTextNode('Go back to Base / Taper after the race'));
+    toggle.appendChild(document.createTextNode('Go back to Base after the race'));
     form.appendChild(toggle);
 
     var preview = el('div', 'phasebuild-preview');
