@@ -1,0 +1,12 @@
+{
+  "name": "tri-momentum",
+  "private": true,
+  "description": "Tests only. The app itself is static HTML with no build step — nothing here is bundled or shipped.",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:fast": "node --test tests/syntax.test.js tests/phase-build-dates.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
