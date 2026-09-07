@@ -459,11 +459,11 @@ textarea::placeholder{color:var(--ink3)}
    .plan-week-nav/.plan-week-btn for month paging rather than inventing a
    second prev/next control, the same pair the Plan view's own week nav
    already established. */
-.race-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:16px}
+.race-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
 .race-cal-weekday{text-align:center;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.race-cal-week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px}
-.race-cal-day{display:flex;align-items:center;justify-content:center;height:38px}
-.race-cal-day-num{width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:13px;font-weight:500;color:var(--ink)}
+.race-cal-week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:2px}
+.race-cal-day{display:flex;align-items:center;justify-content:center;height:32px}
+.race-cal-day-num{width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:500;color:var(--ink)}
 .race-cal-day.dim .race-cal-day-num{color:var(--ink3);opacity:.5}
 .race-cal-day.today .race-cal-day-num{box-shadow:inset 0 0 0 2px var(--blue);font-weight:600;color:var(--blue)}
 .race-cal-day.locked .race-cal-day-num{background:var(--done);color:#fff;font-weight:600}
@@ -472,8 +472,8 @@ textarea::placeholder{color:var(--ink3)}
    this week's phase directly — setPhaseForWeek() writes an ordinary
    phasePlan block dated this week's Monday, the same model the Phase Plan
    editor and "Change phase" both already write to. */
-.race-cal-phase-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
-.race-cal-phase{flex:none;width:20px;height:6px;border-radius:3px}
+.race-cal-phase-row{display:flex;align-items:center;gap:8px;margin:0 0 6px}
+.race-cal-phase{flex:1;height:8px;border-radius:4px}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
@@ -2887,12 +2887,11 @@ if(window.caches && caches.keys){
   }
   function raceCalPhaseRow(week){
     var row = el('div', 'race-cal-phase-row');
-    var pillClass = PERIOD_PILL_CLASS[week.phase];
-    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
-    bar.setAttribute('aria-hidden', 'true');
-    row.appendChild(bar);
-
     var weekLabel = 'the week of ' + formatWeekdayDate(week.mondayISO);
+    // Label/edit control first, colour bar last — flipped from the initial
+    // build on request, and the bar is flex:1 so it fills the rest of the
+    // row's width (the same width as the day grid above) rather than the
+    // fixed 20px stub it started as.
     if(raceCalEditWeek === week.mondayISO){
       var select = document.createElement('select');
       select.className = 'race-cal-phase-select';
@@ -2915,14 +2914,18 @@ if(window.caches && caches.keys){
       editBtn.type = 'button';
       editBtn.className = 'race-cal-phase-edit';
       editBtn.setAttribute('aria-label', 'Edit the phase for ' + weekLabel);
-      editBtn.appendChild(document.createTextNode(week.phase ? PERIOD_LABEL[week.phase] : 'Unset'));
       editBtn.appendChild(pencilIcon());
+      editBtn.appendChild(document.createTextNode(week.phase ? PERIOD_LABEL[week.phase] : 'Unset'));
       editBtn.addEventListener('click', function(){
         raceCalEditWeek = week.mondayISO;
         renderRaces();
       });
       row.appendChild(editBtn);
     }
+    var pillClass = PERIOD_PILL_CLASS[week.phase];
+    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
+    bar.setAttribute('aria-hidden', 'true');
+    row.appendChild(bar);
     return row;
   }
   // A real month calendar, race weeks and the current training phase
