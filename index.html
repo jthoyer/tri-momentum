@@ -495,14 +495,6 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-legend-dot.phase-build{background:var(--phase-build)}
 .race-cal-legend-dot.phase-peak{background:var(--phase-peak)}
 .race-cal-legend-dot.phase-taper{background:var(--phase-taper)}
-/* Side-by-side button pair — "Plan back from a race" / "Edit phase plan" —
-   a modifier layered on top of .dash-signal-link (kept, not replaced, so
-   the buttons stay selectable as signal links) rather than a class of its
-   own: boxed and equal-width, reusing the app's existing .btn-ghost visual
-   language rather than inventing a new one. */
-.race-cal-links{display:flex;gap:10px;margin-top:14px}
-.race-cal-link-btn{flex:1;margin-top:0;min-height:44px;padding:12px 10px;border-radius:var(--rmd);border:1px solid var(--bd2);background:var(--s1);text-align:center}
-.race-cal-link-btn:hover{background:var(--s3)}
 /* ── Training plan ───────────────────────────────────────────────────
    The athlete's own planned sessions, transcribed by hand. Deliberately
    reuses the Races component language rather than inventing a second one:
@@ -2994,29 +2986,11 @@ if(window.caches && caches.keys){
     ]);
     wrap.appendChild(legend);
 
-    // A side-by-side button pair, not stacked text links — both actions are
-    // equal-weight entry points into phase planning, so they read as one
-    // row of tappable choices rather than a list to scan top-to-bottom.
-    // Keeps the dash-signal-link class alongside the new boxed modifier
-    // (rather than replacing it) so this stays selectable as a signal link
-    // wherever that's already relied on, including the existing test suite.
-    var links = el('div', 'race-cal-links');
-
-    var phaseBuildLink = document.createElement('button');
-    phaseBuildLink.type = 'button';
-    phaseBuildLink.className = 'dash-signal-link race-cal-link-btn';
-    phaseBuildLink.textContent = 'Plan back from a race →';
-    phaseBuildLink.addEventListener('click', function(){ goToPhaseBuild(); });
-    links.appendChild(phaseBuildLink);
-
-    var phasePlanLink = document.createElement('button');
-    phasePlanLink.type = 'button';
-    phasePlanLink.className = 'dash-signal-link race-cal-link-btn';
-    phasePlanLink.textContent = 'Edit phase plan →';
-    phasePlanLink.addEventListener('click', function(){ goToPhasePlan(); });
-    links.appendChild(phasePlanLink);
-
-    wrap.appendChild(links);
+    // "Plan back from a race →" / "Edit phase plan →" removed on request —
+    // per-week editing directly on the calendar (above) is now the only way
+    // in. view-phasebuild and view-phaseplan still exist (goToPhaseBuild(),
+    // goToPhasePlan()) but are deliberately left with no navigation path to
+    // them; see CLAUDE.md decision 46's follow-up note.
 
     return wrap;
   }

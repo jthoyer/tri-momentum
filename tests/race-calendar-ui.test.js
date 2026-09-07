@@ -62,9 +62,13 @@ describe('race calendar — month view', { concurrency: false }, () => {
     assert.strictEqual(todayCount, 1, 'exactly one .today cell in the current month');
   });
 
-  test('the Races calendar offers both phase links', async () => {
-    const links = await page.$$eval('.race-cal .dash-signal-link', (ns) => ns.map((n) => n.textContent));
-    assert.deepStrictEqual(links, ['Plan back from a race →', 'Edit phase plan →']);
+  test('the Races calendar no longer offers the phase-plan/phase-build links', async () => {
+    // Removed on request — per-week editing directly on the calendar is now
+    // the only way in; view-phaseplan and view-phasebuild still exist
+    // (goToPhasePlan()/goToPhaseBuild()) but are deliberately unreachable
+    // from the UI. See CLAUDE.md decision 46's follow-up note.
+    const links = await page.$$eval('.race-cal .dash-signal-link', (ns) => ns.length);
+    assert.strictEqual(links, 0);
   });
 
   test('paging forward shows real race days and every phase in the sample cycle', async () => {
