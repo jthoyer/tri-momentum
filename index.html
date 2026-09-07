@@ -559,6 +559,36 @@ fieldset.plan-field{border:0;min-width:0}
 .phaseplan-date{min-height:44px}
 .phaseplan-select{min-height:44px;padding:10px 12px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:14px;color:var(--ink);background:var(--s1)}
 
+/* ── Plan back from a race — the phase-cycle builder. Reuses .race-hero,
+   .plan-field/.field-lbl for the labels, .plan-item for each preview row
+   and .btn for the action; only the weeks grid, the preview row's own
+   layout and the two notice bars are new. No new colour token: every pair
+   below is already in the palette, measured per decisions 24/26 — ink on
+   --modified-l 16.44:1, ink on --blue-l 16.35:1, blue on --blue-l 6.81:1,
+   ink2 on --s3 6.76:1, ink3 on --s1 5.25:1. ── */
+.phasebuild-form{margin-top:1.2rem;display:flex;flex-direction:column;gap:16px}
+.phasebuild-select{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:14px;color:var(--ink);background:var(--s1)}
+.phasebuild-weeks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.phasebuild-week{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rmd)}
+.phasebuild-week label{flex:1;min-width:0;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink)}
+.phasebuild-week input{flex:none;width:56px;min-height:44px;padding:8px 6px;border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--s1);text-align:center}
+.phasebuild-toggle{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;line-height:1.45;color:var(--ink2)}
+.phasebuild-toggle input{flex:none;width:20px;height:20px;accent-color:var(--blue)}
+.phasebuild-preview{display:flex;flex-direction:column;gap:8px;margin-top:.4rem}
+.phasebuild-row{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.phasebuild-row-main{flex:1;min-width:0}
+.phasebuild-row-name{display:block;font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink);line-height:1.35}
+.phasebuild-row-span{display:block;margin-top:3px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.phasebuild-empty{padding:14px;border-radius:var(--rmd);background:var(--s3);font-size:14px;line-height:1.55;color:var(--ink2)}
+.phasebuild-warn{padding:10px 12px;border-radius:var(--rmd);background:var(--modified-l);color:var(--ink);font-size:13.5px;line-height:1.5}
+.phasebuild-undo{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:1rem;padding:8px 14px;border-radius:var(--rmd);background:var(--blue-l);font-size:13.5px;line-height:1.45;color:var(--ink)}
+.phasebuild-undo button{flex:none;min-height:44px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+/* This file has no global [hidden] rule — every hidden component carries
+   its own, because an author display rule beats the UA [hidden]{display:none}
+   (see decision 32's .flow-foot trap). .plan-form-actions sets display:flex,
+   so the actions row needs this to hide at all. */
+.phasebuild-actions[hidden]{display:none}
+
 /* ── Warm up ── */
 .warmup-hero{margin-top:1.4rem;padding:1.5rem 1.3rem 1.4rem;border-radius:var(--rxl);background:#182542;color:#fff}
 .warmup-hero-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--hero-accent)}
@@ -716,6 +746,7 @@ fieldset.plan-field{border:0;min-width:0}
   <!-- Phase Plan — same no-nav-tab treatment as Plan/Month above, reached
        from the "Edit phase plan →" link in This week. -->
   <div class="dash" id="view-phaseplan" role="region" aria-labelledby="phaseplan-h" hidden></div>
+  <div class="dash" id="view-phasebuild" role="region" aria-labelledby="phasebuild-h" hidden></div>
 
   </div>
   <!-- /#app-main -->
@@ -1237,6 +1268,11 @@ if(window.caches && caches.keys){
     persistPhasePlan();
   }
   function newPhaseBlockId(){ return 'ph' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  // Every hand edit below invalidates the "Plan back from a race" undo
+  // snapshot: restoring a pre-build plan on top of edits made since would
+  // silently throw those edits away. phaseBuildUndo itself is declared with
+  // the builder (see PLAN BACK FROM A RACE) — same function scope, hoisted.
+  function clearPhaseBuildUndo(){ phaseBuildUndo = null; }
   // Blocks are keyed by `from` only — each one runs until the next block's
   // `from` (exclusive), so the list can never describe two phases for one
   // day and there is no from/to overlap to validate against. Returns null
@@ -1262,6 +1298,7 @@ if(window.caches && caches.keys){
   // for. Overwrites today's block if one was already added today (e.g. a
   // second change of mind on the same day) rather than stacking duplicates.
   function setPhaseFromToday(v){
+    clearPhaseBuildUndo();
     var today = todayISO();
     var existing = phasePlan.filter(function(b){ return b.from === today; })[0];
     if(existing){ existing.phase = v; }
@@ -1270,11 +1307,13 @@ if(window.caches && caches.keys){
     recomputeCurrentPhase();
   }
   function addPhaseBlock(fromISO, v){
+    clearPhaseBuildUndo();
     phasePlan.push({id: newPhaseBlockId(), from: fromISO, phase: v});
     persistPhasePlan();
     recomputeCurrentPhase();
   }
   function updatePhaseBlock(id, fields){
+    clearPhaseBuildUndo();
     var b = phasePlan.filter(function(x){ return x.id === id; })[0];
     if(!b){ return; }
     if(fields.from !== undefined){ b.from = fields.from; }
@@ -1287,6 +1326,7 @@ if(window.caches && caches.keys){
   // date needs an answer once the athlete has started planning at all.
   function deletePhaseBlock(id){
     if(phasePlan.length <= 1){ return; }
+    clearPhaseBuildUndo();
     phasePlan = phasePlan.filter(function(b){ return b.id !== id; });
     persistPhasePlan();
     recomputeCurrentPhase();
@@ -2831,6 +2871,13 @@ if(window.caches && caches.keys){
     ]);
     wrap.appendChild(legend);
 
+    var phaseBuildLink = document.createElement('button');
+    phaseBuildLink.type = 'button';
+    phaseBuildLink.className = 'dash-signal-link';
+    phaseBuildLink.textContent = 'Plan back from a race →';
+    phaseBuildLink.addEventListener('click', function(){ goToPhaseBuild(); });
+    wrap.appendChild(phaseBuildLink);
+
     var phasePlanLink = document.createElement('button');
     phasePlanLink.type = 'button';
     phasePlanLink.className = 'dash-signal-link';
@@ -3837,6 +3884,22 @@ if(window.caches && caches.keys){
     back.addEventListener('click', function(){ showView('races'); });
     root.appendChild(back);
 
+    // Only ever set by a just-applied build, and dropped by the first hand
+    // edit — so this bar is present exactly while undoing is still safe.
+    if(phaseBuildUndo){
+      var undoBar = el('div', 'phasebuild-undo');
+      undoBar.appendChild(el('span', null, 'Phases built back from a race.'));
+      var undoBtn = el('button', null, 'Undo');
+      undoBtn.type = 'button';
+      undoBtn.addEventListener('click', function(){
+        undoPhaseBuild();
+        renderPhasePlan();
+        say('Build undone — your previous phase plan is back.');
+      });
+      undoBar.appendChild(undoBtn);
+      root.appendChild(undoBar);
+    }
+
     var sorted = phasePlan.slice().sort(function(a, b){ return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
     var list = el('ul', 'plan-item-list phaseplan-list');
     sorted.forEach(function(b){ list.appendChild(phaseBlockRow(b)); });
@@ -3853,8 +3916,300 @@ if(window.caches && caches.keys){
       if(rows.length){ rows[rows.length - 1].focus(); }
     });
     root.appendChild(addBtn);
+
+    var buildLink = document.createElement('button');
+    buildLink.type = 'button';
+    buildLink.className = 'dash-signal-link';
+    buildLink.textContent = 'Plan back from a race →';
+    buildLink.addEventListener('click', function(){ goToPhaseBuild(); });
+    root.appendChild(buildLink);
   }
   function goToPhasePlan(){ showView('phaseplan'); }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PLAN BACK FROM A RACE — the phase-cycle builder.
+  //
+  // Pick an upcoming race, say how many weeks each phase runs, and the
+  // dates fall out backwards from race week. It generates *phase blocks*,
+  // never sessions: every number comes from the athlete, and what it writes
+  // is ordinary `phasePlan` rows they can then edit or delete one by one in
+  // the Phase Plan editor. The generator produces data; it does not own it.
+  // That is the line "no in-app training plan generation" draws — the app
+  // still never authors, suggests or adjusts a session.
+  // ═══════════════════════════════════════════════════════════════
+  // Chronological cycle order. The list is walked *backwards* from race
+  // week when dating blocks, so the last phase with any weeks in it always
+  // ends on race week — which is the one fact the whole screen exists to
+  // guarantee.
+  var PHASE_BUILD_ORDER = ['base', 'build1', 'build2', 'peak'];
+  var PHASE_BUILD_DEFAULT_WEEKS = {base: 4, build1: 4, build2: 4, peak: 3};
+  var PHASE_BUILD_MAX = 26;
+  var phaseBuildRaceId = null;
+  var phaseBuildWeeks = null;   // seeded lazily, then kept across visits
+  var phaseBuildAfter = true;   // "return to Base / Taper after the race"
+  // Snapshot of phasePlan taken immediately before a build is applied, so
+  // the one destructive thing this screen does is reversible. Held here
+  // rather than in the editor because the editor is only where it's *shown*
+  // — and it is dropped by any subsequent phase edit (see the clears in
+  // addPhaseBlock/updatePhaseBlock/deletePhaseBlock/setPhaseFromToday): an
+  // undo that resurrects a plan the athlete has since edited by hand is
+  // worse than no undo at all.
+  var phaseBuildUndo = null;
+
+  // Pure — takes a race date and week counts, returns the dated blocks in
+  // chronological order. No reads of module state, so it can be reasoned
+  // about (and tested) on its own.
+  function phaseBuildBlocks(raceISO, weeks, returnAfter){
+    var raceMon = mondayOf(new Date(raceISO + 'T00:00:00'));
+    var cycle = [];
+    var lastMon = raceMon;
+    for(var i = PHASE_BUILD_ORDER.length - 1; i >= 0; i--){
+      var key = PHASE_BUILD_ORDER[i];
+      var w = weeks[key] || 0;
+      if(w <= 0){ continue; }   // a phase set to 0 is skipped, not zero-length
+      var start = addDays(lastMon, -(w - 1) * 7);
+      cycle.push({phase: key, from: isoDate(start), weeks: w});
+      lastMon = addDays(start, -7);
+    }
+    cycle.reverse();
+    if(!cycle.length){ return []; }
+    cycle[cycle.length - 1].endsRaceWeek = true;
+    // Without this, the final cycle block would run forever and every week
+    // after the race would resolve to Peak. Skipped when it would only
+    // repeat the phase already running — the block it would add says
+    // exactly what the open-ended one before it already says.
+    if(returnAfter && cycle[cycle.length - 1].phase !== 'base'){
+      cycle.push({phase: 'base', from: isoDate(addDays(raceMon, 7)), openEnded: true});
+    }
+    return cycle;
+  }
+  function phaseBuildSpanDates(b){
+    if(b.openEnded){ return 'From ' + formatWeekdayDate(b.from); }
+    var end = addDays(new Date(b.from + 'T00:00:00'), b.weeks * 7 - 1);
+    return formatWeekdayDate(b.from) + ' – ' + formatWeekdayDate(isoDate(end));
+  }
+  function phaseBuildSpanMeta(b){
+    if(b.openEnded){ return 'Ongoing · after the race'; }
+    var parts = [b.weeks + (b.weeks === 1 ? ' week' : ' weeks')];
+    if(b.endsRaceWeek){ parts.push('ends race week'); }
+    return parts.join(' · ');
+  }
+  // Existing blocks the build would drop: anything starting inside the span
+  // it covers. Blocks before it survive and correctly run up to its first
+  // date; blocks after it survive and correctly take over later.
+  function phaseBuildReplaced(blocks){
+    if(!blocks.length){ return []; }
+    var first = blocks[0].from, last = blocks[blocks.length - 1].from;
+    return phasePlan.filter(function(b){ return b.from >= first && b.from <= last; });
+  }
+  function applyPhaseBuild(blocks){
+    if(!blocks.length){ return 0; }
+    // Fresh objects, not aliases of the live rows — restoring this must not
+    // hand back objects a later edit has already mutated in place.
+    phaseBuildUndo = phasePlan.map(function(b){ return {id: b.id, from: b.from, phase: b.phase}; });
+    var first = blocks[0].from, last = blocks[blocks.length - 1].from;
+    var kept = phasePlan.filter(function(b){ return b.from < first || b.from > last; });
+    var made = blocks.map(function(b){ return {id: newPhaseBlockId(), from: b.from, phase: b.phase}; });
+    // Every generated block starts on its own Monday and `kept` excludes the
+    // whole covered span, so this cannot produce two blocks sharing a date
+    // — the state that leaves one row inert and unreachable.
+    phasePlan = kept.concat(made);
+    persistPhasePlan();
+    recomputeCurrentPhase();
+    return made.length;
+  }
+  function undoPhaseBuild(){
+    if(!phaseBuildUndo){ return; }
+    phasePlan = phaseBuildUndo;
+    phaseBuildUndo = null;
+    persistPhasePlan();
+    recomputeCurrentPhase();
+  }
+
+  function phaseBuildSelectedRace(){
+    var up = upcomingRaces();
+    if(!up.length){ return null; }
+    var picked = up.filter(function(r){ return r.id === phaseBuildRaceId; })[0];
+    return picked || up[0];
+  }
+  function phaseBuildCurrentBlocks(){
+    var race = phaseBuildSelectedRace();
+    if(!race){ return []; }
+    return phaseBuildBlocks(race.date, phaseBuildWeeks, phaseBuildAfter);
+  }
+  function phaseBuildRow(b){
+    var row = el('li', 'plan-item phasebuild-row');
+    // The pill carries the phase name and nothing repeats it — the existing
+    // editor's rows show a select and a pill saying the same word, which is
+    // the redundancy this screen deliberately doesn't copy.
+    var pillClass = PERIOD_PILL_CLASS[b.phase];
+    row.appendChild(el('span', 'month-week-pill' + (pillClass ? ' ' + pillClass : ''), PERIOD_LABEL[b.phase] || b.phase));
+    var main = el('div', 'phasebuild-row-main');
+    main.appendChild(el('span', 'phasebuild-row-name', phaseBuildSpanDates(b)));
+    main.appendChild(el('span', 'phasebuild-row-span', phaseBuildSpanMeta(b)));
+    row.appendChild(main);
+    return row;
+  }
+  // Rebuilds the preview only, never the whole view: the week counts are
+  // live <input>s, and a full re-render on every keystroke would recreate
+  // the field being typed into and take focus off it — the same trap
+  // dateField()'s change handler avoids by calling renderFlowPlanCards()
+  // rather than render().
+  function renderPhaseBuildPreview(){
+    var host = document.getElementById('phasebuild-preview');
+    var actions = document.getElementById('phasebuild-actions');
+    if(!host){ return; }
+    clear(host);
+    var blocks = phaseBuildCurrentBlocks();
+    if(!blocks.length){
+      host.appendChild(el('p', 'phasebuild-empty', 'Give at least one phase a week or more, and the dates will fall out from race week backwards.'));
+      if(actions){ actions.hidden = true; }
+      return;
+    }
+    var list = el('ul', 'plan-item-list');
+    blocks.forEach(function(b){ list.appendChild(phaseBuildRow(b)); });
+    host.appendChild(list);
+    var replaced = phaseBuildReplaced(blocks);
+    if(replaced.length){
+      host.appendChild(el('p', 'phasebuild-warn',
+        'This replaces ' + replaced.length + (replaced.length === 1 ? ' phase block' : ' phase blocks') +
+        ' you already have between ' + formatWeekdayDate(blocks[0].from) +
+        ' and ' + formatWeekdayDate(blocks[blocks.length - 1].from) + '. You can undo it straight after.'));
+    }
+    if(actions){ actions.hidden = false; }
+  }
+  function renderPhaseBuild(){
+    var root = els.viewPhaseBuild;
+    clear(root);
+
+    var hero = el('div', 'race-hero');
+    hero.appendChild(el('div', 'race-hero-eyebrow', 'Training phase'));
+    var h = document.createElement('h1');
+    h.className = 'race-hero-headline';
+    h.id = 'phasebuild-h'; h.tabIndex = -1;
+    h.appendChild(document.createTextNode('Plan back '));
+    h.appendChild(el('span', 'accent', 'from a race'));
+    h.appendChild(document.createTextNode('.'));
+    hero.appendChild(h);
+    hero.appendChild(el('p', 'race-hero-sub', 'Set how long each phase runs. The dates are worked out backwards from race week, and land in your phase plan as ordinary blocks you can edit afterwards.'));
+    root.appendChild(hero);
+
+    var back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'dash-phase-change';
+    back.textContent = '← Back to races';
+    back.addEventListener('click', function(){ showView('races'); });
+    root.appendChild(back);
+
+    var up = upcomingRaces();
+    if(!up.length){
+      // The one state this screen can't work in. Say why, and point at the
+      // thing that fixes it, rather than showing a form that cannot submit.
+      root.appendChild(el('p', 'phasebuild-empty', 'There are no upcoming races saved yet. Add one on the Races tab and the phases can be dated back from it.'));
+      var addLink = document.createElement('button');
+      addLink.type = 'button';
+      addLink.className = 'dash-signal-link';
+      addLink.textContent = 'Go to races →';
+      addLink.addEventListener('click', function(){ showView('races'); });
+      root.appendChild(addLink);
+      return;
+    }
+    if(!phaseBuildWeeks){
+      phaseBuildWeeks = {};
+      PHASE_BUILD_ORDER.forEach(function(k){ phaseBuildWeeks[k] = PHASE_BUILD_DEFAULT_WEEKS[k]; });
+    }
+    var race = phaseBuildSelectedRace();
+    phaseBuildRaceId = race.id;
+
+    var form = el('div', 'phasebuild-form');
+
+    var select = document.createElement('select');
+    select.className = 'phasebuild-select';
+    select.id = 'phasebuild-race';
+    up.forEach(function(r){
+      var opt = document.createElement('option');
+      opt.value = r.id;
+      opt.textContent = r.name + ' · ' + formatRaceDateLabel(r.date);
+      if(r.id === phaseBuildRaceId){ opt.selected = true; }
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', function(){
+      phaseBuildRaceId = select.value;
+      renderPhaseBuildPreview();
+    });
+    form.appendChild(planField('Race', 'The last phase ends on race week', select));
+
+    var weeksWrap = el('div', 'phasebuild-weeks');
+    PHASE_BUILD_ORDER.forEach(function(key){
+      var cell = el('div', 'phasebuild-week');
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.id = 'phasebuild-w-' + key;
+      input.min = '0'; input.max = String(PHASE_BUILD_MAX); input.step = '1';
+      input.inputMode = 'numeric';
+      input.value = String(phaseBuildWeeks[key]);
+      var lbl = el('label', null, PERIOD_LABEL[key]);
+      lbl.htmlFor = input.id;
+      cell.appendChild(lbl);
+      cell.appendChild(input);
+      // Clamp on input so the preview never computes from a wild number,
+      // but write the clamped value back only on change — rewriting the
+      // field mid-keystroke fights someone clearing it to retype.
+      input.addEventListener('input', function(){
+        var n = parseInt(input.value, 10);
+        phaseBuildWeeks[key] = isNaN(n) ? 0 : Math.max(0, Math.min(PHASE_BUILD_MAX, n));
+        renderPhaseBuildPreview();
+      });
+      input.addEventListener('change', function(){
+        input.value = String(phaseBuildWeeks[key]);
+      });
+      weeksWrap.appendChild(cell);
+    });
+    var weeksField = el('div', 'plan-field');
+    var weeksLbl = el('span', 'field-lbl');
+    weeksLbl.appendChild(document.createTextNode('Weeks per phase '));
+    weeksLbl.appendChild(el('span', 'sub', 'Set a phase to 0 to skip it'));
+    weeksField.appendChild(weeksLbl);
+    weeksField.appendChild(weeksWrap);
+    form.appendChild(weeksField);
+
+    var toggle = el('label', 'phasebuild-toggle');
+    var check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = phaseBuildAfter;
+    check.addEventListener('change', function(){
+      phaseBuildAfter = check.checked;
+      renderPhaseBuildPreview();
+    });
+    toggle.appendChild(check);
+    toggle.appendChild(document.createTextNode('Go back to Base / Taper after the race'));
+    form.appendChild(toggle);
+
+    var preview = el('div', 'phasebuild-preview');
+    preview.id = 'phasebuild-preview';
+    form.appendChild(preview);
+
+    var actions = el('div', 'plan-form-actions phasebuild-actions');
+    actions.id = 'phasebuild-actions';
+    var apply = el('button', 'btn btn-primary', 'Add to phase plan');
+    apply.type = 'button';
+    apply.addEventListener('click', function(){
+      var blocks = phaseBuildCurrentBlocks();
+      if(!blocks.length){ return; }
+      var picked = phaseBuildSelectedRace();
+      var n = applyPhaseBuild(blocks);
+      // Land on the editor, not back here: the athlete should see the rows
+      // they just made, in the place they can change them.
+      showView('phaseplan', 'Phase plan built back from ' + picked.name + ' — ' +
+        n + (n === 1 ? ' block' : ' blocks') + ' added. Undo is at the top of this screen.');
+    });
+    actions.appendChild(apply);
+    form.appendChild(actions);
+
+    root.appendChild(form);
+    renderPhaseBuildPreview();
+  }
+  function goToPhaseBuild(){ showView('phasebuild'); }
   // Opens the Plan view at one specific day with that day's form showing.
   // `editItem` (optional) makes it a pre-filled edit of that session rather
   // than a blank add. Both entry points — the Plan view's own card and the
@@ -4121,6 +4476,7 @@ if(window.caches && caches.keys){
     viewRaces: document.getElementById('view-races'),
     viewPlan: document.getElementById('view-plan'),
     viewPhasePlan: document.getElementById('view-phaseplan'),
+    viewPhaseBuild: document.getElementById('view-phasebuild'),
     strengthFrame: document.getElementById('strength-frame'),
     tabStrengthSwim: document.getElementById('tab-strength-swim'),
     tabStrengthRun: document.getElementById('tab-strength-run'),
@@ -4819,9 +5175,10 @@ if(window.caches && caches.keys){
     var isRaces = view === 'races';
     var isPlan = view === 'plan';
     var isPhasePlan = view === 'phaseplan';
+    var isPhaseBuild = view === 'phasebuild';
     // isFlow is "none of the named views" — every new view must be added to
     // this chain, or the check-in flow renders underneath it as well.
-    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan;
+    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan && !isPhaseBuild;
     els.viewFlow.hidden = !isFlow;
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
@@ -4830,6 +5187,7 @@ if(window.caches && caches.keys){
     els.viewRaces.hidden = !isRaces;
     els.viewPlan.hidden = !isPlan;
     els.viewPhasePlan.hidden = !isPhasePlan;
+    els.viewPhaseBuild.hidden = !isPhaseBuild;
     els.tabFlow.setAttribute('aria-selected', String(isFlow));
     els.tabDash.setAttribute('aria-selected', String(isDash));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
@@ -4842,12 +5200,13 @@ if(window.caches && caches.keys){
     if(isRaces){ renderRaces(); }
     if(isPlan){ renderPlan(); }
     if(isPhasePlan){ renderPhasePlan(); }
+    if(isPhaseBuild){ renderPhaseBuild(); }
     // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
     if(isFlow){ renderChrome(); }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : 'step-h')))))));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : (isPhaseBuild ? 'phasebuild-h' : 'step-h'))))))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
     refreshVisibleViewFromSheet();
