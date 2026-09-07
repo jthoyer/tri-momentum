@@ -451,19 +451,22 @@ textarea::placeholder{color:var(--ink3)}
    Claude Design canvas mockup; this is that same interaction rebuilt
    against real races/phasePlan data instead of sample data. Scrolls
    horizontally at narrow widths rather than shrinking cells past legibility. */
-.race-cal{margin-top:1.4rem;padding:1.1rem 1.2rem 1.2rem;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
-.race-cal-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.race-cal{margin-top:1.4rem;padding:1rem 1.1rem 1.1rem;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
+.race-cal-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .race-cal-title{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink)}
 /* A real month grid — weekday header, day cells, a phase band per week —
    replacing the old 52-column horizontal scroll strip. Reuses
    .plan-week-nav/.plan-week-btn for month paging rather than inventing a
    second prev/next control, the same pair the Plan view's own week nav
-   already established. */
-.race-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+   already established. A leading 22px column carries the ISO week number,
+   in both the header (its own small "Wk" label, unstyled text) and each
+   week row, so the two grids' 7 date columns stay aligned with each other. */
+.race-cal-weekdays{display:grid;grid-template-columns:22px repeat(7,1fr);gap:4px;margin-top:8px}
 .race-cal-weekday{text-align:center;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.race-cal-week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:2px}
-.race-cal-day{display:flex;align-items:center;justify-content:center;height:32px}
-.race-cal-day-num{width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:500;color:var(--ink)}
+.race-cal-week-row{display:grid;grid-template-columns:22px repeat(7,1fr);gap:4px;margin-top:0}
+.race-cal-weeknum{display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--ink3)}
+.race-cal-day{display:flex;align-items:center;justify-content:center;height:28px}
+.race-cal-day-num{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:11.5px;font-weight:500;color:var(--ink)}
 .race-cal-day.dim .race-cal-day-num{color:var(--ink3);opacity:.5}
 .race-cal-day.today .race-cal-day-num{box-shadow:inset 0 0 0 2px var(--blue);font-weight:600;color:var(--blue)}
 .race-cal-day.locked .race-cal-day-num{background:var(--done);color:#fff;font-weight:600}
@@ -472,13 +475,20 @@ textarea::placeholder{color:var(--ink3)}
    this week's phase directly — setPhaseForWeek() writes an ordinary
    phasePlan block dated this week's Monday, the same model the Phase Plan
    editor and "Change phase" both already write to. */
-.race-cal-phase-row{display:flex;align-items:center;gap:8px;margin:0 0 6px}
-.race-cal-phase{flex:1;height:8px;border-radius:4px}
+.race-cal-phase-row{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+.race-cal-phase{flex:1;height:7px;border-radius:4px}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
 .race-cal-phase.phase-taper{background:var(--phase-taper)}
-.race-cal-phase-edit{flex:none;min-height:44px;padding:0 4px;background:none;border:none;display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
+/* The visible button is small — the row's own height, not a fixed 44px box
+   — but its ::before extends the real tap target to 44px via absolute
+   positioning, which doesn't add to layout height. Shrinking the visible
+   control while keeping the touch target real (not just visually smaller)
+   is the difference between condensing the row and quietly dropping the
+   44px rule every prior pass here has held to. */
+.race-cal-phase-edit{position:relative;flex:none;padding:1px 4px;background:none;border:none;display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
+.race-cal-phase-edit::before{content:'';position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
 .race-cal-phase-edit:hover{color:var(--blue)}
 .race-cal-phase-edit svg{flex:none;width:13px;height:13px;color:var(--ink3)}
 .race-cal-phase-edit:hover svg{color:var(--blue)}
@@ -495,14 +505,6 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-legend-dot.phase-build{background:var(--phase-build)}
 .race-cal-legend-dot.phase-peak{background:var(--phase-peak)}
 .race-cal-legend-dot.phase-taper{background:var(--phase-taper)}
-/* Side-by-side button pair — "Plan back from a race" / "Edit phase plan" —
-   a modifier layered on top of .dash-signal-link (kept, not replaced, so
-   the buttons stay selectable as signal links) rather than a class of its
-   own: boxed and equal-width, reusing the app's existing .btn-ghost visual
-   language rather than inventing a new one. */
-.race-cal-links{display:flex;gap:10px;margin-top:14px}
-.race-cal-link-btn{flex:1;margin-top:0;min-height:44px;padding:12px 10px;border-radius:var(--rmd);border:1px solid var(--bd2);background:var(--s1);text-align:center}
-.race-cal-link-btn:hover{background:var(--s3)}
 /* ── Training plan ───────────────────────────────────────────────────
    The athlete's own planned sessions, transcribed by hand. Deliberately
    reuses the Races component language rather than inventing a second one:
@@ -2872,6 +2874,9 @@ if(window.caches && caches.keys){
   }
   function raceCalWeekRow(week){
     var row = el('div', 'race-cal-week-row');
+    var wn = el('span', 'race-cal-weeknum', String(isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'))));
+    wn.title = 'Week ' + isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'));
+    row.appendChild(wn);
     week.days.forEach(function(day){
       var cls = 'race-cal-day';
       if(!day.inMonth){ cls += ' dim'; }
@@ -2959,6 +2964,7 @@ if(window.caches && caches.keys){
     wrap.appendChild(nav);
 
     var weekdayRow = el('div', 'race-cal-weekdays');
+    weekdayRow.appendChild(el('span', 'race-cal-weeknum', 'Wk'));
     MONTH_DAYS.forEach(function(abbr){
       weekdayRow.appendChild(el('span', 'race-cal-weekday', abbr.charAt(0)));
     });
@@ -2994,29 +3000,11 @@ if(window.caches && caches.keys){
     ]);
     wrap.appendChild(legend);
 
-    // A side-by-side button pair, not stacked text links — both actions are
-    // equal-weight entry points into phase planning, so they read as one
-    // row of tappable choices rather than a list to scan top-to-bottom.
-    // Keeps the dash-signal-link class alongside the new boxed modifier
-    // (rather than replacing it) so this stays selectable as a signal link
-    // wherever that's already relied on, including the existing test suite.
-    var links = el('div', 'race-cal-links');
-
-    var phaseBuildLink = document.createElement('button');
-    phaseBuildLink.type = 'button';
-    phaseBuildLink.className = 'dash-signal-link race-cal-link-btn';
-    phaseBuildLink.textContent = 'Plan back from a race →';
-    phaseBuildLink.addEventListener('click', function(){ goToPhaseBuild(); });
-    links.appendChild(phaseBuildLink);
-
-    var phasePlanLink = document.createElement('button');
-    phasePlanLink.type = 'button';
-    phasePlanLink.className = 'dash-signal-link race-cal-link-btn';
-    phasePlanLink.textContent = 'Edit phase plan →';
-    phasePlanLink.addEventListener('click', function(){ goToPhasePlan(); });
-    links.appendChild(phasePlanLink);
-
-    wrap.appendChild(links);
+    // "Plan back from a race →" / "Edit phase plan →" removed on request —
+    // per-week editing directly on the calendar (above) is now the only way
+    // in. view-phasebuild and view-phaseplan still exist (goToPhaseBuild(),
+    // goToPhasePlan()) but are deliberately left with no navigation path to
+    // them; see CLAUDE.md decision 46's follow-up note.
 
     return wrap;
   }
