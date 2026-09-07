@@ -485,6 +485,14 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-legend-dot.phase-build{background:var(--phase-build)}
 .race-cal-legend-dot.phase-peak{background:var(--phase-peak)}
 .race-cal-legend-dot.phase-taper{background:var(--phase-taper)}
+/* Side-by-side button pair — "Plan back from a race" / "Edit phase plan" —
+   deliberately its own class rather than .dash-signal-link, which is a
+   plain stacked text link shared by several other views; these two are
+   boxed, equal-width and tappable, reusing the app's existing .btn-ghost
+   visual language rather than inventing a new one. */
+.race-cal-links{display:flex;gap:10px;margin-top:14px}
+.race-cal-link-btn{flex:1;min-height:44px;padding:12px 10px;border-radius:var(--rmd);border:1px solid var(--bd2);background:var(--s1);font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-align:center;cursor:pointer}
+.race-cal-link-btn:hover{background:var(--s3)}
 /* ── Training plan ───────────────────────────────────────────────────
    The athlete's own planned sessions, transcribed by hand. Deliberately
    reuses the Races component language rather than inventing a second one:
@@ -2802,15 +2810,15 @@ if(window.caches && caches.keys){
     wrap.appendChild(hd);
 
     var grid = el('div', 'race-cal-grid');
-    grid.style.gridTemplateColumns = 'repeat(' + weeks.length + ', 14px)';
+    grid.style.gridTemplateColumns = 'repeat(' + weeks.length + ', 24px)';
 
     // Month labels, grouped by consecutive weeks whose Monday falls in the
     // same calendar month. A 1-week run — the December sliver most years
     // start with, since week 1's Monday lands before Jan 1 whenever Jan 1
-    // isn't itself a Monday — is skipped rather than labelled: at 14px
-    // there's no room for even a 3-letter abbreviation without clipping it
-    // to something like "DE", and the week's own cell is still correctly
-    // coloured either way.
+    // isn't itself a Monday — is skipped rather than labelled: a single
+    // 24px column still has no room for even a 3-letter abbreviation
+    // without clipping it to something like "DE", and the week's own cell
+    // is still correctly coloured either way.
     var runStart = 1, runMonth = weeks.length ? weeks[0].getMonth() : 0;
     function flushMonthRun(endCol){
       if(endCol - runStart + 1 < 2){ return; }
@@ -2881,21 +2889,37 @@ if(window.caches && caches.keys){
     ]);
     wrap.appendChild(legend);
 
+    // A side-by-side button pair, not stacked text links — both actions are
+    // equal-weight entry points into phase planning, so they read as one
+    // row of tappable choices rather than a list to scan top-to-bottom.
+    var links = el('div', 'race-cal-links');
+
     var phaseBuildLink = document.createElement('button');
     phaseBuildLink.type = 'button';
-    phaseBuildLink.className = 'dash-signal-link';
+    phaseBuildLink.className = 'race-cal-link-btn';
     phaseBuildLink.textContent = 'Plan back from a race →';
     phaseBuildLink.addEventListener('click', function(){ goToPhaseBuild(); });
-    wrap.appendChild(phaseBuildLink);
+    links.appendChild(phaseBuildLink);
 
     var phasePlanLink = document.createElement('button');
     phasePlanLink.type = 'button';
-    phasePlanLink.className = 'dash-signal-link';
+    phasePlanLink.className = 'race-cal-link-btn';
     phasePlanLink.textContent = 'Edit phase plan →';
     phasePlanLink.addEventListener('click', function(){ goToPhasePlan(); });
-    wrap.appendChild(phasePlanLink);
+    links.appendChild(phasePlanLink);
+
+    wrap.appendChild(links);
 
     return wrap;
+  }
+  // Auto-scroll the week-grid to the current week whenever the Races view
+  // is freshly opened, so "this week" is the starting position rather than
+  // January — never called from the background-refresh redraw path, which
+  // must stay a silent in-place redraw with no scroll/focus jump (see
+  // refreshVisibleViewFromSheet above).
+  function scrollRaceCalToCurrentWeek(){
+    var cur = els.viewRaces.querySelector('.race-cal-week.is-current');
+    if(cur){ cur.scrollIntoView({behavior: 'auto', inline: 'center', block: 'nearest'}); }
   }
   function renderRaces(){
     var root = els.viewRaces;
@@ -5208,7 +5232,7 @@ if(window.caches && caches.keys){
     if(isTrends){ renderTrends(); }
     if(isStrength){ sizeStrengthFrame(); }
     if(isWarmup){ renderWarmup(); }
-    if(isRaces){ renderRaces(); }
+    if(isRaces){ renderRaces(); scrollRaceCalToCurrentWeek(); }
     if(isPlan){ renderPlan(); }
     if(isPhasePlan){ renderPhasePlan(); }
     if(isPhaseBuild){ renderPhaseBuild(); }
