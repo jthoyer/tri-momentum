@@ -67,7 +67,16 @@ function loadFunctions(names, preamble = '') {
 // a live Google Sheet fetch can't overwrite a seeded scenario mid-test.
 // http rather than file:// on purpose: a file:// origin makes localStorage and
 // the service-worker check throw, which buries any real page error in noise.
-async function serveApp() {
+//
+// `routes` (optional) maps an exact query string (the part of the request URL
+// after "?", e.g. "phases=1") to a raw response body served as JSON for that
+// request — everything else still gets the app's own html. Since
+// TRAINING_LOG_WRITE_URL is blanked to '', every fetch the app makes resolves
+// relative to the page's own origin, landing here with whatever query string
+// the app itself built (e.g. "?phases=1") preserved — so a test can mock one
+// specific Sheet read without touching how the rest of the page loads.
+async function serveApp(opts) {
+  opts = opts || {};
   let html = readIndex().replace(
     /var TRAINING_LOG_WRITE_URL = '[^']*';/,
     "var TRAINING_LOG_WRITE_URL = '';"
@@ -76,6 +85,13 @@ async function serveApp() {
     throw new Error('could not blank TRAINING_LOG_WRITE_URL — has it been renamed?');
   }
   const server = http.createServer((req, res) => {
+    const qIndex = req.url.indexOf('?');
+    const query = qIndex === -1 ? '' : req.url.slice(qIndex + 1);
+    if (opts.routes && Object.prototype.hasOwnProperty.call(opts.routes, query)) {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(opts.routes[query]);
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
   });
