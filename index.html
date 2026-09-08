@@ -454,17 +454,24 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal{margin-top:1.4rem;padding:1rem 1.1rem 1.1rem;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
 .race-cal-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .race-cal-title{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink)}
+/* Halved from .plan-week-nav's own 1.6rem — scoped to this card only, since
+   that class is shared with the Plan view's own week stepper, which keeps
+   its original spacing. */
+.race-cal .plan-week-nav{margin-top:0.8rem}
 /* A real month grid — weekday header, day cells, a phase band per week —
    replacing the old 52-column horizontal scroll strip. Reuses
    .plan-week-nav/.plan-week-btn for month paging rather than inventing a
    second prev/next control, the same pair the Plan view's own week nav
-   already established. A leading 22px column carries the ISO week number,
-   in both the header (its own small "Wk" label, unstyled text) and each
-   week row, so the two grids' 7 date columns stay aligned with each other. */
-.race-cal-weekdays{display:grid;grid-template-columns:22px repeat(7,1fr);gap:4px;margin-top:8px}
+   already established. A dedicated 64px spacer column carries the gap
+   between the week number and Monday explicitly, rather than a shared grid
+   gap — which stays 0 across the 7 day columns, so widening the spacer is
+   a straight trade against their own width, not something layered on top
+   of it. Both the header and each week row share this "22px, 64px, then 7
+   date columns" template so everything stays aligned. */
+.race-cal-weekdays{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;margin-top:12px}
 .race-cal-weekday{text-align:center;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.race-cal-week-row{display:grid;grid-template-columns:22px repeat(7,1fr);gap:4px;margin-top:0}
-.race-cal-weeknum{display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--ink3)}
+.race-cal-week-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;margin-top:0}
+.race-cal-weeknum{display:flex;align-items:center;justify-content:flex-start;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--ink3)}
 .race-cal-day{display:flex;align-items:center;justify-content:center;height:28px}
 .race-cal-day-num{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:11.5px;font-weight:500;color:var(--ink)}
 .race-cal-day.dim .race-cal-day-num{color:var(--ink3);opacity:.5}
@@ -475,14 +482,19 @@ textarea::placeholder{color:var(--ink3)}
    this week's phase directly — setPhaseForWeek() writes an ordinary
    phasePlan block dated this week's Monday, the same model the Phase Plan
    editor and "Change phase" both already write to. */
-/* Same "22px, then 7 date columns" template as the day/weekday rows above,
-   so the label+bar starts under Monday, not under the week number. Top
-   margin stays 0 — the gap to this row's own dates stays as tight as
-   condensing left it; only the gap to the NEXT week's dates below opens up,
-   via the bottom margin. */
-.race-cal-phase-row{display:grid;grid-template-columns:22px repeat(7,1fr);margin:0 0 10px}
-.race-cal-phase-inner{grid-column:2 / -1;display:flex;align-items:center;gap:8px}
-.race-cal-phase{flex:1;height:7px;border-radius:4px}
+/* View mode (the .race-cal-phase-edit button + the bar) are now two
+   independent grid items rather than one flex row, so each can be
+   positioned against its own columns: the button spans the week-number +
+   spacer columns — its left edge lines up with the week number's own —
+   and the bar spans exactly the 7 day columns, Monday through Sunday, no
+   further. Edit mode keeps its own flex-row wrapper (.race-cal-phase-inner,
+   below), unchanged — still starting under Monday, since a select needs
+   the width and was never part of this alignment. Top margin stays 0 — the
+   gap to this row's own dates stays as tight as condensing left it; only
+   the gap to the NEXT week's dates below opens up, via the bottom margin. */
+.race-cal-phase-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);column-gap:8px;align-items:center;margin:0 0 10px}
+.race-cal-phase-inner{grid-column:3 / -1;display:flex;align-items:center;gap:8px}
+.race-cal-phase{flex:1;grid-column:3 / -1;height:7px;border-radius:4px}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
@@ -492,14 +504,17 @@ textarea::placeholder{color:var(--ink3)}
    positioning, which doesn't add to layout height. Shrinking the visible
    control while keeping the touch target real (not just visually smaller)
    is the difference between condensing the row and quietly dropping the
-   44px rule every prior pass here has held to. */
-.race-cal-phase-edit{position:relative;flex:none;padding:1px 4px;background:none;border:none;display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
+   44px rule every prior pass here has held to. Word leads, icon trails —
+   flipped from the original build — and the left padding is zero so the
+   text starts flush with the week number's own left edge, not offset from
+   it by the button's own inset. */
+.race-cal-phase-edit{grid-column:1 / 3;position:relative;padding:1px 4px 1px 0;background:none;border:none;display:flex;align-items:center;justify-content:flex-start;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
 .race-cal-phase-edit::before{content:'';position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
 .race-cal-phase-edit:hover{color:var(--blue)}
 .race-cal-phase-edit svg{flex:none;width:13px;height:13px;color:var(--ink3)}
 .race-cal-phase-edit:hover svg{color:var(--blue)}
 .race-cal-phase-select{flex:1;min-height:44px;padding:6px 8px;border-radius:var(--rmd);border:1px solid var(--bd2);background:var(--s1);font-family:var(--fd);font-size:13px;color:var(--ink)}
-.race-cal-legend{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.race-cal-legend{display:flex;flex-direction:column;gap:6px;margin-top:18px}
 .race-cal-legend-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
 .race-cal-legend-label{flex:none;font-family:var(--fd);font-size:11px;font-weight:600;color:var(--ink)}
 .race-cal-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
@@ -2883,6 +2898,9 @@ if(window.caches && caches.keys){
     var wn = el('span', 'race-cal-weeknum', String(isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'))));
     wn.title = 'Week ' + isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'));
     row.appendChild(wn);
+    // The spacer column between the week number and Monday — see the
+    // .race-cal-week-row grid-template-columns comment in the CSS.
+    row.appendChild(el('span', null));
     week.days.forEach(function(day){
       var cls = 'race-cal-day';
       if(!day.inMonth){ cls += ' dim'; }
@@ -2898,20 +2916,15 @@ if(window.caches && caches.keys){
   }
   function raceCalPhaseRow(week){
     var row = el('div', 'race-cal-phase-row');
-    // A leading empty cell in the same 22px column the week number sits in
-    // above, so the label/bar that follows starts under Monday rather than
-    // under the week number — the row is a grid with the same
-    // "22px, then 7 date columns" template as the day/weekday rows above it,
-    // and this inner flex container is the one child living in that second
-    // area (grid-column 2/-1).
-    row.appendChild(el('span', null));
-    var inner = el('div', 'race-cal-phase-inner');
     var weekLabel = 'the week of ' + formatWeekdayDate(week.mondayISO);
-    // Label/edit control first, colour bar last — flipped from the initial
-    // build on request, and the bar is flex:1 so it fills the rest of the
-    // inner row's width (the same width as the day grid above) rather than
-    // the fixed 20px stub it started as.
+    var pillClass = PERIOD_PILL_CLASS[week.phase];
+    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
+    bar.setAttribute('aria-hidden', 'true');
     if(raceCalEditWeek === week.mondayISO){
+      // Edit mode keeps the flex-row wrapper — the select needs the width,
+      // and starting under Monday (grid-column 3/-1 on .race-cal-phase-inner)
+      // is unchanged from the original build.
+      var inner = el('div', 'race-cal-phase-inner');
       var select = document.createElement('select');
       select.className = 'race-cal-phase-select';
       select.setAttribute('aria-label', 'Phase for ' + weekLabel);
@@ -2928,24 +2941,26 @@ if(window.caches && caches.keys){
         say('Phase for ' + weekLabel + ' set to ' + PERIOD_LABEL[select.value] + '.');
       });
       inner.appendChild(select);
+      inner.appendChild(bar);
+      row.appendChild(inner);
     } else {
+      // View mode: the button and the bar are direct grid items (see the
+      // .race-cal-phase-edit/.race-cal-phase CSS) so the button can align
+      // with the week number while the bar stays confined to Monday-Sunday.
+      // Word leads, icon trails.
       var editBtn = document.createElement('button');
       editBtn.type = 'button';
       editBtn.className = 'race-cal-phase-edit';
       editBtn.setAttribute('aria-label', 'Edit the phase for ' + weekLabel);
-      editBtn.appendChild(pencilIcon());
       editBtn.appendChild(document.createTextNode(week.phase ? PERIOD_LABEL[week.phase] : 'Unset'));
+      editBtn.appendChild(pencilIcon());
       editBtn.addEventListener('click', function(){
         raceCalEditWeek = week.mondayISO;
         renderRaces();
       });
-      inner.appendChild(editBtn);
+      row.appendChild(editBtn);
+      row.appendChild(bar);
     }
-    var pillClass = PERIOD_PILL_CLASS[week.phase];
-    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
-    bar.setAttribute('aria-hidden', 'true');
-    inner.appendChild(bar);
-    row.appendChild(inner);
     return row;
   }
   // A real month calendar, race weeks and the current training phase
@@ -2980,6 +2995,7 @@ if(window.caches && caches.keys){
 
     var weekdayRow = el('div', 'race-cal-weekdays');
     weekdayRow.appendChild(el('span', 'race-cal-weeknum', 'Wk'));
+    weekdayRow.appendChild(el('span', null));
     MONTH_DAYS.forEach(function(abbr){
       weekdayRow.appendChild(el('span', 'race-cal-weekday', abbr.charAt(0)));
     });
