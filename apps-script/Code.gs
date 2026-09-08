@@ -53,6 +53,14 @@
  * Same client-generated-id rule as races. `addBatch` and `deleteWeek`
  * exist because a week is ~10 sessions and firing 10 concurrent no-cors
  * POSTs races on appendRow. See handlePlanPost_ / listPlan_ below.
+ *
+ * Training phase plan: a fourth sheet tab named "Phases" (also created on
+ * first use), holding the athlete's dated phase blocks (index.html's
+ * `phasePlan` — {id, from, phase}, each block running until the next one
+ * starts). Read via `?phases=1`; written via `{ kind: 'phase', action:
+ * 'add'|'addBatch'|'update'|'delete'|'deleteRange'|'replaceAll', ... }`.
+ * Same client-generated-id rule as races/plan. See handlePhasePost_ /
+ * listPhases_ below.
  * ---------------------------------------------------------------------
  *
  * Redeploying after edits: Deploy -> Manage deployments -> pencil icon ->
@@ -161,6 +169,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.plan === '1') {
     return listPlan_();
   }
+  if (e && e.parameter && e.parameter.phases === '1') {
+    return listPhases_();
+  }
   return ContentService
     .createTextOutput('TRI Momentum training log endpoint is live.')
     .setMimeType(ContentService.MimeType.TEXT);
@@ -215,12 +226,14 @@ function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
     // Was a two-way ternary when 'race' was the only non-session kind; an
-    // if/else chain now that 'plan' is a third, so adding a fourth kind
-    // doesn't mean nesting ternaries.
+    // if/else chain now that 'plan' and 'phase' are a third and fourth, so
+    // adding one doesn't mean nesting ternaries.
     if (body.kind === 'race') {
       result = handleRacePost_(body);
     } else if (body.kind === 'plan') {
       result = handlePlanPost_(body);
+    } else if (body.kind === 'phase') {
+      result = handlePhasePost_(body);
     } else {
       result = handleSessionPost_(body);
     }
@@ -634,6 +647,232 @@ function deletePlanWeek_(sheet, from, to) {
     lock.releaseLock();
   }
   return { ok: true, deleted: deleted };
+}
+
+/* ========================= Training phase plan ========================= */
+
+// Dated phase blocks — each running until the next one starts — mirroring
+// index.html's `phasePlan` model exactly: {id, from, phase}. Structural
+// clone of Races/Plan above: created on demand, hand-editable, client-
+// generated IDs, fire-and-forget no-cors writes, cors reads.
+//
+// phasePlan carries an invariant Races/Plan never had: once any block
+// exists there must always be at least one (index.html's deletePhaseBlock
+// refuses to remove the last one), so an *empty* response is ambiguous —
+// "nothing planned yet" and "this device hasn't pushed its real blocks up
+// yet" look identical from here. That distinction is handled entirely on
+// the client (refreshPhasePlanFromSheet); this script just stores whatever
+// it's told and returns whatever is here.
+var PHASE_SHEET_NAME = 'Phases';
+var PHASE_HEADERS = ['ID', 'From', 'Phase', 'CreatedAt'];
+
+function getPhasesSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PHASE_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PHASE_SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(PHASE_HEADERS);
+  } else {
+    var existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (existing.length < PHASE_HEADERS.length) {
+      var addedCols = PHASE_HEADERS.length - existing.length;
+      sheet.getRange(1, existing.length + 1, 1, addedCols)
+        .setValues([PHASE_HEADERS.slice(existing.length)]);
+    }
+  }
+  return sheet;
+}
+
+// Read path — mirrors listRaces_/listPlan_'s { ok, <name> } envelope.
+function listPhases_() {
+  var sheet = getPhasesSheet_();
+  var lastRow = sheet.getLastRow();
+  var phases = [];
+  if (lastRow > 1) {
+    var values = sheet.getRange(2, 1, lastRow - 1, PHASE_HEADERS.length).getValues();
+    for (var i = 0; i < values.length; i++) {
+      var r = values[i];
+      if (!r[0]) { continue; }
+      phases.push({
+        id: String(r[0]),
+        from: formatWhen_(r[1]),
+        phase: r[2] || ''
+      });
+    }
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, phases: phases }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// The columns 'update' is allowed to touch: From and Phase (2-3). Unlike
+// Plan's update, From *is* editable here — a block's start date is a real,
+// deliberate field on the Phase Plan editor's own row (index.html's
+// updatePhaseBlock), not a drag-and-drop date change on a logged session,
+// so there's no reason to exclude it the way Plan excludes Date.
+var PHASE_EDITABLE_COL = 2;   // 1-based column of 'From'
+var PHASE_EDITABLE_COUNT = 2; // From, Phase
+function phaseEditableCells_(item) {
+  return [item.from, item.phase];
+}
+function phaseRow_(item) {
+  if (!item || !item.id || !item.from || !item.phase) { return null; }
+  return [item.id].concat(phaseEditableCells_(item)).concat([new Date()]);
+}
+
+// action: 'add' | 'addBatch' | 'update' | 'delete' | 'deleteRange' |
+// 'replaceAll'. Phase ids are generated client-side (see index.html's
+// newPhaseBlockId) for the same reason race/plan ids are.
+function handlePhasePost_(body) {
+  var sheet = getPhasesSheet_();
+  var action = body.action;
+
+  if (action === 'add') {
+    var row = phaseRow_(body.item);
+    if (!row) { return { ok: false, error: 'phase add requires id, from, phase' }; }
+    sheet.appendRow(row);
+    return { ok: true, added: 1 };
+  }
+
+  // Bulk write — the one-time local-to-Sheet migration this device performs
+  // the first time it ever syncs (see refreshPhasePlanFromSheet in
+  // index.html) and "Plan back from a race"'s generated blocks both write
+  // several rows at once; one request avoids N concurrent no-cors POSTs
+  // racing on appendRow, same reason Plan's addBatch exists.
+  if (action === 'addBatch') {
+    var items = body.items;
+    if (!items || !items.length) { return { ok: false, error: 'phase addBatch requires a non-empty items array' }; }
+    var rows = [];
+    for (var i = 0; i < items.length; i++) {
+      var r = phaseRow_(items[i]);
+      if (r) { rows.push(r); }
+    }
+    if (!rows.length) { return { ok: false, error: 'phase addBatch had no valid items' }; }
+    // getLastRow() then setValues() is a read-then-write, so it needs a lock
+    // in a way appendRow (atomic) does not — same reasoning as Plan's addBatch.
+    var lock = LockService.getDocumentLock();
+    lock.waitLock(20000);
+    try {
+      var startRow = sheet.getLastRow() + 1;
+      var needed = startRow + rows.length - 1;
+      if (needed > sheet.getMaxRows()) { sheet.insertRowsAfter(sheet.getMaxRows(), needed - sheet.getMaxRows()); }
+      sheet.getRange(startRow, 1, rows.length, PHASE_HEADERS.length).setValues(rows);
+    } finally {
+      lock.releaseLock();
+    }
+    return { ok: true, added: rows.length };
+  }
+
+  // Overwrites one existing row's From/Phase in place, located by id. Same
+  // read-then-blind-write hazard Plan's update guards against with a lock —
+  // see there for why.
+  if (action === 'update') {
+    var upItem = body.item;
+    if (!upItem || !upItem.id || !upItem.from || !upItem.phase) { return { ok: false, error: 'phase update requires an item id, from and phase' }; }
+    var upLock = LockService.getDocumentLock();
+    upLock.waitLock(20000);
+    try {
+      var upRow = findPhaseRow_(sheet, upItem.id);
+      if (!upRow) { return { ok: false, error: 'phase update: no row with id ' + upItem.id }; }
+      sheet.getRange(upRow, PHASE_EDITABLE_COL, 1, PHASE_EDITABLE_COUNT)
+        .setValues([phaseEditableCells_(upItem)]);
+    } finally {
+      upLock.releaseLock();
+    }
+    return { ok: true, updated: 1 };
+  }
+
+  if (action === 'delete') {
+    var id = body.item && body.item.id;
+    if (!id) { return { ok: false, error: 'phase delete requires an item id' }; }
+    var delLock = LockService.getDocumentLock();
+    delLock.waitLock(20000);
+    try {
+      var rowNum = findPhaseRow_(sheet, id);
+      if (rowNum) { sheet.deleteRow(rowNum); }
+    } finally {
+      delLock.releaseLock();
+    }
+    return { ok: true };
+  }
+
+  // Deletes every row whose From falls within [from, to] inclusive — how
+  // "Plan back from a race" replaces the span it covers (applyPhaseBuild in
+  // index.html), same by-date-range approach as Plan's deleteWeek.
+  if (action === 'deleteRange') {
+    return deletePhaseRange_(sheet, body.from, body.to);
+  }
+
+  // Wholesale replace — every existing row deleted, then the given items
+  // written back. Used only by "Plan back from a race"'s undo
+  // (undoPhaseBuild in index.html), which restores a full prior snapshot
+  // rather than a specific span, so there's no single [from, to] range that
+  // would cover what needs restoring.
+  if (action === 'replaceAll') {
+    return replaceAllPhases_(sheet, body.items || []);
+  }
+
+  return { ok: false, error: 'unknown phase action: ' + action };
+}
+
+function findPhaseRow_(sheet, id) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return null; }
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(id)) { return i + 2; }
+  }
+  return null;
+}
+
+function deletePhaseRange_(sheet, from, to) {
+  if (!from || !to) { return { ok: false, error: 'phase deleteRange requires from and to (ISO dates)' }; }
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return { ok: true, deleted: 0 }; }
+  // Same reasoning as deletePlanWeek_: this reads the whole From column and
+  // then mutates row indices, so it must not interleave with another write.
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(20000);
+  var deleted = 0;
+  try {
+    var froms = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    // Walk bottom-up — deleteRow shifts every row below it up by one, so a
+    // top-down loop would skip rows. Same reasoning as deletePlanWeek_.
+    for (var i = froms.length - 1; i >= 0; i--) {
+      var iso = formatWhen_(froms[i][0]);
+      if (iso >= from && iso <= to) {
+        sheet.deleteRow(i + 2);
+        deleted++;
+      }
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, deleted: deleted };
+}
+
+function replaceAllPhases_(sheet, items) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(20000);
+  try {
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) { sheet.deleteRows(2, lastRow - 1); }
+    var rows = [];
+    for (var i = 0; i < items.length; i++) {
+      var r = phaseRow_(items[i]);
+      if (r) { rows.push(r); }
+    }
+    if (rows.length) {
+      var needed = 1 + rows.length;
+      if (needed > sheet.getMaxRows()) { sheet.insertRowsAfter(sheet.getMaxRows(), needed - sheet.getMaxRows()); }
+      sheet.getRange(2, 1, rows.length, PHASE_HEADERS.length).setValues(rows);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, replaced: items.length };
 }
 
 // Creates the header row on a blank sheet, or appends any headers a sheet

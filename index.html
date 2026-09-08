@@ -454,17 +454,24 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal{margin-top:1.4rem;padding:1rem 1.1rem 1.1rem;background:var(--s1);border-radius:var(--rlg);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
 .race-cal-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .race-cal-title{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink)}
+/* Halved from .plan-week-nav's own 1.6rem — scoped to this card only, since
+   that class is shared with the Plan view's own week stepper, which keeps
+   its original spacing. */
+.race-cal .plan-week-nav{margin-top:0.8rem}
 /* A real month grid — weekday header, day cells, a phase band per week —
    replacing the old 52-column horizontal scroll strip. Reuses
    .plan-week-nav/.plan-week-btn for month paging rather than inventing a
    second prev/next control, the same pair the Plan view's own week nav
-   already established. A leading 22px column carries the ISO week number,
-   in both the header (its own small "Wk" label, unstyled text) and each
-   week row, so the two grids' 7 date columns stay aligned with each other. */
-.race-cal-weekdays{display:grid;grid-template-columns:22px repeat(7,1fr);gap:4px;margin-top:8px}
+   already established. A dedicated 64px spacer column carries the gap
+   between the week number and Monday explicitly, rather than a shared grid
+   gap — which stays 0 across the 7 day columns, so widening the spacer is
+   a straight trade against their own width, not something layered on top
+   of it. Both the header and each week row share this "22px, 64px, then 7
+   date columns" template so everything stays aligned. */
+.race-cal-weekdays{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;margin-top:12px}
 .race-cal-weekday{text-align:center;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.race-cal-week-row{display:grid;grid-template-columns:22px repeat(7,1fr);gap:4px;margin-top:0}
-.race-cal-weeknum{display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--ink3)}
+.race-cal-week-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;margin-top:0}
+.race-cal-weeknum{display:flex;align-items:center;justify-content:flex-start;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--ink3)}
 .race-cal-day{display:flex;align-items:center;justify-content:center;height:28px}
 .race-cal-day-num{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:11.5px;font-weight:500;color:var(--ink)}
 .race-cal-day.dim .race-cal-day-num{color:var(--ink3);opacity:.5}
@@ -475,14 +482,19 @@ textarea::placeholder{color:var(--ink3)}
    this week's phase directly — setPhaseForWeek() writes an ordinary
    phasePlan block dated this week's Monday, the same model the Phase Plan
    editor and "Change phase" both already write to. */
-/* Same "22px, then 7 date columns" template as the day/weekday rows above,
-   so the label+bar starts under Monday, not under the week number. Top
-   margin stays 0 — the gap to this row's own dates stays as tight as
-   condensing left it; only the gap to the NEXT week's dates below opens up,
-   via the bottom margin. */
-.race-cal-phase-row{display:grid;grid-template-columns:22px repeat(7,1fr);margin:0 0 10px}
-.race-cal-phase-inner{grid-column:2 / -1;display:flex;align-items:center;gap:8px}
-.race-cal-phase{flex:1;height:7px;border-radius:4px}
+/* View mode (the .race-cal-phase-edit button + the bar) are now two
+   independent grid items rather than one flex row, so each can be
+   positioned against its own columns: the button spans the week-number +
+   spacer columns — its left edge lines up with the week number's own —
+   and the bar spans exactly the 7 day columns, Monday through Sunday, no
+   further. Edit mode keeps its own flex-row wrapper (.race-cal-phase-inner,
+   below), unchanged — still starting under Monday, since a select needs
+   the width and was never part of this alignment. Top margin stays 0 — the
+   gap to this row's own dates stays as tight as condensing left it; only
+   the gap to the NEXT week's dates below opens up, via the bottom margin. */
+.race-cal-phase-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);column-gap:8px;align-items:center;margin:0 0 10px}
+.race-cal-phase-inner{grid-column:3 / -1;display:flex;align-items:center;gap:8px}
+.race-cal-phase{flex:1;grid-column:3 / -1;height:7px;border-radius:4px}
 .race-cal-phase.phase-base{background:var(--phase-base)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
@@ -492,14 +504,17 @@ textarea::placeholder{color:var(--ink3)}
    positioning, which doesn't add to layout height. Shrinking the visible
    control while keeping the touch target real (not just visually smaller)
    is the difference between condensing the row and quietly dropping the
-   44px rule every prior pass here has held to. */
-.race-cal-phase-edit{position:relative;flex:none;padding:1px 4px;background:none;border:none;display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
+   44px rule every prior pass here has held to. Word leads, icon trails —
+   flipped from the original build — and the left padding is zero so the
+   text starts flush with the week number's own left edge, not offset from
+   it by the button's own inset. */
+.race-cal-phase-edit{grid-column:1 / 3;position:relative;padding:1px 4px 1px 0;background:none;border:none;display:flex;align-items:center;justify-content:flex-start;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
 .race-cal-phase-edit::before{content:'';position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
 .race-cal-phase-edit:hover{color:var(--blue)}
 .race-cal-phase-edit svg{flex:none;width:13px;height:13px;color:var(--ink3)}
 .race-cal-phase-edit:hover svg{color:var(--blue)}
 .race-cal-phase-select{flex:1;min-height:44px;padding:6px 8px;border-radius:var(--rmd);border:1px solid var(--bd2);background:var(--s1);font-family:var(--fd);font-size:13px;color:var(--ink)}
-.race-cal-legend{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.race-cal-legend{display:flex;flex-direction:column;gap:6px;margin-top:18px}
 .race-cal-legend-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
 .race-cal-legend-label{flex:none;font-family:var(--fd);font-size:11px;font-weight:600;color:var(--ink)}
 .race-cal-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
@@ -1283,13 +1298,96 @@ if(window.caches && caches.keys){
   var plan = loadPlan(); // cached copy; replaced by refreshPlanFromSheet() as soon as the Sheet responds
 
   // ═══════════════════════════════════════════════════════════════
+  // TRAINING PHASE PLAN SYNC — same Sheet, same pattern as races/plan
+  // above: a fourth sheet tab ("Phases", created on demand by Code.gs) is
+  // the cross-device source of truth for phasePlan. Client-generated ids
+  // (newPhaseBlockId(), already used locally), fire-and-forget no-cors
+  // writes, cors reads — same trade-offs as everywhere else in this file.
+  //
+  // phasePlan carries an invariant races/plan never had to: once any block
+  // exists, there must always be at least one (deletePhaseBlock refuses to
+  // remove the last one) — every date needs a phase once the athlete has
+  // planned at all. That makes an *empty* Sheet response ambiguous the
+  // first time this runs on a given device: it could mean "genuinely
+  // nothing planned yet" (a brand-new setup) or "this device already has
+  // real blocks, but nobody has ever pushed them to the Sheet yet" (every
+  // existing user, on their first load after this shipped). Blindly
+  // trusting an empty response the way races/plan do would silently wipe a
+  // working phase plan on the very next page load. refreshPhasePlanFromSheet
+  // below resolves that by pushing the local plan up (once per device — see
+  // hasPushedPhasePlan()) instead of pulling an empty one down, whenever
+  // local has real blocks the Sheet doesn't know about yet.
+  // ═══════════════════════════════════════════════════════════════
+  var PHASES_READ_URL = TRAINING_LOG_WRITE_URL + '?phases=1';
+  var PHASE_SYNCED_KEY = 'triMomentumPhaseSynced_v1';
+  function hasPushedPhasePlan(){
+    if(!storageOk){ return true; }
+    try{ return window.localStorage.getItem(PHASE_SYNCED_KEY) === '1'; } catch(e){ return true; }
+  }
+  // Set as soon as a push is *attempted*, not confirmed — writes here are
+  // fire-and-forget with no way to read a no-cors response back, the same
+  // trade-off submitRaceToSheet/submitPlanToSheet already accept. If the
+  // attempt was lost (offline at that exact moment), the next ordinary edit
+  // (Change phase, the race calendar's per-week edit, ...) still writes its
+  // own block through separately, so the Sheet catches up incrementally even
+  // if this one-time bulk push never landed.
+  function markPhasePlanPushed(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(PHASE_SYNCED_KEY, '1'); } catch(e){}
+  }
+  // `extra` carries whatever the action needs beyond a single item —
+  // {items:[...]} for addBatch/replaceAll, {from,to} for deleteRange.
+  function submitPhaseToSheet(action, item, extra){
+    if(!TRAINING_LOG_WRITE_URL){ return; }
+    var payload = {kind: 'phase', action: action};
+    if(item){ payload.item = item; }
+    if(extra){
+      for(var k in extra){ if(Object.prototype.hasOwnProperty.call(extra, k)){ payload[k] = extra[k]; } }
+    }
+    try{
+      fetch(TRAINING_LOG_WRITE_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify(payload)
+      }).catch(function(){});
+    } catch(err){ /* best-effort — same trade-off as submitPlanToSheet */ }
+  }
+  function parseSheetPhaseBlock(row){
+    return {id: String(row.id || ''), from: row.from || '', phase: row.phase || ''};
+  }
+  var phasePlanFetchInFlight = null;
+  function refreshPhasePlanFromSheet(){
+    if(phasePlanFetchInFlight){ return phasePlanFetchInFlight; }
+    phasePlanFetchInFlight = fetch(PHASES_READ_URL)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(!data || !data.ok || !Array.isArray(data.phases)){ throw new Error('bad response'); }
+        if(!data.phases.length){
+          if(phasePlan.length && !hasPushedPhasePlan()){
+            submitPhaseToSheet('addBatch', null, {items: phasePlan});
+            markPhasePlanPushed();
+          }
+          return false;
+        }
+        phasePlan = data.phases.map(parseSheetPhaseBlock);
+        persistPhasePlan();
+        recomputeCurrentPhase();
+        markPhasePlanPushed();
+        return true;
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ phasePlanFetchInFlight = null; return ok; });
+    return phasePlanFetchInFlight;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // TRAINING PHASE PLAN — dated blocks, each running until the next one
-  // starts, replacing the old single once-ever phase value. Device-local
-  // only (no Sheet tab): the single value it replaces was never synced
-  // either, so this isn't a step down from what shipped before — only each
-  // logged session's own stamped `phase` (see save()) has ever travelled
-  // via the Sheet. Add a Sheet tab later, on the Races/Plan precedent, if
-  // cross-device phase planning is actually needed.
+  // starts, replacing the old single once-ever phase value. Synced via the
+  // Sheet's "Phases" tab (see above) on the Races/Plan precedent — the old
+  // single value it replaces was never synced, but a dated plan an athlete
+  // actually edits across devices needs to be, unlike that one-off value.
+  // Every logged session's own stamped `phase` (see save()) has always
+  // travelled via the Sheet too, independently of this.
   // ═══════════════════════════════════════════════════════════════
   var phasePlan = loadPhasePlan();
   if(!phasePlan){
@@ -1339,8 +1437,14 @@ if(window.caches && caches.keys){
   function upsertPhaseBlockAt(fromISO, v){
     clearPhaseBuildUndo();
     var existing = phasePlan.filter(function(b){ return b.from === fromISO; })[0];
-    if(existing){ existing.phase = v; }
-    else{ phasePlan.push({id: newPhaseBlockId(), from: fromISO, phase: v}); }
+    if(existing){
+      existing.phase = v;
+      submitPhaseToSheet('update', {id: existing.id, from: existing.from, phase: existing.phase});
+    } else {
+      var block = {id: newPhaseBlockId(), from: fromISO, phase: v};
+      phasePlan.push(block);
+      submitPhaseToSheet('add', block);
+    }
     persistPhasePlan();
     recomputeCurrentPhase();
   }
@@ -1351,7 +1455,9 @@ if(window.caches && caches.keys){
   function setPhaseForWeek(mondayISO, v){ upsertPhaseBlockAt(mondayISO, v); }
   function addPhaseBlock(fromISO, v){
     clearPhaseBuildUndo();
-    phasePlan.push({id: newPhaseBlockId(), from: fromISO, phase: v});
+    var block = {id: newPhaseBlockId(), from: fromISO, phase: v};
+    phasePlan.push(block);
+    submitPhaseToSheet('add', block);
     persistPhasePlan();
     recomputeCurrentPhase();
   }
@@ -1361,6 +1467,7 @@ if(window.caches && caches.keys){
     if(!b){ return; }
     if(fields.from !== undefined){ b.from = fields.from; }
     if(fields.phase !== undefined){ b.phase = fields.phase; }
+    submitPhaseToSheet('update', {id: b.id, from: b.from, phase: b.phase});
     persistPhasePlan();
     recomputeCurrentPhase();
   }
@@ -1371,6 +1478,7 @@ if(window.caches && caches.keys){
     if(phasePlan.length <= 1){ return; }
     clearPhaseBuildUndo();
     phasePlan = phasePlan.filter(function(b){ return b.id !== id; });
+    submitPhaseToSheet('delete', {id: id});
     persistPhasePlan();
     recomputeCurrentPhase();
   }
@@ -2883,6 +2991,9 @@ if(window.caches && caches.keys){
     var wn = el('span', 'race-cal-weeknum', String(isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'))));
     wn.title = 'Week ' + isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'));
     row.appendChild(wn);
+    // The spacer column between the week number and Monday — see the
+    // .race-cal-week-row grid-template-columns comment in the CSS.
+    row.appendChild(el('span', null));
     week.days.forEach(function(day){
       var cls = 'race-cal-day';
       if(!day.inMonth){ cls += ' dim'; }
@@ -2898,20 +3009,15 @@ if(window.caches && caches.keys){
   }
   function raceCalPhaseRow(week){
     var row = el('div', 'race-cal-phase-row');
-    // A leading empty cell in the same 22px column the week number sits in
-    // above, so the label/bar that follows starts under Monday rather than
-    // under the week number — the row is a grid with the same
-    // "22px, then 7 date columns" template as the day/weekday rows above it,
-    // and this inner flex container is the one child living in that second
-    // area (grid-column 2/-1).
-    row.appendChild(el('span', null));
-    var inner = el('div', 'race-cal-phase-inner');
     var weekLabel = 'the week of ' + formatWeekdayDate(week.mondayISO);
-    // Label/edit control first, colour bar last — flipped from the initial
-    // build on request, and the bar is flex:1 so it fills the rest of the
-    // inner row's width (the same width as the day grid above) rather than
-    // the fixed 20px stub it started as.
+    var pillClass = PERIOD_PILL_CLASS[week.phase];
+    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
+    bar.setAttribute('aria-hidden', 'true');
     if(raceCalEditWeek === week.mondayISO){
+      // Edit mode keeps the flex-row wrapper — the select needs the width,
+      // and starting under Monday (grid-column 3/-1 on .race-cal-phase-inner)
+      // is unchanged from the original build.
+      var inner = el('div', 'race-cal-phase-inner');
       var select = document.createElement('select');
       select.className = 'race-cal-phase-select';
       select.setAttribute('aria-label', 'Phase for ' + weekLabel);
@@ -2928,24 +3034,26 @@ if(window.caches && caches.keys){
         say('Phase for ' + weekLabel + ' set to ' + PERIOD_LABEL[select.value] + '.');
       });
       inner.appendChild(select);
+      inner.appendChild(bar);
+      row.appendChild(inner);
     } else {
+      // View mode: the button and the bar are direct grid items (see the
+      // .race-cal-phase-edit/.race-cal-phase CSS) so the button can align
+      // with the week number while the bar stays confined to Monday-Sunday.
+      // Word leads, icon trails.
       var editBtn = document.createElement('button');
       editBtn.type = 'button';
       editBtn.className = 'race-cal-phase-edit';
       editBtn.setAttribute('aria-label', 'Edit the phase for ' + weekLabel);
-      editBtn.appendChild(pencilIcon());
       editBtn.appendChild(document.createTextNode(week.phase ? PERIOD_LABEL[week.phase] : 'Unset'));
+      editBtn.appendChild(pencilIcon());
       editBtn.addEventListener('click', function(){
         raceCalEditWeek = week.mondayISO;
         renderRaces();
       });
-      inner.appendChild(editBtn);
+      row.appendChild(editBtn);
+      row.appendChild(bar);
     }
-    var pillClass = PERIOD_PILL_CLASS[week.phase];
-    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
-    bar.setAttribute('aria-hidden', 'true');
-    inner.appendChild(bar);
-    row.appendChild(inner);
     return row;
   }
   // A real month calendar, race weeks and the current training phase
@@ -2980,6 +3088,7 @@ if(window.caches && caches.keys){
 
     var weekdayRow = el('div', 'race-cal-weekdays');
     weekdayRow.appendChild(el('span', 'race-cal-weeknum', 'Wk'));
+    weekdayRow.appendChild(el('span', null));
     MONTH_DAYS.forEach(function(abbr){
       weekdayRow.appendChild(el('span', 'race-cal-weekday', abbr.charAt(0)));
     });
@@ -4151,6 +4260,8 @@ if(window.caches && caches.keys){
     // whole covered span, so this cannot produce two blocks sharing a date
     // — the state that leaves one row inert and unreachable.
     phasePlan = kept.concat(made);
+    submitPhaseToSheet('deleteRange', null, {from: first, to: last});
+    submitPhaseToSheet('addBatch', null, {items: made});
     persistPhasePlan();
     recomputeCurrentPhase();
     return made.length;
@@ -4159,6 +4270,10 @@ if(window.caches && caches.keys){
     if(!phaseBuildUndo){ return; }
     phasePlan = phaseBuildUndo;
     phaseBuildUndo = null;
+    // A full-snapshot restore, not a specific span — 'replaceAll' wipes and
+    // rewrites the whole Phases tab rather than trying to express this as a
+    // deleteRange/addBatch pair against some derived span.
+    submitPhaseToSheet('replaceAll', null, {items: phasePlan});
     persistPhasePlan();
     recomputeCurrentPhase();
   }
@@ -5379,11 +5494,22 @@ if(window.caches && caches.keys){
         if(!els.viewDash.hidden){ renderDashboard(); }
         if(!els.viewTrends.hidden){ renderTrends(); }
       });
+      // Both views show a per-week phase pill (resolvePhaseForDate), which
+      // can change from another device just like the log can.
+      refreshPhasePlanFromSheet().then(function(changed){
+        if(!changed){ return; }
+        if(!els.viewDash.hidden){ renderDashboard(); }
+        if(!els.viewTrends.hidden){ renderTrends(); }
+      });
     }
     if(!els.viewRaces.hidden){
       refreshRacesFromSheet().then(function(changed){
         if(changed && !els.viewRaces.hidden){ renderRaces(); }
         renderSplashCountdown();
+      });
+      // The calendar's phase band and per-week edit both read phasePlan.
+      refreshPhasePlanFromSheet().then(function(changed){
+        if(changed && !els.viewRaces.hidden){ renderRaces(); }
       });
     }
     if(!els.viewPlan.hidden){
@@ -5607,6 +5733,12 @@ if(window.caches && caches.keys){
   // that is exactly the case the Sheet is about to fill in.
   renderSplashToday();
   refreshPlanFromSheet().then(function(){ renderSplashToday(); });
+  // No splash card of its own to repaint, but this still needs to run at
+  // boot regardless of which view is showing — it's what performs the
+  // one-time local-to-Sheet push (see refreshPhasePlanFromSheet's own
+  // comment) and keeps state.periodisation current before Check-in's
+  // no-phase-set gate or any other reader looks at it.
+  refreshPhasePlanFromSheet();
   // An installed PWA (iOS "Add to Home Screen") can resume from a frozen
   // background state instead of a real page load, so a phone left sitting
   // on This week/Month/Races would otherwise never re-check the Sheet after
