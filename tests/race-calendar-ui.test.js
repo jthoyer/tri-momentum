@@ -35,6 +35,8 @@ describe('race calendar — month view', { concurrency: false }, () => {
     page = await ctx.newPage();
     errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
+    // The fixtures are dated around Sep-Oct 2026, so pin "today" inside them.
+    await page.clock.setFixedTime(new Date('2026-09-15T10:00:00'));
     await page.addInitScript(
       ([races, plan]) => {
         localStorage.setItem('triMomentumRaces_v1', JSON.stringify(races));
