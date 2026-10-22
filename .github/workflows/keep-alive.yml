@@ -1,0 +1,44 @@
+# Supabase pauses free projects after 7 days without activity. This sends one
+# request to the project's public API every three days so it never goes quiet.
+# Adapted from the BalanceTRI-app keep-alive workflow.
+#
+# The live app does not use Supabase yet and this project has no tables, so
+# there is no row to read. Any answer from the API gateway counts as traffic,
+# so the job only fails on a network error or a 5xx response.
+#
+# Set the repository variable SUPABASE_KEY (Settings > Secrets and variables >
+# Actions > Variables) to the project's publishable key. It is a public value.
+name: keep-alive
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the Supabase API
+        env:
+          SUPABASE_URL: https://ghfvmsyxfovwaeeuzlzn.supabase.co
+          SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_KEY" ]; then
+            echo "Repository variable SUPABASE_KEY is not set." >&2
+            exit 1
+          fi
+          for path in /rest/v1/ /auth/v1/health; do
+            status=$(curl --silent --show-error --retry 3 --retry-delay 10 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H "apikey: $SUPABASE_KEY" \
+              "$SUPABASE_URL$path")
+            echo "$path -> $status"
+            if [ "$status" -ge 500 ] || [ "$status" -eq 000 ]; then
+              echo "Project did not answer. It may be paused: restore it from the dashboard." >&2
+              exit 1
+            fi
+          done
