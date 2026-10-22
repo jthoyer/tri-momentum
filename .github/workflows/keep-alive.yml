@@ -6,8 +6,8 @@
 # there is no row to read. Any answer from the API gateway counts as traffic,
 # so the job only fails on a network error or a 5xx response.
 #
-# Set the repository variable SUPABASE_KEY (Settings > Secrets and variables >
-# Actions > Variables) to the project's publishable key. It is a public value.
+# Set SUPABASE_KEY as a repository variable or secret (Settings > Secrets and variables >
+# Actions) to the project's publishable key. It is a public value.
 name: keep-alive
 
 on:
@@ -25,10 +25,10 @@ jobs:
       - name: Ping the Supabase API
         env:
           SUPABASE_URL: https://ghfvmsyxfovwaeeuzlzn.supabase.co
-          SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+          SUPABASE_KEY: ${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}
         run: |
           if [ -z "$SUPABASE_KEY" ]; then
-            echo "Repository variable SUPABASE_KEY is not set." >&2
+            echo "SUPABASE_KEY is not set as a repository variable or secret." >&2
             exit 1
           fi
           for path in /rest/v1/ /auth/v1/health; do
