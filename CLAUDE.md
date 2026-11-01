@@ -170,7 +170,9 @@ tri-momentum/
 │   │   └── main.jsx
 │   └── vite.config.js
 ├── backend/                    ← empty scaffold: .env.example + .gitignore only, no server code
-└── supabase/                   ← does not exist yet (no migrations applied, no project schema)
+└── supabase/                   ← database for project ghfvmsyxfovwaeeuzlzn; not read by the live app yet
+    ├── migrations/             ← six additive SQL files (allow-list, session_checkins, races, plan_sessions, phase_blocks, sheet_import); the owner applies them by hand
+    └── tests/                  ← run.sh: throwaway PG16 cluster + assertions for shapes, grants, RLS and behaviour
 ```
 
 ---
@@ -234,12 +236,50 @@ const isPro = profile.subscription_tier === 'paid'
 
 ---
 
-## 🔮 Database schema — target, not yet applied
+## Database schema — partly applied, partly target
 
-No `supabase/migrations/` exist yet and no Supabase project schema has been created. This is the plan for when Phase 2/3 of the multi-user build begins. All tables use Supabase row-level security (RLS). Users can only read and write their own rows.
+Two parts. The **applied** part is written as migration files under `supabase/migrations/` for the Supabase project `ghfvmsyxfovwaeeuzlzn`. No app code reads or writes it yet: `index.html` still syncs through the Google Sheet until the cutover change lands. The **target** part is the rest of the multi-user plan and is not built.
+
+### Applied — `supabase/migrations/` (six files, apply in filename order)
+
+| File | Table | What it holds |
+|---|---|---|
+| `20261101000100_allowed_users.sql` | `allowed_users` | The allow-list: one row per auth user id that may use the data. Every policy below checks it. |
+| `20261101000200_session_checkins.sql` | `session_checkins` | The check-in log (`log` array). |
+| `20261101000300_races.sql` | `races` | The race calendar (`races` array). |
+| `20261101000400_plan_sessions.sql` | `plan_sessions` | The training plan (`plan` array). |
+| `20261101000500_phase_blocks.sql` | `phase_blocks` | The dated phase plan (`phasePlan` array). |
+| `20261101000600_sheet_import.sql` | `sheet_import` | A one-row-per-user marker: "this account's Sheet history has been imported". |
+
+Design rules that hold for all six:
+
+- **Client text ids, composite key.** Data tables have `id text` supplied by the app (the same ids it already generates) and `primary key (user_id, id)`, so an insert-if-absent (`on conflict (user_id, id) do nothing`) is safe to repeat and per-user ids such as phase `'legacy'` cannot collide. `seq bigint generated always as identity` gives the read order, which reproduces the Sheet's append order. This differs from the target schema this section used to show (`uuid default gen_random_uuid()`).
+- **No cascade.** `user_id uuid not null default auth.uid() references auth.users(id)` with no `on delete`. Deleting or recreating the auth user must not silently delete training history.
+- **Client field to column.** `date` is `session_date` / `race_date` / `plan_date`, `loggedAt` (ms) is `logged_at`, `key` is `is_key`, `from` is `from_date`; other fields keep their names. `a3` is the fuelling answer and `b2` is how it felt (see the Check-in data model above). `disc`, `intensity` and `phase` have no allowed-value check, because the Sheet is hand-editable and out-of-list values must round-trip. `races.status` is the one constrained column (`considering` or `locked`).
+- **Row-level security (RLS) is on for every table, with policies `to authenticated` only.** A data-table policy requires both `user_id = (select auth.uid())` and a row for that user in `allowed_users`. `allowed_users` itself is read-only for a user's own row; the owner is added by hand in the SQL editor, and the user id is never committed.
+- **Least-privilege grants.** Supabase gives `anon` and `authenticated` every privilege (including `TRUNCATE`, which RLS does not cover) on new tables and sequences in `public`. Each migration revokes all of it from `PUBLIC`, `anon` and `authenticated`, then grants `authenticated` only:
+
+| Table | select | insert | update | delete |
+|---|---|---|---|---|
+| `allowed_users` | yes | no | no | no |
+| `session_checkins` | yes | yes | no | no |
+| `races` | yes | yes | no | yes |
+| `plan_sessions` | yes | yes | columns `disc, title, intensity, duration, is_key, notes, phase` only | yes |
+| `phase_blocks` | yes | yes | columns `from_date, phase` only | yes |
+| `sheet_import` | yes | yes | no | no |
+
+  `plan_sessions.plan_date` is not updatable: decision 31's "a planned session's date is not editable" is enforced by the grant, not just the UI.
+- **Strava columns are not carried over.** Columns N to T of the session sheet (`ActualMin` and the rest) are not in `session_checkins`; their Supabase shape belongs to the Garmin work.
+- **Tests.** `supabase/tests/run.sh` builds a throwaway PostgreSQL 16 cluster, recreates Supabase's roles, a stub `auth.uid()` and its default privileges, applies the migrations in order and asserts the shapes, grants, policies and behaviour for each role. It needs PostgreSQL 16 binaries; see the header of the script. Run it after any migration change. It is not part of `npm test` or CI.
+
+Nothing has been applied to the live project from this repo yet. The owner applies each file, in order, in the Supabase SQL editor.
+
+### Still target — not applied
+
+No `user_profiles`, subscription or Stripe tables exist. This is the plan for when Phase 2/3 of the multi-user build begins. All tables use Supabase row-level security (RLS); the target pattern is that users can only read and write their own rows.
 
 ```sql
--- 001_initial_schema.sql
+-- 001_initial_schema.sql  (target — not applied)
 
 create table public.user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -255,28 +295,8 @@ create table public.user_profiles (
   updated_at timestamptz not null default now()
 );
 
--- Superseded the original session_logs + week_reflections tables below — the
--- current index.html app's check-in model won out (see "Key product
--- decisions"). Mirrors the shape of the localStorage `log` array in
--- index.html directly, so the eventual Supabase migration is a straight
--- copy of existing data, not a remodel.
-create table public.session_checkins (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  session_date date not null,
-  disc text not null, -- 'swim'|'bike'|'run'|'brick'|'strength'
-  duration integer, -- minutes
-  intensity text,
-  rpe integer,
-  a1 text, -- execution/intent question — drives the intensity-drift signal
-  a2 text,
-  a3 text,
-  b2 text, -- fuelling question — drives the fuelling signal
-  b3 text,
-  note text,
-  phase text, -- 'base'|'build1'|'build2'|'peak' — whatever was current when logged, not resolved from dates
-  logged_at timestamptz not null default now()
-);
+-- session_checkins is no longer part of the target: it is applied (see above), with text ids
+-- and a composite key rather than the uuid default this block used to show.
 
 -- Signals (fuelling, intensity drift, compound-pair detection, severity,
 -- auto-generated headlines) are computed at read time from
@@ -287,17 +307,15 @@ create table public.session_checkins (
 -- Future table — add in a later migration
 -- create table public.garmin_activities ( ... );
 
--- RLS policies (repeat pattern for each table)
+-- RLS policies (target pattern for user_profiles)
 alter table public.user_profiles enable row level security;
 create policy "Users can read own profile"
   on public.user_profiles for select using (auth.uid() = id);
 create policy "Users can update own profile"
   on public.user_profiles for update using (auth.uid() = id);
-
--- (repeat for session_checkins)
 ```
 
-**Resolved:** the target schema adopts the current app's check-in + computed-signals model (`session_checkins`), not the original `session_logs`/`week_reflections` self-report design. `calendar_sessions` and `week_cadences` are dropped entirely — they described proactive day-of-week planning that neither the current app nor the adopted model implements. If calendar-based planning is ever wanted, design it fresh against actual need rather than reviving these.
+**Resolved:** the schema adopts the current app's check-in + computed-signals model (`session_checkins`), not the original `session_logs`/`week_reflections` self-report design. `calendar_sessions` and `week_cadences` are dropped entirely — they described proactive day-of-week planning that neither the current app nor the adopted model implements. If calendar-based planning is ever wanted, design it fresh against actual need rather than reviving these.
 
 ---
 

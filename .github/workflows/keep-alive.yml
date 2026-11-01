@@ -2,9 +2,11 @@
 # request to the project's public API every three days so it never goes quiet.
 # Adapted from the BalanceTRI-app keep-alive workflow.
 #
-# The live app does not use Supabase yet and this project has no tables, so
-# there is no row to read. Any answer from the API gateway counts as traffic,
-# so the job only fails on a network error or a 5xx response.
+# The live app does not use Supabase yet. The project's tables are defined in
+# supabase/migrations/, but the public key has no privilege on any of them (only
+# a signed-in, allow-listed user can read rows), so there is no row for this
+# job to read. Any answer from the API gateway counts as traffic, so the job
+# only fails on a network error or a 5xx response.
 #
 # Set SUPABASE_KEY as a repository variable or secret (Settings > Secrets and variables >
 # Actions) to the project's publishable key. It is a public value.
