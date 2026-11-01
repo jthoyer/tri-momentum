@@ -26,6 +26,10 @@ select t.is('second deletes the owner''s plan_sessions rows -> 0 rows affected',
 select t.is('second deletes the owner''s phase_blocks rows -> 0 rows affected', t.rows($q$delete from public.phase_blocks where id = 'legacy' and user_id = '00000000-0000-4000-8000-000000000001'$q$), 0::bigint);
 select t.is('an unfiltered delete by second removes only second''s own phase row',
   t.rows($q$delete from public.phase_blocks$q$), 1::bigint);
+select t.is('an unfiltered delete by second removes only second''s own plan_sessions row (DELETE policy alone, no WHERE)',
+  t.rows($q$delete from public.plan_sessions$q$), 1::bigint);
+select t.is('an unfiltered delete by second removes only second''s own race',
+  t.rows($q$delete from public.races$q$), 1::bigint);
 
 select t.rls_rejected('second cannot insert a session_checkins row carrying the owner''s user_id',
   $q$insert into public.session_checkins (user_id, id, session_date) values ('00000000-0000-4000-8000-000000000001','evil-1','2026-10-09')$q$);
@@ -86,4 +90,4 @@ select t.denied('allow-listed owner cannot truncate ' || tbl, 'truncate public.'
 from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
 :as_super;
 select t.is('the fixtures were all still there after the truncate attempts',
-  (select count(*) from public.session_checkins) + (select count(*) from public.races), 8::bigint);
+  (select count(*) from public.session_checkins) + (select count(*) from public.races), 7::bigint);

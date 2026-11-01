@@ -29,6 +29,14 @@ select t.rls_rejected('stranger cannot insert with an explicit user_id of their 
 select t.is('stranger updates their own plan_sessions row -> 0 rows', t.rows($q$update public.plan_sessions set title = 'x' where id = 'z-p1'$q$), 0::bigint);
 select t.is('stranger updates their own phase_blocks row -> 0 rows', t.rows($q$update public.phase_blocks set phase = 'x' where id = 'z-ph1'$q$), 0::bigint);
 select t.is('stranger deletes their own race -> 0 rows', t.rows($q$delete from public.races where id = 'z-r1'$q$), 0::bigint);
+select t.is('stranger deletes their own plan_sessions row -> 0 rows', t.rows($q$delete from public.plan_sessions where id = 'z-p1'$q$), 0::bigint);
+select t.is('stranger deletes their own phase_blocks row -> 0 rows', t.rows($q$delete from public.phase_blocks where id = 'z-ph1'$q$), 0::bigint);
+-- A delete with a WHERE on a column also has to pass the SELECT policy, which hides the row on its own.
+-- An unfiltered delete reads no columns, so it is stopped by the DELETE policy alone: this is the check
+-- that fails if a DELETE policy loses its allow-list test.
+select t.is('stranger''s unfiltered delete from races -> 0 rows', t.rows($q$delete from public.races$q$), 0::bigint);
+select t.is('stranger''s unfiltered delete from plan_sessions -> 0 rows', t.rows($q$delete from public.plan_sessions$q$), 0::bigint);
+select t.is('stranger''s unfiltered delete from phase_blocks -> 0 rows', t.rows($q$delete from public.phase_blocks$q$), 0::bigint);
 
 -- The allow-list itself: read-only, own row only, nobody can add themselves.
 select t.is('stranger reads 0 rows of allowed_users', (select count(*) from public.allowed_users), 0::bigint);
@@ -46,6 +54,11 @@ select t.denied('allow-listed owner cannot add someone to allowed_users',
   $q$insert into public.allowed_users (user_id, note) values ('00000000-0000-4000-8000-000000000003','sneaky')$q$);
 select t.denied('allow-listed owner cannot update allowed_users', $q$update public.allowed_users set note = 'x'$q$);
 select t.denied('allow-listed owner cannot delete from allowed_users', $q$delete from public.allowed_users$q$);
+
+:as_super;
+select t.is('stranger''s race, plan and phase rows all still exist after their delete attempts',
+  (select count(*) from public.races where id = 'z-r1') + (select count(*) from public.plan_sessions where id = 'z-p1')
+  + (select count(*) from public.phase_blocks where id = 'z-ph1'), 3::bigint);
 
 -- Positive control: put the stranger on the list and the same rows appear. This proves the
 -- zeros above come from the allow-list and not from a broken fixture or predicate.

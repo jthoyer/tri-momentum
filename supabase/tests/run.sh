@@ -19,6 +19,9 @@
 #   MIGRATIONS_DIR=/path/to/dir   default ../migrations (used to test a mutated copy)
 #   VERBOSE=1                     list every assertion, not just failures
 #
+# To check that these tests can actually fail, run supabase/tests/mutate.sh: it breaks scratch copies of the
+# migrations one edit at a time and reports whether this script goes red.
+#
 # initdb refuses to run as root. When this script is run as root it starts the server as the
 # `postgres` OS user; psql still runs as you.
 #

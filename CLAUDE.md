@@ -240,7 +240,9 @@ const isPro = profile.subscription_tier === 'paid'
 
 Two parts. The **applied** part is written as migration files under `supabase/migrations/` for the Supabase project `ghfvmsyxfovwaeeuzlzn`. No app code reads or writes it yet: `index.html` still syncs through the Google Sheet until the cutover change lands. The **target** part is the rest of the multi-user plan and is not built.
 
-### Applied — `supabase/migrations/` (six files, apply in filename order)
+### Applied by migration, not yet live — `supabase/migrations/` (six files, apply in filename order)
+
+These six files are the schema. The owner runs them by hand in the Supabase SQL editor, so until then the tables do not exist on the project.
 
 | File | Table | What it holds |
 |---|---|---|

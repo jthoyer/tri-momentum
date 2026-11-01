@@ -131,14 +131,16 @@ select t.is('no duplicate policy per table and command',
 
 -- Every policy on a data table carries BOTH the own-row test and the allow-list test, in the
 -- clause that applies to its command (USING for select/delete, WITH CHECK for insert, both for update).
+-- The own-row test is matched as pg_policies prints it, "(user_id = ( SELECT auth.uid()", with the
+-- "(" directly before user_id so that "a.user_id = ..." inside the allow-list subquery cannot satisfy it.
 select t.ok('policy ' || p.policyname || ' tests user_id = auth.uid() and the allow-list',
   case p.cmd
-    when 'SELECT' then p.qual ~ 'user_id = ' and p.qual ~ 'allowed_users'
-    when 'DELETE' then p.qual ~ 'user_id = ' and p.qual ~ 'allowed_users'
-    when 'INSERT' then p.with_check ~ 'user_id = ' and p.with_check ~ 'allowed_users'
-    when 'UPDATE' then p.qual ~ 'user_id = ' and p.qual ~ 'allowed_users' and p.with_check ~ 'user_id = ' and p.with_check ~ 'allowed_users'
+    when 'SELECT' then p.qual ~ '\(user_id = \( SELECT auth\.uid\(\)' and p.qual ~ 'allowed_users'
+    when 'DELETE' then p.qual ~ '\(user_id = \( SELECT auth\.uid\(\)' and p.qual ~ 'allowed_users'
+    when 'INSERT' then p.with_check ~ '\(user_id = \( SELECT auth\.uid\(\)' and p.with_check ~ 'allowed_users'
+    when 'UPDATE' then p.qual ~ '\(user_id = \( SELECT auth\.uid\(\)' and p.qual ~ 'allowed_users' and p.with_check ~ '\(user_id = \( SELECT auth\.uid\(\)' and p.with_check ~ 'allowed_users'
   end)
 from pg_policies p
 where p.schemaname = 'public' and p.tablename <> 'allowed_users';
 select t.ok('allowed_users policy tests only user_id = auth.uid()',
-  (select qual ~ 'user_id = ' and qual !~ 'allowed_users' from pg_policies where tablename = 'allowed_users'));
+  (select qual ~ '\(user_id = \( SELECT auth\.uid\(\)' and qual !~ 'allowed_users' from pg_policies where tablename = 'allowed_users'));
