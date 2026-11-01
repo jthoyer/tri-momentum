@@ -1,5 +1,26 @@
 /**
- * TRI Momentum training-log write endpoint + Strava sync.
+ * TRI Momentum Google Sheet script: read-only backup, import source, Strava sync.
+ *
+ * STATUS (2026-11, CLAUDE.md decision 49): the live app no longer reads or
+ * writes this script. Supabase is the source of truth. What this script is
+ * for now:
+ *   - The Sheet is a READ-ONLY BACKUP of everything up to the cutover.
+ *   - doGet's ?list=1, ?races=1, ?plan=1 and ?phases=1 are the SOURCE of the
+ *     one-off "Import from Sheet" in index.html. Nothing else reads them.
+ *   - The Strava sync (syncStravaActivities and its 2-hourly time trigger)
+ *     KEEPS RUNNING. It only fills columns N-T of rows that already exist, so
+ *     a session logged after the cutover (it lives in Supabase, not here)
+ *     gets no objective data until the Garmin step.
+ *   - After the import, ARCHIVE the web-app deployment (Deploy -> Manage
+ *     deployments -> Archive; supabase/README.md has the step). doPost below
+ *     has no authentication: while it is deployed, anyone who has the /exec
+ *     URL (it is public, in index.html) can write to the Sheet. Archiving does
+ *     not stop the Strava trigger, which is not a deployment. It does end the
+ *     Strava authorisation redirect, which is pinned to the /exec URL, so
+ *     re-authorising later means deploying again.
+ *   - This file changed only in comments for the cutover, so no redeploy was
+ *     needed.
+ * Everything below describes the script as it was built and still behaves.
  *
  * Deploy this bound to the Sheet at:
  *   https://docs.google.com/spreadsheets/d/15I6fMqoJjlakSrmbqgPkgz44eZ955LOUUrlvUh3IRy0/edit
@@ -15,7 +36,7 @@
  *      expected for a personal script; Advanced -> Go to <project> (unsafe)).
  *   7. Copy the Web app URL it gives you (ends in /exec).
  *   8. Paste that URL into TRAINING_LOG_WRITE_URL near the top of
- *      Tri-momentum-log-v9.html's script.
+ *      index.html's script (it is used only by the one-off import now).
  *
  * Verify it's live: open the /exec URL directly in a browser tab — it
  * should show "TRI Momentum training log endpoint is live." (see doGet
@@ -26,7 +47,7 @@
  *   - doPost(e): appends one row per logged session. Creates the header
  *     row automatically on the very first write if the sheet is still
  *     empty, using the exact column order/names the app's read path
- *     (parseTrainingLogRows in Tri-momentum-log-v9.html) expects. A body
+ *     (listSessions_ below; parseSheetSession in index.html) expects. A body
  *     with `kind: 'race'` is routed to the race calendar, and one with
  *     `kind: 'plan'` to the training plan (see below) — everything else is
  *     treated as a session.
@@ -49,7 +70,7 @@
  * Training plan: a third sheet tab named "Plan" (also created on first
  * use), holding the athlete's manually-entered planned sessions, one row
  * per session against a real ISO date. Read via `?plan=1`; written via
- * `{ kind: 'plan', action: 'add'|'addBatch'|'delete'|'deleteWeek', ... }`.
+ * `{ kind: 'plan', action: 'add'|'addBatch'|'update'|'delete'|'deleteWeek', ... }`.
  * Same client-generated-id rule as races. `addBatch` and `deleteWeek`
  * exist because a week is ~10 sessions and firing 10 concurrent no-cors
  * POSTs races on appendRow. See handlePlanPost_ / listPlan_ below.
@@ -178,7 +199,8 @@ function doGet(e) {
 }
 
 // Read path — the Sheet is the cross-device source of truth the app loads
-// from on every visit (see index.html's loadLogFromSheet). Returns every
+// from on every visit (see index.html's refreshLogFromSheet, which now reads
+// Supabase; this read path is the import source). Returns every
 // logged session as JSON, in the same field names doPost accepts, so a
 // round trip through the Sheet is lossless. Column order here must match
 // SHEET_HEADERS positionally (A-M; Week No (A) is derived, not part of the
@@ -251,7 +273,7 @@ function handleSessionPost_(body) {
   ensureHeaders_(sheet);
 
   // Order must match SHEET_HEADERS exactly — this is the one place that
-  // encodes the column layout the read side (parseTrainingLogRows) relies
+  // encodes the column layout the read side (listSessions_) relies
   // on by header name, not position, so a re-order here is harmless to
   // the reader as long as the header row and the values stay in the same
   // order as each other. The trailing blanks are the Strava columns —

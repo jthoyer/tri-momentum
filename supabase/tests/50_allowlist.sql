@@ -28,6 +28,8 @@ select t.rls_rejected('stranger cannot insert with an explicit user_id of their 
 
 select t.is('stranger updates their own plan_sessions row -> 0 rows', t.rows($q$update public.plan_sessions set title = 'x' where id = 'z-p1'$q$), 0::bigint);
 select t.is('stranger updates their own phase_blocks row -> 0 rows', t.rows($q$update public.phase_blocks set phase = 'x' where id = 'z-ph1'$q$), 0::bigint);
+select t.is('stranger''s unfiltered update of phase_blocks -> 0 rows (UPDATE policy alone, no WHERE)',
+  t.rows($q$update public.phase_blocks set phase = 'x'$q$), 0::bigint);
 select t.is('stranger deletes their own race -> 0 rows', t.rows($q$delete from public.races where id = 'z-r1'$q$), 0::bigint);
 select t.is('stranger deletes their own plan_sessions row -> 0 rows', t.rows($q$delete from public.plan_sessions where id = 'z-p1'$q$), 0::bigint);
 select t.is('stranger deletes their own phase_blocks row -> 0 rows', t.rows($q$delete from public.phase_blocks where id = 'z-ph1'$q$), 0::bigint);

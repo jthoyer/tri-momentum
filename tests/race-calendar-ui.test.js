@@ -10,7 +10,7 @@
 const { test, before, after, describe } = require('node:test');
 const assert = require('node:assert');
 const { chromium } = require('playwright');
-const { serveApp, chromiumPath } = require('./lib/app');
+const { serveApp, guardNetwork, chromiumPath } = require('./lib/app');
 
 const RACES = [
   { id: 'r1', name: 'SwimRun North', date: '2026-10-10', status: 'locked', url: '', notes: '' },
@@ -26,12 +26,13 @@ const PLAN = [
 ];
 
 describe('race calendar — month view', { concurrency: false }, () => {
-  let server, browser, ctx, page, errors;
+  let server, browser, ctx, page, errors, guard;
 
   before(async () => {
-    server = await serveApp();
+    server = await serveApp();   // key and Sheet URL both blank: the app runs local-only
     browser = await chromium.launch({ executablePath: chromiumPath() });
     ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    guard = await guardNetwork(ctx);
     page = await ctx.newPage();
     errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
@@ -153,5 +154,9 @@ describe('race calendar — month view', { concurrency: false }, () => {
 
   test('no page errors were raised at any point', async () => {
     assert.deepStrictEqual(errors, []);
+  });
+
+  test('nothing was sent to Supabase or the Sheet (both are blank in this suite)', async () => {
+    assert.deepStrictEqual(guard.blocked, []);
   });
 });

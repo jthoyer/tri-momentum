@@ -5,26 +5,37 @@
 #
 # Works on scratch copies under /tmp only; the migrations and tests in the working tree are never edited.
 # Each mutation: copy migrations (and tests), make ONE edit, confirm the edit changed the file, run the harness,
-# report whether it went red and which assertions failed. Expected survivors: M3 (PUBLIC holds nothing by
-# default, so revoking from it changes nothing) and M14 (user_id has no update grant, so that WITH CHECK
-# condition is unreachable). Any other "exit=0" is a gap in the tests.
+# report whether it went red and which assertions failed.
+#
+# Exit status: 1 if the baseline harness is red (mutation results would mean nothing); 1 if a mutation did not
+# apply, or if any mutation other than M3 survives (exit=0), because that is a gap in the tests; 0 otherwise.
+# The one expected survivor is M3 (PUBLIC holds nothing by default, so revoking from it changes nothing).
+# M14 (drop user_id from plan_sessions_update_own WITH CHECK) is caught, but only by the structural policy-text
+# check in 20_privileges.sql: no behavioural test can reach that condition, because user_id has no UPDATE grant.
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN=$REPO/tests/run.sh
 S=$(mktemp -d /tmp/mut-XXXXXX); trap 'rm -rf "$S"' EXIT
 chmod 755 "$S"
+BAD=0   # set to 1 by a mutation that did not apply, or survived and is not on the expected-survivor list
+EXPECTED_SURVIVORS=" M3 "
 mutate() { # label  file-glob  perl-expression  [tests-dir-mutation: 1]
   local label="$1" file="$2" expr="$3" where="${4:-mig}"
   rm -rf "$S/m" "$S/t"; mkdir -p "$S/m"; cp "$REPO"/migrations/*.sql "$S/m/"; cp -r "$REPO/tests" "$S/t"
   local target; if [ "$where" = mig ]; then target="$S/m/$file"; else target="$S/t/$file"; fi
   cp "$target" "$S/before"; perl -0777 -pi -e "$expr" "$target"
-  if cmp -s "$S/before" "$target"; then echo "MUTATION DID NOT APPLY: $label"; return; fi
+  if cmp -s "$S/before" "$target"; then echo "MUTATION DID NOT APPLY: $label"; BAD=1; return; fi
   out=$(MIGRATIONS_DIR="$S/m" "$S/t/run.sh" 2>&1); rc=$?
+  if [ "$rc" -eq 0 ]; then
+    local id="${label%% *}"
+    case "$EXPECTED_SURVIVORS" in *" $id "*) echo "  (survivor $id is expected)";; *) echo "  SURVIVED: $id is not an expected survivor"; BAD=1;; esac
+  fi
   nfail=$(echo "$out" | sed -n 's/^== TOTAL: .* \([0-9]*\) failed/\1/p')
   echo "[$label] exit=$rc failed_assertions=${nfail:-n/a}"
   echo "$out" | sed -n '/^== failed assertions/,/^== TOTAL/p' | grep '|' | head -${SHOW:-3} | sed 's/^/     /'
   echo "$out" | grep -E '^(FAIL|  contains)' | head -3 | sed 's/^/     /'
 }
-echo "--- baseline"; out=$("$RUN" 2>&1); echo "exit=$? $(echo "$out" | grep TOTAL)"
+echo "--- baseline"; out=$("$RUN" 2>&1); base_rc=$?; echo "exit=$base_rc $(echo "$out" | grep TOTAL)"
+if [ "$base_rc" -ne 0 ]; then echo "baseline harness is red: fix that first, mutation results would mean nothing" >&2; exit 1; fi
 echo "--- revokes (AC3)"
 mutate "M1 races: drop 'anon' from the revoke" 20261101000300_races.sql 's/revoke all on table public.races from public, anon, authenticated;/revoke all on table public.races from public, authenticated;/'
 mutate "M2 races: drop 'authenticated' from the revoke" 20261101000300_races.sql 's/revoke all on table public.races from public, anon, authenticated;/revoke all on table public.races from public, anon;/'
@@ -46,6 +57,8 @@ mutate "M16 sheet_import_insert_own: drop allow-list from WITH CHECK" 2026110100
 mutate "M27 plan_sessions_delete_own: drop the allow-list condition" 20261101000400_plan_sessions.sql 's/(create policy plan_sessions_delete_own.*?using \()\n    user_id = \(select auth.uid\(\)\)\n    and exists[^\n]*\n/$1\n    user_id = (select auth.uid())\n/s'
 mutate "M28 plan_sessions_delete_own: drop the user_id condition" 20261101000400_plan_sessions.sql 's/(create policy plan_sessions_delete_own.*?using \(\n)    user_id = \(select auth.uid\(\)\)\n    and (exists)/$1    $2/s'
 mutate "M29 phase_blocks_delete_own: drop the allow-list condition" 20261101000500_phase_blocks.sql 's/(create policy phase_blocks_delete_own.*?using \()\n    user_id = \(select auth.uid\(\)\)\n    and exists[^\n]*\n/$1\n    user_id = (select auth.uid())\n/s'
+mutate "M30 phase_blocks_update_own: drop the allow-list condition from USING" 20261101000500_phase_blocks.sql 's/(create policy phase_blocks_update_own.*?using \()\n    user_id = \(select auth.uid\(\)\)\n    and exists[^\n]*\n/$1\n    user_id = (select auth.uid())\n/s'
+mutate "M31 phase_blocks_update_own: drop the user_id condition from USING" 20261101000500_phase_blocks.sql 's/(create policy phase_blocks_update_own.*?using \(\n)    user_id = \(select auth.uid\(\)\)\n    and (exists)/$1    $2/s'
 echo "--- grants / immutability (AC7), shape (AC2)"
 mutate "M17 plan_sessions: allow updating plan_date" 20261101000400_plan_sessions.sql 's/grant update \(disc,/grant update (plan_date, disc,/'
 mutate "M18 phase_blocks: allow updating id" 20261101000500_phase_blocks.sql 's/grant update \(from_date, phase\)/grant update (id, from_date, phase)/'
@@ -64,3 +77,6 @@ perl -0777 -pi -e 's/revoke all on table public.races from public, anon, authent
 out=$(MIGRATIONS_DIR="$S/m" "$S/t/run.sh" 2>&1); rc=$?
 echo "[M26 no default privileges AND anon revoke missing] exit=$rc $(echo "$out" | grep TOTAL)"
 echo "$out" | sed -n '/^== failed assertions/,/^== TOTAL/p' | grep '|' | sed 's/^/     /'
+if [ "$rc" -eq 0 ]; then echo "  SURVIVED: M26 is not an expected survivor"; BAD=1; fi
+if [ "$BAD" -ne 0 ]; then echo "RESULT: a mutation survived or did not apply (see above)" >&2; exit 1; fi
+echo "RESULT: every mutation went red, except the expected survivor(s):$EXPECTED_SURVIVORS"

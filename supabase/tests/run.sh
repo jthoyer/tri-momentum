@@ -110,6 +110,20 @@ for f in "${FILES[@]}"; do
 done
 [ "$FAILED" = 0 ] || { echo "== migrations did not apply cleanly; not running the tests"; exit 1; }
 
+# supabase/checks/verify.sql is what the owner runs on the live project after applying the migrations.
+# Run it here too: it must execute without error, and what it prints must say what the owner is told to expect.
+echo "== running supabase/checks/verify.sql (read-only)"
+if psql_run -F '|' -f "$HERE/../checks/verify.sql" >"$TMP/verify.txt" 2>&1; then
+  [ "$(grep -Ec '^[a-z_]+\|t\|' "$TMP/verify.txt")" -ge 6 ] || fail "verify.sql: fewer than six tables report row-level security on"
+  ! grep -Eq '^[a-z_]+\|f\|' "$TMP/verify.txt" || fail "verify.sql: a table reports row-level security off"
+  ! grep -Eq '^[a-z_]+\|[A-Z]+\|t\|' "$TMP/verify.txt" || fail "verify.sql: anon holds a privilege on a table"
+  ! grep -Eq '^(function|view)\|' "$TMP/verify.txt" || fail "verify.sql: a function or view exists in public"
+  grep -q '^plan_sessions|disc$' "$TMP/verify.txt" && ! grep -q '^plan_sessions|plan_date$' "$TMP/verify.txt" \
+    || fail "verify.sql: plan_sessions column-level UPDATE is not disc..phase without plan_date"
+else
+  fail "verify.sql did not run: $(cat "$TMP/verify.txt")"
+fi
+
 # ---------------------------------------------------------------- 5. assertion files
 echo "== running assertions"
 for t in "$HERE"/[0-9][0-9]_*.sql; do

@@ -21,6 +21,8 @@ select t.is('second updates every plan_sessions row it can -> only its own 1',
   t.rows($q$update public.plan_sessions set title = 'mine'$q$), 1::bigint);
 select t.is('second updates the owner''s phase_blocks row -> 0 rows affected',
   t.rows($q$update public.phase_blocks set phase = 'HACKED' where id = 'o-ph1'$q$), 0::bigint);
+select t.is('second''s unfiltered update of phase_blocks changes only their own 1 row (UPDATE policy alone, no WHERE)',
+  t.rows($q$update public.phase_blocks set phase = 'x'$q$), 1::bigint);
 select t.is('second deletes the owner''s race -> 0 rows affected', t.rows($q$delete from public.races where id = 'o-r1'$q$), 0::bigint);
 select t.is('second deletes the owner''s plan_sessions rows -> 0 rows affected', t.rows($q$delete from public.plan_sessions where user_id = '00000000-0000-4000-8000-000000000001'$q$), 0::bigint);
 select t.is('second deletes the owner''s phase_blocks rows -> 0 rows affected', t.rows($q$delete from public.phase_blocks where id = 'legacy' and user_id = '00000000-0000-4000-8000-000000000001'$q$), 0::bigint);
