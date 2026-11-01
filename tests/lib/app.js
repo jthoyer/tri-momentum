@@ -63,34 +63,58 @@ function loadFunctions(names, preamble = '') {
   return new Function(preamble + '\n' + body + '\nreturn {' + exp + '};')();
 }
 
-// Serve the real index.html over http, with only the Apps Script URL blanked so
-// a live Google Sheet fetch can't overwrite a seeded scenario mid-test.
+// Serve the real index.html over http. By default BOTH outside endpoints are
+// blanked: the Sheet URL (so a live Sheet fetch can't overwrite a seeded
+// scenario) and the Supabase publishable key (blank = the app runs local-only
+// and sends nothing to *.supabase.co). A test that exercises the backend opts
+// in with `key` and, for the import, `sheetUrl`, and must then mock those
+// hosts itself — see guardNetwork() below, which aborts anything unmocked.
 // http rather than file:// on purpose: a file:// origin makes localStorage and
 // the service-worker check throw, which buries any real page error in noise.
 //
-// `routes` (optional) maps an exact query string (the part of the request URL
-// after "?", e.g. "phases=1") to a raw response body served as JSON for that
-// request — everything else still gets the app's own html. Since
-// TRAINING_LOG_WRITE_URL is blanked to '', every fetch the app makes resolves
-// relative to the page's own origin, landing here with whatever query string
-// the app itself built (e.g. "?phases=1") preserved — so a test can mock one
-// specific Sheet read without touching how the rest of the page loads.
+// Options:
+//   key        publishable key to put in the page ('' = unconfigured, the default)
+//   sheetUrl   Apps Script URL to put in the page ('' = none, the default)
+//   timeoutMs  replaces SB_TIMEOUT_MS (a hung-request test shouldn't take 15s)
+//   transform  (html) => html, applied last. For discrimination checks only:
+//              breaks the code on a copy served to the browser, never on disk.
+//   routes     maps an exact query string ("phases=1") to a JSON body served for
+//              that request, for tests that fake the page-origin itself.
+//
+// Non-root paths are served from the repo when the file exists (the vendored
+// supabase-js, favicon.png, ...); anything else still gets index.html.
+const MIME = { '.js': 'application/javascript; charset=utf-8', '.png': 'image/png', '.json': 'application/json', '.md': 'text/plain', '.svg': 'image/svg+xml', '.html': 'text/html; charset=utf-8' };
+function setConst(html, name, value) {
+  const re = new RegExp("var " + name + " = '[^']*';");
+  if (!re.test(html)) throw new Error('could not set ' + name + ' — has it been renamed?');
+  return html.replace(re, () => "var " + name + " = '" + String(value).replace(/'/g, "\\'") + "';");
+}
 async function serveApp(opts) {
   opts = opts || {};
-  let html = readIndex().replace(
-    /var TRAINING_LOG_WRITE_URL = '[^']*';/,
-    "var TRAINING_LOG_WRITE_URL = '';"
-  );
-  if (!html.includes("var TRAINING_LOG_WRITE_URL = '';")) {
-    throw new Error('could not blank TRAINING_LOG_WRITE_URL — has it been renamed?');
+  let html = readIndex();
+  html = setConst(html, 'TRAINING_LOG_WRITE_URL', opts.sheetUrl || '');
+  html = setConst(html, 'SUPABASE_PUBLISHABLE_KEY', opts.key || '');
+  if (opts.timeoutMs) {
+    if (!/var SB_TIMEOUT_MS = \d+;/.test(html)) throw new Error('SB_TIMEOUT_MS not found');
+    html = html.replace(/var SB_TIMEOUT_MS = \d+;/, 'var SB_TIMEOUT_MS = ' + opts.timeoutMs + ';');
   }
+  if (opts.transform) html = opts.transform(html);
   const server = http.createServer((req, res) => {
     const qIndex = req.url.indexOf('?');
     const query = qIndex === -1 ? '' : req.url.slice(qIndex + 1);
+    const pathname = decodeURIComponent(qIndex === -1 ? req.url : req.url.slice(0, qIndex));
     if (opts.routes && Object.prototype.hasOwnProperty.call(opts.routes, query)) {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(opts.routes[query]);
       return;
+    }
+    if (pathname !== '/' && pathname !== '/index.html') {
+      const file = path.resolve(ROOT, '.' + pathname);
+      if (file.startsWith(ROOT + path.sep) && fs.existsSync(file) && fs.statSync(file).isFile()) {
+        res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+        res.end(fs.readFileSync(file));
+        return;
+      }
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
@@ -100,6 +124,20 @@ async function serveApp(opts) {
     origin: 'http://127.0.0.1:' + server.address().port + '/',
     close: () => new Promise((resolve) => server.close(resolve)),
   };
+}
+
+// Abort every request to a host the app must not reach unprompted, and record
+// it. Install it FIRST on a context; later page.route() handlers (the Supabase
+// and Sheet mocks) take precedence over it, so only requests nobody mocked end
+// up here. A test then asserts `guard.blocked` is empty.
+const GUARDED_HOSTS = /^https:\/\/([a-z0-9-]+\.supabase\.co|script\.google\.com|script\.googleusercontent\.com)\//;
+async function guardNetwork(ctx) {
+  const blocked = [];
+  await ctx.route(GUARDED_HOSTS, (route) => {
+    blocked.push(route.request().method() + ' ' + route.request().url());
+    return route.abort('blockedbyclient');
+  });
+  return { blocked };
 }
 
 // Resolve Chromium without downloading one. The remote/dev images ship browsers
@@ -118,4 +156,4 @@ function chromiumPath() {
   return fs.existsSync(bin) ? bin : undefined;
 }
 
-module.exports = { ROOT, INDEX, readIndex, inlineScript, extractFunction, extractConst, loadFunctions, serveApp, chromiumPath };
+module.exports = { ROOT, INDEX, readIndex, inlineScript, extractFunction, extractConst, loadFunctions, serveApp, guardNetwork, chromiumPath };
