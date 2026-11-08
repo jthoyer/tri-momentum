@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>TRI-swim-strength</title>
-<meta name="description" content="45-minute resistance band dryland session for swimmers, with progress tracking." />
+<meta name="description" content="Two resistance band dryland sessions for swimmers: a 20-minute pre-swim primer and a 35-minute strength session, with progress tracking." />
 <meta name="theme-color" content="#182542" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -27,71 +27,52 @@
     <button class="text-button" id="resetButton" type="button">Reset session</button>
   </header>
 
+  <div class="session-tabs" role="tablist" aria-label="Choose a session">
+    <button class="session-tab" role="tab" id="tab-primer" data-session="primer" aria-selected="true" aria-controls="sessionPanel" type="button">
+      <span class="session-tab-name">Pre-swim primer</span>
+      <span class="session-tab-meta">20 min</span>
+    </button>
+    <button class="session-tab" role="tab" id="tab-strength" data-session="strength" aria-selected="false" aria-controls="sessionPanel" tabindex="-1" type="button">
+      <span class="session-tab-name">Strength</span>
+      <span class="session-tab-meta">35 min</span>
+    </button>
+  </div>
+
   <div class="completion-banner hidden" id="completionBanner" role="status">
-    <p class="completion-title">Well done! Session complete &#127881;</p>
-    <p class="completion-sub">All 3 phases logged &mdash; that&rsquo;s session #<span id="completionCount">0</span>.</p>
+    <p class="completion-title" id="completionTitle">Well done! Session complete</p>
+    <p class="completion-sub" id="completionSub"></p>
     <button class="primary-button" id="completionResetButton" type="button">Reset &amp; go again</button>
   </div>
 
-  <section class="hero" id="top">
-    <div class="hero-copy">
-      <p class="eyebrow">DRYLAND STRENGTH &middot; INTERMEDIATE SWIMMER</p>
-      <h1>45-minute <em>resistance band</em> session</h1>
-      <p>Improve swimming-specific power, core stability, and muscular endurance.</p>
+  <div id="sessionPanel" role="tabpanel" aria-labelledby="tab-primer">
 
-      <div class="session-meta">
-        <div class="session-meta-item"><span class="meta-label">Structure</span><span>Warm-up (10) &rarr; Main set (30) &rarr; Cool-down (5)</span></div>
-        <div class="session-meta-item"><span class="meta-label">Equipment</span><span>Long resistance band with handles or loop band; anchor point</span></div>
-      </div>
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow" id="heroEyebrow"></p>
+        <h1 id="heroTitle"></h1>
+        <p id="heroSub"></p>
 
-      <div class="progress-block">
-        <div class="progress-top">
-          <span class="progress-count"><span id="progressDone">0</span> / <span id="progressTotal">0</span> exercises logged</span>
-          <span class="progress-pct" id="progressPct">0%</span>
+        <div class="session-meta" id="sessionMeta"></div>
+
+        <div class="progress-block">
+          <div class="progress-top">
+            <span class="progress-count"><span id="progressDone">0</span> / <span id="progressTotal">0</span> sets logged</span>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <p class="sessions-completed" id="sessionsCompletedLabel"></p>
         </div>
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-        <p class="sessions-completed"><span id="sessionsCompleted">0</span> sessions completed all-time</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="phase-card" id="phase1" aria-labelledby="phase1Title">
-    <div class="card-header">
-      <div><p class="eyebrow phase-eyebrow">PHASE 1 &middot; 10 MIN</p><h2 id="phase1Title">Dynamic warm-up</h2></div>
-      <span class="phase-progress" id="phase1Progress">0/4</span>
-    </div>
-    <p class="card-intro">Prepare joints and muscles for pulling and kicking actions.</p>
-    <div class="exercise-list" id="phase1List"></div>
-  </section>
+    <div id="phases"></div>
 
-  <section class="phase-card" id="phase2" aria-labelledby="phase2Title">
-    <div class="card-header">
-      <div><p class="eyebrow phase-eyebrow">PHASE 2 &middot; 30 MIN</p><h2 id="phase2Title">Main strength circuit</h2></div>
-      <span class="phase-progress" id="phase2Progress">0/45</span>
-    </div>
-    <p class="card-intro">Perform exercises in sequence. Rest 1 minute between rounds.</p>
-    <div class="exercise-list" id="phase2List"></div>
-  </section>
+    <section class="info-card" aria-labelledby="remindersTitle">
+      <h2 id="remindersTitle">Rules for this session</h2>
+      <ol class="reminder-list" id="reminderList"></ol>
+    </section>
 
-  <section class="phase-card" id="phase3" aria-labelledby="phase3Title">
-    <div class="card-header">
-      <div><p class="eyebrow phase-eyebrow">PHASE 3 &middot; 5 MIN</p><h2 id="phase3Title">Core finisher &amp; cool-down</h2></div>
-      <span class="phase-progress" id="phase3Progress">0/4</span>
-    </div>
-    <p class="card-intro">Mini-circuit: 30 seconds on, 15 seconds rest between exercises.</p>
-    <div class="exercise-list" id="phase3List"></div>
-  </section>
-
-  <section class="info-card" aria-labelledby="remindersTitle">
-    <h2 id="remindersTitle">Key technique reminders</h2>
-    <ol class="reminder-list">
-      <li><strong>Tension:</strong> Keep constant tension on the band throughout every repetition. Never let it go slack.</li>
-      <li><strong>Core:</strong> Brace your core in every standing exercise to protect your lower back.</li>
-      <li><strong>Breath:</strong> Exhale on the effort phase; inhale on the return.</li>
-      <li><strong>Quality:</strong> Prioritise perfect form over band tension.</li>
-    </ol>
-  </section>
-
+  </div>
 
 </main>
 

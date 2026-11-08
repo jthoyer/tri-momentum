@@ -1,7 +1,7 @@
 {
   "name": "TRI-swim-strength",
   "short_name": "Swim Strength",
-  "description": "45-minute resistance band dryland session for swimmers, with progress tracking.",
+  "description": "Two resistance band dryland sessions for swimmers: a 20-minute pre-swim primer and a 35-minute strength session, with progress tracking.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
