@@ -133,6 +133,7 @@ tri-momentum/
 ├── style-guide.md              ← design system source of truth — colour tokens, type, layout, component patterns
 ├── TRI-Momentum-Design-Guide.html  ← browsable visual rendering of style-guide.md
 ├── index.html                 ← ★ CURRENT LIVE APP (shell) — static, self-contained, deployed as-is via GH Pages
+├── docs/wiki/index.html       ← the project wiki: market research, strategy, service blueprint, screen flow (real screen captures), decision-log summary. One self-contained file. Reflects CLAUDE.md as of 9 Nov 2026 and does not update itself; GitHub Pages serves it at /docs/wiki/
 ├── apps-script/
 │   └── Code.gs                ← Google Apps Script Web App — receives session POSTs, writes to the athlete's Sheet
 ├── TRI-swim-strength mobile app/   ← ★ CORE — Strength tab's Swim sub-tab, rendered via iframe in index.html
