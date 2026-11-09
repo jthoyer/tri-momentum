@@ -1,4 +1,4 @@
-var CACHE_NAME = 'tri-swim-strength-v1';
+var CACHE_NAME = 'tri-swim-strength-v2';
 var APP_SHELL = [
   './',
   './index.html',
