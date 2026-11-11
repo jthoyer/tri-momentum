@@ -298,6 +298,11 @@ textarea::placeholder{color:var(--ink3)}
    Edit button off the right edge at 320px. */
 .dash-plan-line-text{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
 .dash-plan-empty{flex:1;min-width:0;font-size:13.5px;color:var(--ink3)}
+/* Strava minutes against planned minutes (decision 50). A second line under
+   the session summary, in --ink2 (7.12:1 on the page), so the objective
+   number sits with the session it measures without a new colour. */
+.dash-plan-actual{display:block;margin-top:2px;font-size:12.5px;color:var(--ink2)}
+.dash-plan-strava{margin:.5rem 0 .2rem;font-size:13px;line-height:1.5;color:var(--ink)}
 /* Text button, matching .dash-signal-link's weight/size rather than a boxed
    control — this section is a lower-emphasis addition under the signal panel,
    not a second hero. min-height carries the 44px target the row height gives. */
@@ -1168,8 +1173,19 @@ if(window.caches && caches.keys){
       a1: row.a1 || null, a2: row.a2 || null, a3: row.a3 || null,
       rpe: row.rpe === '' || row.rpe == null ? null : parseInt(row.rpe, 10),
       b2: row.b2 || null, b3: row.b3 || null,
-      note: row.note || '', phase: row.phase || null, loggedAt: null
+      note: row.note || '', phase: row.phase || null, loggedAt: null,
+      // Strava's moving time for this row, written by Code.gs's 2-hourly
+      // sync and read back since decision 50. null until Strava matches the
+      // row, and always null on a session saved this visit, since save()
+      // never sets it — the next Sheet refresh fills it in.
+      actualMin: stravaMinutes(row.actualMin)
     };
+  }
+  // A whole number of minutes, or null. Shared by the Sheet parse and every
+  // reader, so a blank, zero or junk cell can never reach a sum as NaN.
+  function stravaMinutes(v){
+    var n = Number(v);
+    return v === '' || v == null || !isFinite(n) || n <= 0 ? null : Math.round(n);
   }
   var sheetFetchInFlight = null;
   // Fetches the full log from the Sheet and replaces the in-memory/cached
@@ -2495,7 +2511,10 @@ if(window.caches && caches.keys){
   // exactly this reason: with two sessions, one button has to guess which,
   // and guessing wrong here silently overwrites the wrong session's fields.
   // Stacked lines keep the day's date label appearing once, as specified.
-  function dashPlanLine(item){
+  // `res` is this session's planDayResults() entry, or undefined. When it was
+  // logged and Strava has matched that log row, a second line sets Strava's
+  // minutes against the plan's. Display only: it never changes the score.
+  function dashPlanLine(item, res){
     var li = el('li', 'dash-plan-line');
     var dot = el('span', 'dash-plan-dot');
     // The existing discipline identity tokens (--swim/--bike/--run/--brick/
@@ -2506,6 +2525,12 @@ if(window.caches && caches.keys){
     dot.setAttribute('aria-hidden', 'true');
     li.appendChild(dot);
     var text = el('span', 'dash-plan-line-text', planSummaryLine(item));
+    var actual = res && res.entry ? stravaMinutes(res.entry.actualMin) : null;
+    if(actual != null){
+      var planned = parseInt(item.duration, 10);
+      text.appendChild(el('span', 'dash-plan-actual',
+        'Strava: ' + actual + ' min' + (isFinite(planned) && planned > 0 ? ' of ' + planned + ' planned' : '')));
+    }
     li.appendChild(text);
     // Kept even though the specified summary is "discipline — title ·
     // duration": a key session is what decision 30 lets force a week's
@@ -2536,7 +2561,14 @@ if(window.caches && caches.keys){
     var items = planItemsFor(dateISO);
     if(items.length){
       lines.setAttribute('aria-label', 'Planned sessions for ' + formatWeekdayDate(dateISO));
-      items.forEach(function(item){ lines.appendChild(dashPlanLine(item)); });
+      // Same matcher Adherence runs, so the Strava line pairs a session with
+      // the log row the signal pairs it with. weekDayFor() builds a fresh day
+      // object per call, which is PLAN_MATCH_CACHE's safety condition.
+      var results = planDayResults(weekDayFor(dateISO)).results;
+      items.forEach(function(item){
+        var res = results.filter(function(r){ return r.item === item; })[0];
+        lines.appendChild(dashPlanLine(item, res));
+      });
     } else {
       // "Nothing planned", not "Rest day" — the splash Today card's "Rest
       // day" asserts something about *today* specifically; in a full 7-day
@@ -2553,6 +2585,40 @@ if(window.caches && caches.keys){
     row.appendChild(lines);
     return row;
   }
+  // The week's first objective check (decision 50): Strava minutes against
+  // planned minutes, summed only over sessions that have both, so the two
+  // totals always cover the same sessions. Returns null when nothing has
+  // synced, so an athlete without Strava sees no change at all.
+  function stravaWeekTally(mondayISO){
+    var t = {actual:0, planned:0, synced:0, unsynced:0};
+    planWeekDates(mondayISO).forEach(function(dateISO){
+      if(!planItemsFor(dateISO).length){ return; }
+      planDayResults(weekDayFor(dateISO)).results.forEach(function(res){
+        // A session logged as "didn't happen" has no activity to sync, so it
+        // is neither synced nor waiting on Strava.
+        if(!res.entry || res.entry.a2 === 'didnt'){ return; }
+        var planned = parseInt(res.item.duration, 10);
+        var actual = stravaMinutes(res.entry.actualMin);
+        if(actual == null){ t.unsynced++; return; }
+        // Synced, but with no planned duration there's nothing to set it
+        // against, so it stays out of both totals.
+        if(!isFinite(planned) || planned <= 0){ return; }
+        t.actual += actual; t.planned += planned; t.synced++;
+      });
+    });
+    return t;
+  }
+  function stravaWeekLine(mondayISO){
+    var t = stravaWeekTally(mondayISO);
+    if(!t.synced){ return null; }
+    var line = 'Strava: ' + t.actual + ' of ' + t.planned + ' planned minutes (' +
+      Math.round(t.actual / t.planned * 100) + '%), across ' + t.synced +
+      ' synced session' + (t.synced === 1 ? '' : 's') + '.';
+    if(t.unsynced){
+      line += ' ' + t.unsynced + ' logged session' + (t.unsynced === 1 ? ' has' : 's have') + ' no Strava data yet.';
+    }
+    return line;
+  }
   function dashPlanWeekSection(mondayISO){
     var wrap = el('section', 'dash-section dash-plan-week');
     wrap.setAttribute('data-label', 'This week’s plan');
@@ -2561,6 +2627,8 @@ if(window.caches && caches.keys){
     // accessible name rather than depending on it being announced.
     wrap.setAttribute('aria-label', 'This week’s plan');
     wrap.appendChild(el('p', 'dash-plan-week-sub', 'Every day this week, planned or not. Edit opens the Plan view on that day.'));
+    var strava = stravaWeekLine(mondayISO);
+    if(strava){ wrap.appendChild(el('p', 'dash-plan-strava', strava)); }
     var ul = el('ul', 'dash-plan-days');
     planWeekDates(mondayISO).forEach(function(dateISO){ ul.appendChild(dashPlanDay(dateISO)); });
     wrap.appendChild(ul);

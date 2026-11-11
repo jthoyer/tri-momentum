@@ -104,11 +104,12 @@
  *   5. Redeploy (Deploy -> Manage deployments -> pencil -> New version) so
  *      the live /exec URL picks up the Strava-aware doGet.
  *
- * What the sync does: every run, it fetches Strava activities since the
- * last successful sync, and for each one looks for a same-day row in the
+ * What the sync does: every run, it fetches Strava activities since a week
+ * before the last successful sync (so a check-in logged after its activity
+ * was first fetched still gets matched), and for each one looks for a same-day row in the
  * sheet whose Disc column matches the activity's mapped discipline (brick
  * rows match a same-day Ride + Run pair) and whose StravaId column is
- * still blank. When it finds one it fills in the objective columns
+ * still blank, using each activity at most once. When it finds one it fills in the objective columns
  * (ActualMin, ActualKm, AvgHR, AvgPaceOrPower, ElevM, SufferScore,
  * StravaId) on that row and leaves everything else — including the
  * subjective columns the check-in flow already wrote — untouched. Rows
@@ -182,15 +183,22 @@ function doGet(e) {
 // logged session as JSON, in the same field names doPost accepts, so a
 // round trip through the Sheet is lossless. Column order here must match
 // SHEET_HEADERS positionally (A-M; Week No (A) is derived, not part of the
-// entry shape the app uses, so it's read but not included in the output —
-// the Strava columns N-T aren't read back either since nothing in the app
-// currently displays them).
+// entry shape the app uses, so it's read but not included in the output).
+//
+// Of the Strava columns N-T, only ActualMin is read back: it's the one the
+// app compares against planned minutes (CLAUDE.md decision 50). It's found
+// by header name, the same way writeMatchToRow_ finds it to write, so the
+// read and the write can't disagree about which column it is. A sheet that
+// never ran the Strava setup has no such header, and every row reads null.
 function listSessions_() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   var lastRow = sheet.getLastRow();
   var sessions = [];
   if (lastRow > 1) {
-    var values = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    var lastCol = Math.max(sheet.getLastColumn(), 13);
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var actualMinCol = headers.indexOf('ActualMin');
+    var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     for (var i = 0; i < values.length; i++) {
       var r = values[i];
       if (!r[1]) { continue; }
@@ -202,13 +210,23 @@ function listSessions_() {
         rpe: r[5] === '' ? null : r[5],
         a1: r[6] || '', a2: r[7] || '', a3: r[8] || '',
         b2: r[9] || '', b3: r[10] || '',
-        note: r[11] || '', phase: r[12] || ''
+        note: r[11] || '', phase: r[12] || '',
+        actualMin: actualMinCol === -1 ? null : actualMinOrNull_(r[actualMinCol])
       });
     }
   }
   return ContentService
     .createTextOutput(JSON.stringify({ ok: true, sessions: sessions }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ActualMin is a whole number of minutes, or blank until Strava has
+// matched the row. Anything else (a stray hand edit) reads as null rather
+// than reaching the app as a string it would have to guess about.
+function actualMinOrNull_(v) {
+  if (v === '' || v == null) { return null; }
+  var n = Number(v);
+  return isFinite(n) && n > 0 ? Math.round(n) : null;
 }
 
 // The When column holds whatever doPost was sent — usually an ISO date
@@ -1010,6 +1028,8 @@ function createStravaSyncTrigger() {
   Logger.log('Strava sync trigger installed — runs every 2 hours.');
 }
 
+var STRAVA_LOOKBACK_SEC = 7 * 24 * 3600;
+
 function syncStravaActivities() {
   var props = PropertiesService.getScriptProperties();
   var lastSync = Number(props.getProperty('STRAVA_LAST_SYNC') || 0);
@@ -1017,7 +1037,13 @@ function syncStravaActivities() {
     lastSync = Math.floor(Date.now() / 1000) - 30 * 24 * 3600; // first run: look back 30 days
   }
 
-  var activities = fetchStravaActivities_(lastSync);
+  // Fetch from a week before the last sync, not from the last sync itself.
+  // Without the overlap, an activity fetched before its check-in existed was
+  // never fetched again: swim at 7am, sync at 9am, check in at 6pm, and the
+  // row stayed blank for good. The StravaId guard below stops a matched row
+  // being overwritten, so re-fetching is safe. Seven days covers the
+  // "Earlier this week" carousel (decision 36), the usual late check-in.
+  var activities = fetchStravaActivities_(lastSync - STRAVA_LOOKBACK_SEC);
   if (!activities.length) return;
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
@@ -1048,6 +1074,17 @@ function syncStravaActivities() {
     byDate[dateISO].push(a);
   });
 
+  // Activities already attached to a row, so one activity can't fill two.
+  // Seeded from the sheet: with the look-back above, the same activities come
+  // back on every run, and an id matched on an earlier run must stay used.
+  var usedIds = {};
+  for (var u = 0; u < values.length; u++) {
+    String(values[u][col['StravaId']] || '').split('+').forEach(function (id) {
+      if (id) usedIds[id] = true;
+    });
+  }
+  function unused(a) { return !usedIds[String(a.id)]; }
+
   Object.keys(byDate).forEach(function (dateISO) {
     var dayActivities = byDate[dateISO];
 
@@ -1059,15 +1096,18 @@ function syncStravaActivities() {
       var rowDisc = row[col['Disc']];
       var match = null;
 
+      var used = [];
       if (rowDisc === 'brick') {
-        var ride = dayActivities.filter(function (a) { return STRAVA_TYPE_TO_DISC[a.type] === 'bike'; })[0];
-        var run = dayActivities.filter(function (a) { return STRAVA_TYPE_TO_DISC[a.type] === 'run'; })[0];
-        if (ride && run) match = combineBrickActivities_(ride, run);
+        var ride = dayActivities.filter(function (a) { return unused(a) && STRAVA_TYPE_TO_DISC[a.type] === 'bike'; })[0];
+        var run = dayActivities.filter(function (a) { return unused(a) && STRAVA_TYPE_TO_DISC[a.type] === 'run'; })[0];
+        if (ride && run) { match = combineBrickActivities_(ride, run); used = [ride, run]; }
       } else {
-        match = dayActivities.filter(function (a) { return STRAVA_TYPE_TO_DISC[a.type] === rowDisc; })[0];
+        match = dayActivities.filter(function (a) { return unused(a) && STRAVA_TYPE_TO_DISC[a.type] === rowDisc; })[0];
+        if (match) used = [match];
       }
 
       if (!match) continue;
+      used.forEach(function (a) { usedIds[String(a.id)] = true; });
       writeMatchToRow_(sheet, r + 2, col, match);
     }
   });
