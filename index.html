@@ -5668,16 +5668,6 @@ if(window.caches && caches.keys){
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
   }
-  // This week / Month / Races all reflect state that can change on another
-  // device, so pull the current source of truth every time the relevant
-  // view is opened, then silently redraw in place if it changed anything
-  // (no scroll/focus jump — the user is already looking at this view).
-  // Also called on visibilitychange (see Init below): an installed PWA can
-  // be resumed from a frozen background state on iOS rather than doing a
-  // fresh page load, so neither the tab-click handler nor the app-boot
-  // fetch fires — without this, a phone left sitting on Races (or This
-  // week/Month) would keep showing whatever was cached from before another
-  // device added or removed something.
   // Redraws whatever is showing for a new day, without waiting for a Sheet
   // change. Held (and retried on the next resume) where a redraw would destroy
   // work in progress: an open Month phase select, an open plan form, a race
@@ -5700,6 +5690,16 @@ if(window.caches && caches.keys){
     if(!els.viewRaces.hidden && !raceFormOpen){ renderRaces(); }
     if(!els.viewPlan.hidden && !planFormOpenFor && !planCopyOpen){ renderPlan(); }
   }
+  // This week / Month / Races all reflect state that can change on another
+  // device, so pull the current source of truth every time the relevant
+  // view is opened, then silently redraw in place if it changed anything
+  // (no scroll/focus jump — the user is already looking at this view).
+  // Also called on visibilitychange (see Init below): an installed PWA can
+  // be resumed from a frozen background state on iOS rather than doing a
+  // fresh page load, so neither the tab-click handler nor the app-boot
+  // fetch fires — without this, a phone left sitting on Races (or This
+  // week/Month) would keep showing whatever was cached from before another
+  // device added or removed something.
   function refreshVisibleViewFromSheet(dayRolled){
     if(dayRolled){ redrawForNewDay(); }
     // Calendar reads all four synced tables — the log (what is logged), the
