@@ -143,80 +143,6 @@ textarea::placeholder{color:var(--ink3)}
 .flow-foot .btn-primary:hover{background:#0022CC}
 .flow-foot .btn-primary::after{content:"\2192";margin-left:8px;font-weight:600;display:inline-block}
 
-/* ── Splash — shown on load until a nav tap dismisses it; no auto-advance ── */
-.splash{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--blue)}
-.splash[hidden]{display:none}
-.splash-logo{width:192px;height:192px;border-radius:var(--rxl)}
-.splash-headline{margin-top:12px;max-width:300px;font-family:var(--fd);font-size:23px;font-weight:600;letter-spacing:-.3px;line-height:1.25;color:#fff}
-.splash-headline:focus,.splash-headline:focus-visible{outline:none}
-/* width:100% (capped at 300px) on both cards, not shrink-to-fit — the splash
-   is a centred column, so two content-sized cards stack at two different
-   widths and read as a mistake. */
-.splash-countdown{margin-top:56px;padding:14px 18px;width:100%;max-width:300px;box-sizing:border-box;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
-.splash-countdown[hidden]{display:none}
-/* .82 alpha, not .7/.75 — white at those alphas over the translucent card
-   measures 3.97:1 and 4.35:1 against the card's own composited background,
-   both under the 4.5:1 AA floor style-guide.md sets for normal text. .82
-   measures 4.93:1. Applies to the new Today card's labels as well, so the
-   two splash cards stay visually identical. */
-.splash-countdown-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
-.splash-countdown-race{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
-.splash-countdown-time{margin-top:2px;font-family:var(--fd);font-size:22px;font-weight:600;letter-spacing:-.3px;color:#fff}
-.splash-countdown-time .u{font-size:14px;font-weight:500;color:rgba(255,255,255,.82)}
-
-/* Splash "Today" card — sibling of the race countdown, same translucent-on-
-   --blue treatment. Unlike the countdown (which stays in the DOM behind
-   [hidden]), renderSplashToday() builds and removes this node outright, so
-   "no plan anywhere in this week" leaves nothing behind at all. */
-.splash-today{margin-top:14px;padding:14px 18px;width:100%;max-width:300px;box-sizing:border-box;border-radius:var(--rlg);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
-.splash-countdown[hidden] + .splash-today{margin-top:56px}
-.splash-today-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
-.splash-today-list{list-style:none;margin:0;padding:0}
-.splash-today-item + .splash-today-item{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.22)}
-.splash-today-btn{display:block;width:100%;min-height:44px;padding:2px 0;background:none;border:none;text-align:center;cursor:pointer;font:inherit}
-/* The global focus ring is --blue, which is also the splash background — it
-   would be invisible here. These are the only focusable controls on the
-   splash, so they need a white ring (6.65:1 against the card) to satisfy
-   WCAG 2.4.7 / 1.4.11. */
-.splash-today-btn:focus,.splash-today-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.splash-today-name{display:block;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35;overflow-wrap:anywhere}
-.splash-today-meta{display:block;margin-top:2px;font-family:var(--fd);font-size:13px;font-weight:500;color:rgba(255,255,255,.82);overflow-wrap:anywhere}
-.splash-today-rest{margin-top:4px;font-family:var(--fd);font-size:15px;font-weight:600;color:#fff;line-height:1.35}
-/* Already logged: a static record, not an offer. Rendered as a <div> so there
-   is no cursor, no focus ring and nothing to activate — see splashTodayRow().
-   No new colour token: rgba(255,255,255,.82) is the value the card's own
-   eyebrow and meta line already use, measured at 4.93:1 against this card's
-   composited background in decision 29. */
-.splash-today-btn.is-logged{cursor:default}
-.splash-today-btn.is-logged .splash-today-name{color:rgba(255,255,255,.82);font-weight:500}
-.splash-today-logged{display:block;margin-top:4px;font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.82)}
-
-/* "Earlier this week" — a day-at-a-time carousel over still-open sessions
-   from earlier days in the current week, appended below Today inside the
-   same card. One day showing at once (not a flat list) because a day can
-   hold more than one still-open session — see splashPrevDays(). Reuses
-   .splash-today-list/-item/-btn/-name/-meta wholesale for each day's rows
-   (same tap flow, same focus ring, same verified contrast). */
-.splash-prev{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.22)}
-/* Today's own section is skipped outright when the current week has no
-   plan at all yet (see renderSplashToday()) — a lingering miss from last
-   week can still justify the card, so this can end up the card's only
-   child. Without this it'd carry a divider and top gap with nothing above
-   it to divide from. */
-.splash-prev:first-child{margin-top:0;padding-top:0;border-top:none}
-.splash-prev-nav{margin-top:2px;display:flex;align-items:center;justify-content:center;gap:10px}
-.splash-prev-nav-btn{flex:none;width:44px;height:44px;padding:0;border-radius:50%;background:rgba(255,255,255,.14);border:none;font-family:var(--fd);font-size:19px;font-weight:600;line-height:1;color:#fff;cursor:pointer}
-.splash-prev-nav-btn:focus,.splash-prev-nav-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
-/* Dimmed, not removed: the day-before-today end and the Monday end both
-   need to read as "nowhere further to go" without the row of controls
-   jumping around as you page. */
-.splash-prev-nav-btn.is-disabled{opacity:.35;cursor:default}
-.splash-prev-day-label{min-width:76px;font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.82)}
-.splash-prev-list{margin-top:10px}
-.splash-prev-dots{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px}
-.splash-prev-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)}
-.splash-prev-dot.active{width:14px;border-radius:3px;background:#fff}
-
 /* Planned-session cards at the top of the check-in flow's first page. A
    shortcut into the same form — every value they set stays freely editable,
    and none of them is ever a1 (see CLAUDE.md decision 29). */
@@ -232,30 +158,6 @@ textarea::placeholder{color:var(--ink3)}
 .flow-plan-meta{display:block;margin-top:4px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
 .flow-plan-notes{display:block;margin-top:8px;font-family:var(--fb);font-size:13.5px;color:var(--ink2);line-height:1.5;overflow-wrap:anywhere}
 .flow-plan-cta{display:block;margin-top:10px;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue)}
-/* An already-logged planned session. Rendered as a static div rather than a
-   disabled button (see flowPlanCard), so it deliberately has no hover, no
-   pointer and no lift — it is a record, not an offer. Muted fill and no
-   shadow keep it visibly behind the sessions still to log. */
-.flow-plan-card.is-logged{background:var(--s3);border-color:var(--bd);box-shadow:none;cursor:default}
-.flow-plan-card.is-logged .flow-plan-title{color:var(--ink2)}
-.flow-plan-logged{display:block;margin-top:10px;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--done)}
-/* Check-in landing (state.mode 'plan'). The cards are the same component as
-   the in-flow hint list; on the landing they carry more weight (blue border,
-   larger gap) because here they are the primary action rather than a shortcut
-   sitting above the real question. */
-.flow-landing-list{gap:12px;margin-top:1.4rem}
-.flow-landing-list .flow-plan-card{padding:14px 16px}
-/* :not(.is-logged) on both — an already-logged session must not pick up the
-   landing list's primary-action emphasis or its hover, or it would read as
-   just as tappable as the ones still to log, which is the whole defect. */
-.flow-landing-list .flow-plan-card:not(.is-logged){border-color:var(--blue-m)}
-.flow-landing-list .flow-plan-card:not(.is-logged):hover{border-color:var(--blue);background:var(--blue-l)}
-/* Secondary by construction: a full-width text button with no fill, well
-   clear of the cards, so "log something else" never competes with the
-   planned session it sits under. */
-.flow-landing-other{display:block;width:100%;min-height:44px;margin-top:2rem;padding:12px 14px;background:none;border:none;font-family:var(--fd);font-size:14px;font-weight:600;color:var(--blue);cursor:pointer;text-align:center}
-.flow-landing-other:hover{color:var(--blue-m);text-decoration:underline}
-
 /* ── One-time training phase screen ── */
 .period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;justify-content:center}
 .period[hidden]{display:none}
@@ -479,6 +381,9 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-day{display:flex;align-items:center;justify-content:center;height:28px}
 .race-cal-day-num{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:11.5px;font-weight:500;color:var(--ink)}
 .race-cal-day.dim .race-cal-day-num{color:var(--ink3);opacity:.5}
+/* A race day in an adjacent month is information, not filler: don't fade it
+   (a faded fill drops its white number below 4.5:1). */
+.race-cal-day.dim.locked .race-cal-day-num,.race-cal-day.dim.considering .race-cal-day-num{color:#fff;opacity:1}
 .race-cal-day.today .race-cal-day-num{box-shadow:inset 0 0 0 2px var(--blue);font-weight:600;color:var(--blue)}
 .race-cal-day.locked .race-cal-day-num{background:var(--done);color:#fff;font-weight:600}
 .race-cal-day.considering .race-cal-day-num{background:var(--phase-build);color:#fff;font-weight:600}
@@ -772,17 +677,6 @@ fieldset.plan-field{border:0;min-width:0}
 <body>
 <div id="app">
 
-  <!-- ══════════ SPLASH — dismissed by tapping any nav tab, never auto-advances ══════════ -->
-  <section class="splash" id="view-splash" aria-labelledby="splash-h">
-    <img class="splash-logo" src="favicon.png" alt="TRI Momentum" width="192" height="192">
-    <h1 class="splash-headline" id="splash-h" tabindex="-1">Helping you prepare for your next race</h1>
-    <div class="splash-countdown" id="splash-countdown" hidden>
-      <p class="splash-countdown-eyebrow">Next race</p>
-      <p class="splash-countdown-race" id="splash-countdown-race"></p>
-      <p class="splash-countdown-time" id="splash-countdown-time"></p>
-    </div>
-  </section>
-
   <!-- ══════════ TRAINING PHASE — asked once, ever ══════════ -->
   <section class="period" id="view-period" hidden aria-labelledby="period-h">
     <p class="eyebrow">TRI Momentum</p>
@@ -803,7 +697,7 @@ fieldset.plan-field{border:0;min-width:0}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7v10"></path><path d="M4 9v6"></path><path d="M17.5 7v10"></path><path d="M20 9v6"></path><path d="M6.5 12h11"></path></svg>
       <span>Strength</span>
     </button>
-    <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-flow">
+    <button type="button" class="view-tab" id="tab-flow" role="tab" aria-selected="true" aria-controls="view-calendar view-flow">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C6.06294 1.25 1.25 6.06294 1.25 12C1.25 17.9371 6.06294 22.75 12 22.75C17.9371 22.75 22.75 17.9371 22.75 12C22.75 6.06294 17.9371 1.25 12 1.25ZM2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12Z" fill="currentColor"></path></svg>
       <span>Check-in</span>
     </button>
@@ -818,6 +712,11 @@ fieldset.plan-field{border:0;min-width:0}
   </div>
 
   <div id="app-main" hidden>
+
+  <!-- Live region for say(). Lives here, not inside the check-in flow: that
+       whole subtree is display:none whenever Calendar, Review or any other
+       view is showing, and a hidden live region announces nothing. -->
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
 
   <!-- ══════════ CALENDAR — the start screen, and the first screen of Check-in ══════════ -->
   <div class="dash cal" id="view-calendar" role="tabpanel" aria-labelledby="tab-flow" hidden></div>
@@ -842,7 +741,6 @@ fieldset.plan-field{border:0;min-width:0}
       <button type="button" class="btn btn-ghost" id="btn-back">Back</button>
       <button type="button" class="btn btn-primary" id="btn-next">Next</button>
     </div>
-    <p class="visually-hidden" aria-live="polite" id="live"></p>
   </section>
 
   </div>
@@ -1689,9 +1587,9 @@ if(window.caches && caches.keys){
   // planDayResults() correctly; without it, a date outside the current
   // week falls back to "everything's still open" with no reference to the
   // log at all, which is exactly the untested-against-the-log gap
-  // decisions 32(b)/34 fixed on the splash Today card and Check-in
-  // landing — needed here too once splashPrevDays() started reaching one
-  // day into the previous week to always include yesterday.
+  // decisions 32(b)/34 fixed on the old splash Today card and Check-in
+  // landing — needed by the Calendar for any day it shows, including the
+  // Sunday before a new week (the "Still to log" row).
   function weekDayFor(dateISO){
     var monday = mondayOf(new Date(dateISO + 'T00:00:00'));
     return buildWeek(monday).filter(function(d){ return d.date === dateISO; })[0];
@@ -1750,7 +1648,7 @@ if(window.caches && caches.keys){
   var state = {
     ans: {date: todayISO()},
     step: 0,
-    mode: 'ask',       // 'ask' | 'plan' | 'review' | 'saved'
+    mode: 'ask',       // 'ask' | 'review' | 'saved'
     note: '',
     periodisation: resolvePhaseForDate(todayISO()), // today's phase, resolved from phasePlan — see recomputeCurrentPhase()
     monthSignal: 'intensity',
@@ -1762,11 +1660,6 @@ if(window.caches && caches.keys){
     warmupLogged: {}
   };
   var phaseReturnView = 'flow';
-  // Whether returning from the phase picker should run the Check-in landing
-  // decision. True only when the picker was a gate on the way *into* Check-in;
-  // the in-flow "Change phase" link sets it false so it still lands back on
-  // the question the athlete was on (decision 19).
-  var phaseReturnWantsLanding = false;
 
   function isLong(v){ return v !== null && v !== undefined && parseInt(v,10) > 45; }
   function asked(q){ return !q.onlyLong || isLong(state.ans.duration); }
@@ -2748,7 +2641,6 @@ if(window.caches && caches.keys){
     submitRaceToSheet('add', race);
     raceFormOpen = false;
     renderRaces();
-    renderSplashCountdown();
     say('Race added: ' + race.name + '.');
   }
   function deleteRace(id){
@@ -2757,7 +2649,6 @@ if(window.caches && caches.keys){
     persistRaces();
     submitRaceToSheet('delete', {id: id});
     renderRaces();
-    renderSplashCountdown();
     if(race){ say('Removed ' + race.name + '.'); }
   }
   function raceField(labelText, subText, inputEl){
@@ -3284,6 +3175,7 @@ if(window.caches && caches.keys){
     calYear = now.getFullYear();
     calMonthIdx = now.getMonth();
     calEditWeek = null;
+    calPending = null;
   }
 
   // One mapping from a planDayResults() result to the grid's segment class,
@@ -3906,6 +3798,8 @@ if(window.caches && caches.keys){
     root.appendChild(h);
     var strip = calRaceStrip();
     if(strip){ root.appendChild(strip); }
+    var resume = calResumeBar();
+    if(resume){ root.appendChild(resume); }
     root.appendChild(calViewSwitch());
     root.appendChild(calMode === 'month' ? calMonthPanel() : calWeekPanel());
   }
@@ -3916,262 +3810,101 @@ if(window.caches && caches.keys){
     planBackTo = 'calendar';
     openPlanDayForm(dateISO, item || null);
   }
-  // Interim wiring: stage-3 replaces this with the resume-bar / phase-gate
-  // request path.
-  function calRequestCheckIn(action){
-    if(action.item){ startCheckInFromPlan(action.item); return; }
-    state.ans = {date: action.date}; state.note = ''; state.step = 0; state.mode = 'ask';
+  // A check-in is "in progress" when the flow holds answers (or a chosen
+  // date) and is asking or reviewing. flowIsPristine() is false for 'saved'
+  // too, so that mode is excluded explicitly: a saved check-in is finished,
+  // not something to resume.
+  function calCheckInInProgress(){
+    return (state.mode === 'ask' || state.mode === 'review') && !flowIsPristine();
+  }
+  // What is known about the half-finished check-in, in one line: the session
+  // (discipline and duration, if answered), the date when it isn't today, and
+  // where in the flow it stopped. The flow's own counter and announcements
+  // count *steps* (pages of questions), so this says "step", not "question".
+  function calResumeLine(){
+    var a = state.ans, bits = [];
+    var what = [];
+    if(a.disc){ what.push(DISC_LABEL[a.disc] || a.disc); }
+    if(a.duration){ what.push((optionFor(QUESTIONS_BY_KEY.duration, a.duration) || {}).label || a.duration + ' min'); }
+    if(what.length){ bits.push(what.join(' · ')); }
+    if(a.date && a.date !== todayISO()){ bits.push(formatWeekdayDate(a.date)); }
+    if(state.mode === 'review'){
+      bits.push('ready to review');
+    } else {
+      var total = steps().length;
+      bits.push('step ' + (Math.min(state.step, total - 1) + 1) + ' of ' + total);
+    }
+    return bits.join(' · ');
+  }
+  // Shows the flow exactly where it was. Nothing in `state` changes: render()
+  // rebuilds the same step from state.ans, and the note lives in state.note.
+  function resumeCheckIn(){
+    calPending = null;
     showView('flow');
     render();
     focusHeading();
+    say('Resuming your check-in.');
   }
-
-  function renderSplashCountdown(){
-    var next = nextRace();
-    if(!next){ els.splashCountdown.hidden = true; return; }
-    els.splashCountdownRace.textContent = next.name;
-    var days = daysUntil(next.date);
-    els.splashCountdownTime.textContent = raceCountdownLabel(days) + (days >= 7 ? ' to go' : '');
-    els.splashCountdown.hidden = false;
-  }
-
-  // Splash "Today" card — sibling of the countdown above. Today's own state
-  // is one of three:
-  //
-  //   sessions planned today   → one tappable line per session
-  //   week has a plan, today doesn't → "Rest day" (a real, useful answer —
-  //                              a planned rest is not the same as no plan)
-  //   week has no plan at all  → this section is skipped entirely (not even
-  //                              the "Today" eyebrow), though the card
-  //                              itself can still exist for the section below
-  //
-  // A fourth, independent section — "Earlier this week" — appends below
-  // whichever of those three renders: a day-at-a-time carousel over any
-  // still-open (not yet logged) sessions from earlier days, each tappable
-  // into the same check-in flow a today row uses (see startCheckInFromPlan,
-  // splashPrevDays). It is independent of Today's own state on purpose: a
-  // rest day today says nothing about whether Monday's session ever got
-  // logged, so the two must be able to appear together — and it reaches one
-  // day further back than "the current week" whenever today is the start of
-  // a new one, so it can still show yesterday even when Today's own section
-  // has nothing to say because the new week has no plan yet.
-  //
-  // The card itself disappears entirely — not the countdown's [hidden]
-  // toggle — only when *neither* section has anything: no plan anywhere in
-  // the current week AND no lingering open session from yesterday. An
-  // athlete who has never entered a plan should find no trace of the
-  // feature on the splash, not an empty shell. Rebuilt from scratch on
-  // every call, so a Sheet refresh landing while the splash is still up
-  // repaints it correctly without any diffing.
-  //
-  // Which day the carousel is showing is module state, not derived from the
-  // DOM — the same reason planFormOpenFor/raceFormOpen are: a rebuild (every
-  // Sheet refresh, every prev/next tap) must not silently snap the carousel
-  // back to its first day. Clamped in splashPrevCarousel() against whatever
-  // the current list of missed days actually is, since that list can shrink
-  // (a session gets logged) or grow between renders.
-  var splashPrevDayIndex = 0;
-  function renderSplashToday(){
-    var existing = document.getElementById('splash-today');
-    if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
-
-    var weekItems = planItemsInWeek(isoDate(mondayOf(new Date())));
-    // Still-open sessions from earlier days, grouped by day — see
-    // splashPrevDays(). Computed before the early-return below (unlike
-    // weekItems, which only speaks for the current Mon–Sun week) because on
-    // the very first day of a new week, yesterday belongs to the *previous*
-    // week: splashPrevDays() can find something to show even when the
-    // current week has nothing planned yet, and the card has to render for
-    // that case too.
-    var prevDays = splashPrevDays();
-    if(!weekItems.length && !prevDays.length){ return; }
-    // Same split the Check-in landing uses, from the same source — see
-    // todayPlanSplit(), which defers to planDayResults(), the matcher the
-    // Adherence signal itself runs on. Deliberately not a second rule here:
-    // this card had the identical defect the landing screen was fixed for,
-    // and two independent "has it been logged?" tests could disagree.
-    // open.length + logged.length is exactly planItemsFor(today).length, so
-    // the card's three existing states keep their own trigger conditions
-    // untouched — "Rest day" is still "the week has a plan but today has
-    // nothing in it", never "today is planned and already done".
-    var split = todayPlanSplit();
-    var open = split.open, logged = split.logged;
-
-    var card = el('div', 'splash-today');
-    card.id = 'splash-today';
-
-    // Today's own section only renders when the current week actually has a
-    // plan (weekItems.length) — a lingering miss from last week can justify
-    // the card existing at all (the guard above), but "Rest day" specifically
-    // asserts "the week has a plan and today isn't in it" (decision 29), and
-    // that would be a lie about a week with nothing planned in it yet.
-    if(weekItems.length){
-      card.appendChild(el('p', 'splash-today-eyebrow', 'Today'));
-      if(!open.length && !logged.length){
-        card.appendChild(el('p', 'splash-today-rest', 'Rest day'));
-      } else {
-        var list = el('ul', 'splash-today-list');
-        list.setAttribute('aria-label', 'Planned sessions for today');
-        // Still to log first, already logged after — the same order the
-        // landing screen uses. Unlike the landing, an all-logged day still
-        // renders the card rather than disappearing: this is an
-        // informational surface as well as an action prompt (decision 29
-        // already treats "Rest day" as an answer worth showing), so it
-        // keeps telling the athlete what today was.
-        open.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
-        logged.forEach(function(item){ list.appendChild(splashTodayRow(item, true)); });
-        card.appendChild(list);
-      }
+  // The check-in the athlete tapped while another was in progress, held while
+  // the inline "Resume" / "Discard and start this one" choice is showing.
+  // Module state, not DOM, so a background refresh that redraws the Calendar
+  // does not lose the question.
+  var calPending = null;
+  function calRequestCheckIn(action){
+    if(calCheckInInProgress()){
+      calPending = action;
+      renderCalendar();
+      var go = els.viewCalendar.querySelector('.cal-resume-go');
+      if(go){ go.focus(); }
+      say('A check-in is already in progress. Resume it, or discard it and start this one.');
+      return;
     }
-
-    if(prevDays.length){ card.appendChild(splashPrevCarousel(prevDays)); }
-
-    els.splashScreen.appendChild(card);
+    beginCheckIn(action);
   }
-  // Each session is its own row with its own action rather than one tap target
-  // for the whole card: with two sessions planned, a single card-level tap
-  // would have to guess which one was just finished, and guessing wrong writes
-  // the wrong discipline into a check-in.
-  //
-  // An already-logged session renders as a <div>, not a disabled <button> —
-  // mirroring flowPlanCard()'s own rule, for its own reason: there is no
-  // action here to re-enable, and a disabled control invites a hunt for the
-  // thing that would turn it back on. The visual treatment can't be shared
-  // with flowPlanCard: that card is light-on-light (--s1/--s3 fills, --ink
-  // text) and this one sits on the splash's --blue field, so the two have no
-  // usable colours in common. The copy ("Logged"), the div-not-button rule and
-  // the after-the-open-ones ordering are what's kept identical.
-  function splashTodayRow(item, isLogged){
-    var li = el('li', 'splash-today-item');
-    var row = el(isLogged ? 'div' : 'button', 'splash-today-btn' + (isLogged ? ' is-logged' : ''));
-    if(!isLogged){ row.type = 'button'; }
-    row.appendChild(el('span', 'splash-today-name', splashTodayName(item)));
-    row.appendChild(el('span', 'splash-today-meta', planMetaLine(item)));
-    if(isLogged){
-      row.appendChild(el('span', 'splash-today-logged', 'Logged'));
+  // Under the race strip while a check-in is part-way through. With a held
+  // tap (calPending) it becomes the inline choice: the athlete must pick
+  // "Resume" or "Discard and start this one" — a half-finished check-in is
+  // never thrown away silently (decision 32's rule, owner answer Q2).
+  function calResumeBar(){
+    if(!calCheckInInProgress()){ return null; }
+    var bar = el('section', 'cal-resume');
+    bar.setAttribute('aria-label', 'Check-in in progress');
+    bar.appendChild(el('p', 'cal-resume-title', 'Check-in in progress'));
+    bar.appendChild(el('p', 'cal-resume-line', calResumeLine()));
+    var actions = el('div', 'cal-resume-actions');
+    if(calPending){
+      var held = calPending;
+      bar.appendChild(el('p', 'cal-resume-line', 'You tapped ' +
+        (held.item ? splashTodayName(held.item) : 'an unplanned session on ' + formatWeekdayDate(held.date)) +
+        '. Resume the check-in you started, or discard it and start this one?'));
+      var resume = el('button', 'cal-resume-go', 'Resume');
+      resume.type = 'button';
+      resume.addEventListener('click', resumeCheckIn);
+      actions.appendChild(resume);
+      var discard = el('button', 'cal-resume-discard', 'Discard and start this one');
+      discard.type = 'button';
+      discard.addEventListener('click', function(){
+        calPending = null;
+        beginCheckIn(held);
+      });
+      actions.appendChild(discard);
     } else {
-      row.addEventListener('click', function(){ startCheckInFromPlan(item); });
+      var go = el('button', 'cal-resume-go', 'Resume check-in');
+      go.type = 'button';
+      go.addEventListener('click', resumeCheckIn);
+      actions.appendChild(go);
     }
-    li.appendChild(row);
-    return li;
+    bar.appendChild(actions);
+    return bar;
   }
+
+
+  // "Swim — Squad — 8×100 CSS" style name for a planned session: discipline,
+  // then title. Used by the Calendar cards, the in-flow hint cards and the
+  // pre-fill announcement. (Named for the splash it first served.)
   function splashTodayName(item){
     var disc = DISC_LABEL[item.disc] || item.disc;
     return item.title ? (disc + ' — ' + item.title) : disc;
-  }
-  // Still-open (not-yet-logged) sessions from days before today, grouped one
-  // entry per day. Uses dayPlanSplit() per day rather than a hand-rolled
-  // "any log entry that day" test, for the same reason todayPlanSplit()
-  // does: a second rule could disagree with the Adherence matcher about
-  // what's already logged, and tapping a session that's secretly already
-  // logged would write a duplicate — the exact defect decisions 32(b)/34
-  // fixed on the other two plan surfaces.
-  //
-  // Ordered most-recent-missed-day first, oldest last — the day before today
-  // is the freshest miss and the one worth seeing without paging, so it's
-  // index 0; "next" pages backwards in time from there. currentWeekDays()
-  // is Monday-first, so this walks it forward and reverses the result rather
-  // than trying to walk it backward directly.
-  function splashPrevDays(){
-    var todayI = todayISO();
-    var out = [];
-    currentWeekDays().forEach(function(d){
-      if(d.date >= todayI){ return; }
-      var open = dayPlanSplit(d.date).open;
-      if(open.length){ out.push({date: d.date, items: open}); }
-    });
-    // currentWeekDays() only covers the current Mon–Sun week, so on the
-    // first day of a new week "yesterday" — the previous week's Sunday —
-    // never appears in the loop above at all, even though it's the single
-    // day someone is most likely to want to catch up on. Checked separately
-    // rather than widening the loop, since yesterday is the only day that
-    // can ever fall outside the current week's range from here.
-    var yesterdayISO = isoDate(addDays(new Date(), -1));
-    if(yesterdayISO < isoDate(mondayOf(new Date()))){
-      var yOpen = dayPlanSplit(yesterdayISO).open;
-      if(yOpen.length){ out.push({date: yesterdayISO, items: yOpen}); }
-    }
-    out.reverse();
-    return out;
-  }
-  // The "Earlier this week" card content: one day showing at a time, since
-  // a day can hold more than one still-open session (dayPlanSplit's `open`
-  // array) and a flat list would bury that under whichever day happened to
-  // sort first. Left/right steps splashPrevDayIndex and re-renders the whole
-  // splash card — the same rebuild-and-announce pattern stepPlanWeek() uses,
-  // not a manual refocus, since renderSplashToday() rebuilds this node from
-  // scratch on every call anyway.
-  function splashPrevCarousel(days){
-    // Clamped here, not at the call site: this is the one function that
-    // knows both the stored index and the day list it has to fit inside,
-    // and it runs on every render (including the ones triggered by a
-    // background Sheet refresh that can change how many days there are).
-    if(splashPrevDayIndex >= days.length){ splashPrevDayIndex = Math.max(0, days.length - 1); }
-    var idx = splashPrevDayIndex;
-    var day = days[idx];
-
-    var wrap = el('div', 'splash-prev');
-    wrap.appendChild(el('p', 'splash-today-eyebrow', 'Earlier this week'));
-
-    var dateLbl = el('span', 'splash-prev-day-label', formatSplashPrevDate(day.date));
-    dateLbl.setAttribute('aria-label', formatWeekdayDate(day.date));
-
-    if(days.length > 1){
-      var atNewest = idx === 0;
-      var atOldest = idx === days.length - 1;
-      var nav = el('div', 'splash-prev-nav');
-
-      var prevBtn = el('button', 'splash-prev-nav-btn' + (atNewest ? ' is-disabled' : ''), '‹');
-      prevBtn.type = 'button';
-      prevBtn.setAttribute('aria-label', 'More recent day');
-      if(!atNewest){
-        prevBtn.addEventListener('click', function(){
-          splashPrevDayIndex--;
-          renderSplashToday();
-          say('Showing ' + formatWeekdayDate(days[splashPrevDayIndex].date) + '.');
-        });
-      }
-      nav.appendChild(prevBtn);
-      nav.appendChild(dateLbl);
-      var nextBtn = el('button', 'splash-prev-nav-btn' + (atOldest ? ' is-disabled' : ''), '›');
-      nextBtn.type = 'button';
-      nextBtn.setAttribute('aria-label', 'Earlier day');
-      if(!atOldest){
-        nextBtn.addEventListener('click', function(){
-          splashPrevDayIndex++;
-          renderSplashToday();
-          say('Showing ' + formatWeekdayDate(days[splashPrevDayIndex].date) + '.');
-        });
-      }
-      nav.appendChild(nextBtn);
-      wrap.appendChild(nav);
-    } else {
-      // One missed day, nothing to page through — the arrows would both be
-      // permanently dimmed dead controls, so skip the nav row entirely.
-      wrap.appendChild(dateLbl);
-    }
-
-    var list = el('ul', 'splash-today-list splash-prev-list');
-    list.setAttribute('aria-label', 'Planned sessions still to log on ' + formatWeekdayDate(day.date));
-    day.items.forEach(function(item){ list.appendChild(splashTodayRow(item, false)); });
-    wrap.appendChild(list);
-
-    if(days.length > 1){
-      var dots = el('div', 'splash-prev-dots');
-      days.forEach(function(_, i){
-        dots.appendChild(el('span', 'splash-prev-dot' + (i === idx ? ' active' : '')));
-      });
-      wrap.appendChild(dots);
-    }
-
-    return wrap;
-  }
-  // "MON 18" — the abbreviated weekday + day-of-month label the carousel nav
-  // shows; the unabbreviated date goes on the label's aria-label instead
-  // (formatWeekdayDate), the same split decision 31's dashPlanDay() uses.
-  function formatSplashPrevDate(dateISO){
-    var d = new Date(dateISO + 'T00:00:00');
-    return MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate();
   }
   // "60 min · Hard / quality · Key" — the same fields planItemCard() shows in
   // the Plan view, in the same order, so the two surfaces read identically.
@@ -5508,10 +5241,6 @@ if(window.caches && caches.keys){
     tabStrengthRehab: document.getElementById('tab-strength-rehab'),
     viewTabs: document.getElementById('view-tabs'),
     appMain: document.getElementById('app-main'),
-    splashScreen: document.getElementById('view-splash'),
-    splashCountdown: document.getElementById('splash-countdown'),
-    splashCountdownRace: document.getElementById('splash-countdown-race'),
-    splashCountdownTime: document.getElementById('splash-countdown-time'),
     periodScreen: document.getElementById('view-period'),
     periodChoices: document.getElementById('period-choices')
   };
@@ -5662,64 +5391,66 @@ if(window.caches && caches.keys){
     goToNextUnanswered();
     say('Pre-filled from your plan: ' + splashTodayName(item) + '. Every answer can still be changed.');
   }
-  // Entry point from the splash card — both the Today rows and the "Earlier
-  // this week" rows share this one function: a fresh check-in, dated the
-  // tapped session's own day (item.date, not necessarily today), seeded from
-  // the tapped session. Check-in is the one tab that requires a phase
-  // (a logged session is stamped with it), so an athlete who has never set one
-  // goes through the picker first and the pre-fill is held until they return —
-  // same rule the Check-in nav tab follows.
-  var pendingPlanPrefill = null;
-  function startCheckInFromPlan(item){
-    exitSplash();
+  // ── Starting a check-in from the Calendar ───────────────────────────
+  // Two entry points, one machine: "Check in on this" on a planned card
+  // ({item, date: item.date}) and "Log an unplanned session" under a day's
+  // cards ({item: null, date: the selected day}). Either way the check-in is
+  // fresh and dated the action's own day. Only a planned card pre-fills, and
+  // only disc / intensity / duration (applyPlanPrefill) — never a1 or any
+  // other outcome field, through either path.
+  //
+  // A half-finished check-in is never discarded without the athlete choosing
+  // to (decision 32's rule, in its new form): requestCheckIn() from the
+  // Calendar shows an inline "Resume" / "Discard and start this one" instead.
+  //
+  // The phase gate lives here now, at the *start of a check-in*, not at the
+  // Check-in tab: a logged session is stamped with the current phase, so an
+  // athlete with none set goes through the picker first, and the action is
+  // held across it (pendingCheckIn) and resumed by choosePeriod() — same
+  // date, same pre-fill. The Calendar itself never needs a phase.
+  var pendingCheckIn = null;
+  function beginCheckIn(action){
     if(!state.periodisation){
-      pendingPlanPrefill = item;
+      pendingCheckIn = action;
       els.appMain.hidden = true;
       els.periodScreen.hidden = false;
       phaseReturnView = 'flow';
-      // The athlete already named a session by tapping the card, so the
-      // landing screen's question is answered — the pendingPlanPrefill branch
-      // in choosePeriod takes them straight to the pre-filled flow.
-      phaseReturnWantsLanding = false;
       var h = document.getElementById('period-h');
       if(h){ h.focus({preventScroll:true}); }
       return;
     }
-    exitPeriodScreen();
-    state.ans = {date: item.date}; state.note = ''; state.step = 0; state.mode = 'ask';
-    applyPlanPrefill(item);
-    showView('flow');
-    goToNextUnanswered();
+    runCheckIn(action);
   }
-
-  // ── Check-in landing (state.mode === 'plan') ───────────────────────
-  // Check-in is the app's primary interaction, and when today has a planned
-  // session the honest default is "did you do the one you planned?", not a
-  // blank date/discipline form. This screen is that default. It only ever
-  // appears on a *fresh* open of Check-in with at least one session planned
-  // for today — never mid-flow, never on "Log another", never after a date
-  // change, and never when the athlete already named a session by tapping the
-  // splash Today card (that tap has already made this screen's choice).
-  function todayPlanItems(){ return planItemsFor(todayISO()); }
+  function runCheckIn(action){
+    clearAutoProgress();
+    exitPeriodScreen();
+    state.ans = {date: action.date}; state.note = ''; state.step = 0; state.mode = 'ask';
+    if(action.item){ applyPlanPrefill(action.item); }
+    showView('flow');
+    if(action.item){
+      goToNextUnanswered();
+    } else {
+      render();
+      focusHeading();
+      say('Logging an unplanned session. Nothing pre-filled.');
+    }
+  }
+  function startCheckInFromPlan(item){ beginCheckIn({item: item, date: item.date}); }
   // Splits a day's planned sessions into the ones still to log and the ones
   // already logged — using the *same* greedy matcher the Adherence signal
   // runs on (planDayResults), never a second rule that could disagree with
-  // it. Offering an already-logged session as an equal "check in on this"
-  // option is not just a cosmetic repeat: tapping it writes a duplicate
-  // entry, the matcher then has two logged entries for one planned session,
-  // and the spare is reported as `extra` — an unplanned session — which
-  // corrupts the exact signal this screen exists to feed. Generalised from
-  // today-only to any dateISO so the splash's "Earlier this week" carousel
-  // (splashPrevDays) can run the identical check against past days rather
-  // than a hand-rolled one.
+  // it. Offering an already-logged session as "check in on this" is not just
+  // a cosmetic repeat: tapping it writes a duplicate entry, the matcher then
+  // has two logged entries for one planned session, and the spare is reported
+  // as `extra` — an unplanned session — which corrupts the exact signal the
+  // Calendar exists to show. Works for any dateISO, including a date outside
+  // the current Mon–Sun week (weekDayFor builds the right week).
   function dayPlanSplit(dateISO){
     // weekDayFor()'s own day object, not a hand-rolled one, so what
     // planDayResults() is handed here is identical in shape to what every
     // other caller hands it — and a brand-new object per call, which is
     // exactly the invariant PLAN_MATCH_CACHE documents as its safety
-    // condition. Works for any date, not just the current week, so this
-    // stays correct when splashPrevDays() reaches into yesterday even
-    // though yesterday can fall in the previous Mon–Sun week.
+    // condition.
     var day = weekDayFor(dateISO);
     if(!day){ return {open: planItemsFor(dateISO), logged: []}; }
     var r = planDayResults(day);
@@ -5732,115 +5463,30 @@ if(window.caches && caches.keys){
     });
     return {open: open, logged: logged};
   }
-  function todayPlanSplit(){ return dayPlanSplit(todayISO()); }
-  function renderPlanLanding(){
-    var split = todayPlanSplit();
-    var items = split.open;
-    var logged = split.logged;
-    var total = items.length + logged.length;
-    var h = el('h1', null, items.length === 1 ? 'Ready to check in?' : 'Which session?');
-    h.id = 'step-h'; h.tabIndex = -1;
-    els.body.appendChild(h);
-    var hintText;
-    if(!logged.length){
-      hintText = items.length === 1
-        ? 'This is what you had planned for today.'
-        : 'You had ' + items.length + ' sessions planned for today.';
-    } else {
-      hintText = items.length === 1
-        ? 'One of your ' + total + ' planned sessions today is still to log.'
-        : items.length + ' of your ' + total + ' planned sessions today are still to log.';
-    }
-    els.body.appendChild(el('p', 'hint', hintText));
-
-    var ul = el('ul', 'flow-plan-list flow-landing-list');
-    items.forEach(function(item){
-      var li = document.createElement('li');
-      li.appendChild(flowPlanCard(item, 'Check in on this →'));
-      ul.appendChild(li);
-    });
-    // Shown rather than hidden, and always after the ones still to log: the
-    // athlete gets the whole day at a glance, and the reason a session isn't
-    // offered is on the card itself instead of being silently absent. Passing
-    // no CTA is what makes it a static, untappable record — see flowPlanCard.
-    logged.forEach(function(item){
-      var li = document.createElement('li');
-      li.appendChild(flowPlanCard(item, null));
-      ul.appendChild(li);
-    });
-    els.body.appendChild(ul);
-
-    // The escape hatch, deliberately named and deliberately secondary — a
-    // session that wasn't on the plan is a normal thing to log, not an error
-    // state, and Adherence already counts it as `extra` rather than scoring
-    // it bad. Copy matches the app's plain button voice ("Add a race",
-    // "+ Add session"): no exclamation, no apology.
-    var other = el('button', 'flow-landing-other', 'Log an unplanned session');
-    other.type = 'button';
-    other.addEventListener('click', startUnplannedCheckIn);
-    els.body.appendChild(other);
-  }
-  // Drops into the manual flow exactly as it behaved before any plan
-  // integration existed: fresh answers, dated today, step 0, nothing
-  // pre-filled — in particular no disc/intensity/duration, and (as
-  // everywhere) no a1. Phase 2's per-date planned cards still appear on the
-  // date page and still follow a date change; suppressing them here would
-  // regress behaviour that is explicitly meant to keep working, and they are
-  // a hint rather than a default in that position anyway.
-  function startUnplannedCheckIn(){
-    state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
-    render();
-    focusHeading();
-    say('Logging an unplanned session. Nothing pre-filled.');
-  }
   // "Nothing has been entered yet" — the flow is sitting at its initial state
   // rather than part-way through a check-in. `state.ans` is seeded with a
   // `date` and nothing else, so any other key means the athlete has answered
   // something. Review and saved are never pristine by definition.
+  //
+  // Two callers, both on the Calendar: the resume bar (shown when this is
+  // false and the mode is ask/review — 'saved' also returns false here, so
+  // calCheckInInProgress() excludes it explicitly) and the guard on starting
+  // another check-in.
   function flowIsPristine(){
     if(state.mode === 'review' || state.mode === 'saved'){ return false; }
     if(state.note){ return false; }
     // A deliberately changed date IS an entered answer. `date` is skipped by
     // the loop below only because state.ans is *seeded* with today's — but
     // anything other than that seed was typed by the athlete, and calling it
-    // pristine let startCheckIn() reset state.ans back to {date: todayISO()},
-    // silently discarding a date chosen to log a missed session from earlier
-    // in the week. This is startCheckIn()'s only caller, so tightening the
-    // definition here has no other reader to surprise.
+    // pristine would let a new check-in reset state.ans back to
+    // {date: todayISO()}, silently discarding a date chosen to log a missed
+    // session from earlier in the week.
     if(state.ans.date && state.ans.date !== todayISO()){ return false; }
     var keys = Object.keys(state.ans);
     for(var i = 0; i < keys.length; i++){
       if(keys[i] !== 'date' && state.ans[keys[i]] !== undefined){ return false; }
     }
     return true;
-  }
-  // The single decision about where a Check-in open lands. Every entry point
-  // that opens Check-in without naming a session goes through here, so the nav
-  // tab and the return-from-phase-picker path cannot diverge.
-  //
-  // Two things this deliberately does NOT do. It does not reset a check-in
-  // that is already part-way through — tapping away to Review and back has
-  // always resumed where you were, and discarding half-entered answers to show
-  // a landing screen would be a far worse regression than the screen is an
-  // improvement. And it does not touch the no-plan case at all: with nothing
-  // planned today there is nothing to frame around, so it falls through to
-  // exactly the previous behaviour.
-  function startCheckIn(){
-    // `.open`, not the raw planned count: with every planned session for
-    // today already logged there is nothing left to offer, so the landing
-    // screen would be a list of things you cannot do. Falls through to
-    // showView('flow') — exactly the pre-landing behaviour.
-    if(flowIsPristine() && todayPlanSplit().open.length){
-      state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'plan';
-      showView('flow');
-      // showView only refreshes the chrome, not the body — without this the
-      // landing would be announced by the header while the previous screen's
-      // questions were still on it.
-      render();
-      focusHeading();
-      return;
-    }
-    showView('flow');
   }
 
   function setFlowPhaseLabel(){
@@ -5852,15 +5498,7 @@ if(window.caches && caches.keys){
   function renderChrome(){
     var list = steps();
     var idx = Math.min(state.step, list.length - 1);
-    if(state.mode === 'plan'){
-      // No step counter and an empty progress bar: the landing screen sits
-      // *before* the flow, so "1 / 6" would be a lie about where they are.
-      els.eyebrow.textContent = 'Today';
-      els.counter.textContent = '';
-      els.barFill.style.width = '0%';
-      els.phaseRow.hidden = false;
-      setFlowPhaseLabel();
-    } else if(state.mode === 'saved'){
+    if(state.mode === 'saved'){
       els.eyebrow.textContent = (PERIOD_LABEL[state.periodisation] || 'Phase not set');
       els.counter.textContent = 'logged';
       els.barFill.style.width = '100%';
@@ -5884,11 +5522,6 @@ if(window.caches && caches.keys){
     return {list: list, idx: idx};
   }
   function renderFoot(list, idx){
-    // The landing screen's actions are the cards and the unplanned link, so
-    // the sticky Back/Next pair is hidden outright rather than disabled — a
-    // greyed "Next" on a screen with no next step reads as something broken.
-    els.foot.hidden = state.mode === 'plan';
-    if(state.mode === 'plan'){ return; }
     if(state.mode === 'saved'){
       els.back.disabled = true;
       els.back.textContent = 'Back';
@@ -5906,8 +5539,7 @@ if(window.caches && caches.keys){
   function render(){
     var c = renderChrome();
     clear(els.body);
-    if(state.mode === 'plan'){ renderPlanLanding(); }
-    else if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
+    if(state.mode === 'ask'){ renderAsk(c.list[c.idx]); }
     else if(state.mode === 'review'){ renderReview(c.list); }
     else { renderSaved(); }
     // Prepended after the questions exist, and only on the date page — see
@@ -6005,20 +5637,10 @@ if(window.caches && caches.keys){
     wrap.appendChild(ul);
     els.body.insertBefore(wrap, els.body.firstChild);
   }
-  // One planned-session card, shared by the in-flow hint list above and the
-  // check-in landing screen below, so the two can never drift into showing
-  // different fields for the same session. Only the call-to-action wording
-  // differs — a hint offers to fill the form in, the landing screen *is* the
-  // way in — so that is the one thing passed in.
-  // A null `ctaText` renders the card as a static, untappable record of a
-  // session that has already been logged, marked "Logged" where the CTA would
-  // be. A <div>, not a disabled <button>, on purpose: there is no action here
-  // to re-enable, and a disabled control invites a hunt for the thing that
-  // would turn it back on.
+  // One planned-session hint card for the in-flow list above.
   function flowPlanCard(item, ctaText){
-    var isLogged = !ctaText;
-    var btn = el(isLogged ? 'div' : 'button', 'flow-plan-card' + (isLogged ? ' is-logged' : ''));
-    if(!isLogged){ btn.type = 'button'; }
+    var btn = el('button', 'flow-plan-card');
+    btn.type = 'button';
 
     var hd = el('div', 'flow-plan-hd');
     var dot = el('span', 'flow-plan-dot');
@@ -6032,10 +5654,6 @@ if(window.caches && caches.keys){
     var meta = planMetaLine(item, false);   // the Key pill above covers it
     if(meta){ btn.appendChild(el('span', 'flow-plan-meta', meta)); }
     if(item.notes){ btn.appendChild(el('span', 'flow-plan-notes', item.notes)); }
-    if(isLogged){
-      btn.appendChild(el('span', 'flow-plan-logged', 'Logged'));
-      return btn;
-    }
     btn.appendChild(el('span', 'flow-plan-cta', ctaText));
 
     // usePlannedSession → applyPlanPrefill, which is the a1-guarded function.
@@ -6192,7 +5810,9 @@ if(window.caches && caches.keys){
   // ═══════════════════════════════════════════════════════════════
   // VIEW SWITCHING
   // ═══════════════════════════════════════════════════════════════
-  function showView(view, announceMsg){
+  // opts.quiet paints the view without scrolling, moving focus or announcing —
+  // used once, at boot, so the start screen never steals focus (spec P10).
+  function showView(view, announceMsg, opts){
     var isDash = view === 'dashboard';
     var isTrends = view === 'trends';
     var isStrength = view === 'strength';
@@ -6234,11 +5854,12 @@ if(window.caches && caches.keys){
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
     if(isFlow){ renderChrome(); }
+    refreshVisibleViewFromSheet();
+    if(opts && opts.quiet){ return; }
     window.scrollTo(0, 0);
     var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : (isPhaseBuild ? 'phasebuild-h' : (isCalendar ? 'calendar-h' : 'step-h')))))))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
-    refreshVisibleViewFromSheet();
   }
   // This week / Month / Races all reflect state that can change on another
   // device, so pull the current source of truth every time the relevant
@@ -6251,19 +5872,27 @@ if(window.caches && caches.keys){
   // week/Month) would keep showing whatever was cached from before another
   // device added or removed something.
   function refreshVisibleViewFromSheet(){
-    // The splash can still be up here: an installed PWA resumed from a frozen
-    // background never re-boots, so nothing else would re-check the Sheet
-    // while the athlete is sitting on it. That matters more than it used to —
-    // the Today card now decides whether to *offer* a session based on the
-    // log, so a stale card is not merely out of date, it re-opens the exact
-    // duplicate-entry defect the open/logged split exists to close.
-    if(!els.splashScreen.hidden){
-      refreshLogFromSheet().then(function(changed){
-        if(changed && !els.splashScreen.hidden){ renderSplashToday(); }
-      });
-      refreshPlanFromSheet().then(function(changed){
-        if(changed && !els.splashScreen.hidden){ renderSplashToday(); }
-      });
+    // Calendar reads all four synced tables — the log (what is logged), the
+    // plan, the races (the strip and the Month markers) and the phase plan
+    // (the summary pill and the Month band) — so it re-checks every one when
+    // shown and on visibilitychange: an installed PWA resumed from a frozen
+    // background never re-boots, and a stale Calendar would keep offering a
+    // session another device already logged. Redraws only if something
+    // changed and only while still showing.
+    if(!els.viewCalendar.hidden){
+      var redrawCalendar = function(changed){
+        if(!changed || els.viewCalendar.hidden){ return; }
+        // Fresh data is already in memory and persisted by here — but hold the
+        // redraw while a Month phase select is open, as the Plan view holds
+        // its redraw for an open form: a rebuild would close the select under
+        // the athlete's thumb. The next render picks the data up.
+        if(calMode === 'month' && calEditWeek){ return; }
+        renderCalendar();
+      };
+      refreshLogFromSheet().then(redrawCalendar);
+      refreshPlanFromSheet().then(redrawCalendar);
+      refreshRacesFromSheet().then(redrawCalendar);
+      refreshPhasePlanFromSheet().then(redrawCalendar);
     }
     if(!els.viewDash.hidden || !els.viewTrends.hidden){
       refreshLogFromSheet().then(function(changed){
@@ -6281,11 +5910,6 @@ if(window.caches && caches.keys){
     }
     if(!els.viewRaces.hidden){
       refreshRacesFromSheet().then(function(changed){
-        if(changed && !els.viewRaces.hidden){ renderRaces(); }
-        renderSplashCountdown();
-      });
-      // The calendar's phase band and per-week edit both read phasePlan.
-      refreshPhasePlanFromSheet().then(function(changed){
         if(changed && !els.viewRaces.hidden){ renderRaces(); }
       });
     }
@@ -6323,55 +5947,31 @@ if(window.caches && caches.keys){
     } catch(e){ /* cross-origin fallback: leave last-known height */ }
   }
 
-  // The tab bar is visible even on the splash and the one-time phase screen —
-  // tapping a tab from either dismisses it (without forcing a phase choice)
-  // and jumps straight to the requested view. There's no timer on the splash;
-  // it only goes away once a tab is tapped.
-  function revealPostSplashScreen(){
-    if(state.periodisation){ els.appMain.hidden = false; }
-    else{ els.periodScreen.hidden = false; }
-  }
-  function exitSplash(){
-    if(!els.splashScreen.hidden){
-      els.splashScreen.hidden = true;
-      revealPostSplashScreen();
-    }
-  }
+  // The tab bar is visible even on the one-time phase screen — tapping a tab
+  // from it leaves the picker (without forcing a phase choice) and jumps
+  // straight to the requested view.
   function exitPeriodScreen(){
     if(!els.periodScreen.hidden){
       els.periodScreen.hidden = true;
       els.appMain.hidden = false;
+      // Walking away from the picker abandons whatever check-in was waiting
+      // on it — a later "Change phase" must not resurrect it.
+      pendingCheckIn = null;
     }
   }
-  // Check-in is the one tab that needs a phase to make sense of what it logs,
-  // so — unlike the other three tabs — it doesn't bypass the phase question.
-  // If no phase is set yet, tapping Check-in (from the splash or anywhere
-  // else) lands on the phase question first; choosing one there returns
-  // straight to Check-in via phaseReturnView.
+  // Check-in always opens the Calendar, reset to the current week with today
+  // selected — whether or not a phase is set and whether or not a check-in is
+  // part-way through (the resume bar is the way back to that one). The phase
+  // question moved to the start of a check-in; see beginCheckIn().
   els.tabFlow.addEventListener('click', function(){
-    exitSplash();
-    if(!state.periodisation){
-      els.appMain.hidden = true;
-      els.periodScreen.hidden = false;
-      phaseReturnView = 'flow';
-      // The picker is a gate on the way *in* here, so the landing decision
-      // still applies once a phase is chosen — unlike the in-flow
-      // "Change phase" link, which clears this.
-      phaseReturnWantsLanding = true;
-      var h = document.getElementById('period-h');
-      if(h){ h.focus({preventScroll:true}); }
-      return;
-    }
     exitPeriodScreen();
-    // Not showView('flow') directly — startCheckIn decides whether today's
-    // plan earns the landing screen. This is also the path a Check-in tap
-    // from the splash takes, since the nav sits under it.
-    startCheckIn();
+    calResetToToday();
+    showView('calendar');
   });
-  els.tabDash.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('dashboard'); });
-  els.tabStrength.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('strength'); });
-  els.tabWarmup.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('warmup'); });
-  els.tabRaces.addEventListener('click', function(){ exitSplash(); exitPeriodScreen(); showView('races'); });
+  els.tabDash.addEventListener('click', function(){ exitPeriodScreen(); showView('dashboard'); });
+  els.tabStrength.addEventListener('click', function(){ exitPeriodScreen(); showView('strength'); });
+  els.tabWarmup.addEventListener('click', function(){ exitPeriodScreen(); showView('warmup'); });
+  els.tabRaces.addEventListener('click', function(){ exitPeriodScreen(); showView('races'); });
   els.strengthFrame.addEventListener('load', sizeStrengthFrame);
   window.addEventListener('resize', function(){ if(!els.viewStrength.hidden){ sizeStrengthFrame(); } });
 
@@ -6414,12 +6014,10 @@ if(window.caches && caches.keys){
     });
   }
   function openPhasePicker(){
-    // Reached from the in-flow "Change phase" link, so this is a detour out of
-    // a check-in already in progress, not a way into one. Decision 19's rule
-    // is that it returns to the question you were on — so it must NOT come
-    // back through the landing screen, even when the flow happens to be
-    // pristine and today has a plan.
-    phaseReturnWantsLanding = false;
+    // Reached from the in-flow "Change phase" link (or Review's), so this is a
+    // detour, not a way into a check-in: decision 19's rule is that it returns
+    // to the question you were on, and it must never resume a held check-in.
+    pendingCheckIn = null;
     phaseReturnView = els.viewDash.hidden ? (els.viewTrends.hidden ? 'flow' : 'trends') : 'dashboard';
     els.appMain.hidden = true;
     els.periodScreen.hidden = false;
@@ -6431,33 +6029,16 @@ if(window.caches && caches.keys){
     els.periodScreen.hidden = true;
     els.appMain.hidden = false;
     say('Training phase set to ' + PERIOD_LABEL[v] + '.');
-    // A splash card tap (Today or Earlier-this-week) by an athlete with no
-    // phase set yet is held in pendingPlanPrefill across the picker, so the
-    // tap still lands where it was aimed instead of dropping them on a blank
-    // check-in. Dated from the held session's own day, same as
-    // startCheckInFromPlan() — not always today, once Earlier-this-week rows
-    // can hold it too.
-    if(pendingPlanPrefill && phaseReturnView === 'flow'){
-      var held = pendingPlanPrefill;
-      pendingPlanPrefill = null;
-      state.ans = {date: held.date}; state.note = ''; state.step = 0; state.mode = 'ask';
-      applyPlanPrefill(held);
-      showView('flow');
-      goToNextUnanswered();
+    // A "Check in on this" / "Log an unplanned session" tap by an athlete with
+    // no phase set yet is held in pendingCheckIn across the picker, so the tap
+    // still lands where it was aimed — dated and pre-filled exactly as it
+    // would have been — instead of dropping them on a blank check-in.
+    if(pendingCheckIn){
+      var held = pendingCheckIn;
+      pendingCheckIn = null;
+      runCheckIn(held);
       return;
     }
-    pendingPlanPrefill = null;
-    // Only when the picker was a gate *on the way into* Check-in (the nav tab
-    // with no phase set yet) does the landing decision apply — otherwise an
-    // athlete who set their phase on the way in would silently miss the screen
-    // an athlete who already had one would see. The in-flow "Change phase"
-    // link clears this flag, so it still returns to the question you were on.
-    if(phaseReturnView === 'flow' && phaseReturnWantsLanding){
-      phaseReturnWantsLanding = false;
-      startCheckIn();
-      return;
-    }
-    phaseReturnWantsLanding = false;
     showView(phaseReturnView);
   }
 
@@ -6465,18 +6046,12 @@ if(window.caches && caches.keys){
   // WIRING
   // ═══════════════════════════════════════════════════════════════
   els.back.addEventListener('click', function(){
-    // The foot is hidden in 'plan' mode, but guard the handlers too — a
-    // hidden button is still reachable programmatically, and Back from the
-    // landing screen would drop into step 0 with no pre-fill, silently
-    // bypassing the choice the screen exists to offer.
-    if(state.mode === 'plan'){ return; }
     if(state.mode === 'saved'){ return; }
     var list = steps();
     if(state.mode === 'review'){ go(list.length - 1, true); }
     else { go(state.step - 1, true); }
   });
   els.next.addEventListener('click', function(){
-    if(state.mode === 'plan'){ return; }   // see the Back handler above
     if(state.mode === 'saved'){ startNew(); return; }
     if(state.mode === 'review'){ save(); return; }
     go(state.step + 1, true);
@@ -6486,36 +6061,16 @@ if(window.caches && caches.keys){
   // ── Init ──────────────────────────────────────────────────────
   buildPeriodChoices();
   render();
-  // The splash (visible by default in markup) covers the period/app-main
-  // screens until a nav tap dismisses it — see exitSplash — so neither is
-  // revealed here.
-  // Warm the cache from the Sheet right away so This week/Month have fresh
-  // data as soon as they're opened, even though the check-in flow (the
-  // default view) doesn't need it itself.
-  // Repaints the Today card on resolve as well: since it started splitting
-  // today's plan into still-to-log and already-logged, it reads the *log* as
-  // well as the plan, so a session logged on another device would otherwise
-  // keep being offered here until something else forced a rebuild. Both this
-  // chain and the plan chain below repaint independently — renderSplashToday()
-  // removes and rebuilds its own node, so a double call is idempotent.
-  refreshLogFromSheet().then(function(){ renderSplashToday(); });
-  // Same idea for races — paint the cached countdown on the splash
-  // immediately, then refresh from the Sheet and repaint if it changed.
-  renderSplashCountdown();
-  refreshRacesFromSheet().then(function(changed){ if(changed){ renderSplashCountdown(); } });
-  // Same for the plan: paint today's card from the localStorage cache
-  // immediately so the splash isn't blank while the fetch is in flight, then
-  // repaint once the Sheet answers. Always repaint on resolve, not only when
-  // `changed` is true — a first load with an empty cache paints nothing, and
-  // that is exactly the case the Sheet is about to fill in.
-  renderSplashToday();
-  refreshPlanFromSheet().then(function(){ renderSplashToday(); });
-  // No splash card of its own to repaint, but this still needs to run at
-  // boot regardless of which view is showing — it's what performs the
-  // one-time local-to-Sheet push (see refreshPhasePlanFromSheet's own
-  // comment) and keeps state.periodisation current before Check-in's
-  // no-phase-set gate or any other reader looks at it.
-  refreshPhasePlanFromSheet();
+  // The Calendar is the start screen: it paints from the localStorage cache at
+  // once, quietly (no scroll, no focus move, no announcement — spec P10), and
+  // showView() starts the Sheet refresh of everything it reads. That refresh
+  // also performs the one-time local-to-Sheet phase-plan push (see
+  // refreshPhasePlanFromSheet) and keeps state.periodisation current before
+  // anything that stamps a logged session reads it. A phase is NOT needed to
+  // look at the Calendar — it gates the start of a check-in instead.
+  calResetToToday();
+  els.appMain.hidden = false;
+  showView('calendar', null, {quiet: true});
   // An installed PWA (iOS "Add to Home Screen") can resume from a frozen
   // background state instead of a real page load, so a phone left sitting
   // on This week/Month/Races would otherwise never re-check the Sheet after
