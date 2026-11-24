@@ -172,9 +172,83 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.phases === '1') {
     return listPhases_();
   }
+  // SPIKE (calendar start screen, stage b precursor). Throwaway: stage b
+  // replaces it. Deliberately not `list=1`: doGet checks that first.
+  if (e && e.parameter && e.parameter.calendar === '1') {
+    return calendarSpike_();
+  }
   return ContentService
     .createTextOutput('TRI Momentum training log endpoint is live.')
     .setMimeType(ContentService.MimeType.TEXT);
+}
+
+// ---------------------------------------------------------------------
+// SPIKE: Google Calendar read probe (docs/specs/calendar-start-screen.md,
+// section 9). Answers the UNVERIFIED Apps Script points before stage b is
+// built. Remove or replace when stage b lands.
+//
+// SAFETY: this /exec URL is in a public repo, so anyone can call this while
+// it is deployed. It therefore returns NO calendar names, NO event titles
+// and NO calendar ids: only counts, flags, colours, time zones and one
+// start time. It writes nothing. Set the Script Property SPIKE_PROBE_TITLE
+// (Project Settings -> Script properties) to the exact title of one test
+// event you made in the next 14 days; if it is unset the probe is null.
+//
+// Pin oauthScopes in appsscript.json (see the spec) so CalendarApp asks for
+// calendar.readonly and NOT the full calendar scope.
+var SPIKE_VERSION = 'spike-1';
+
+function calendarSpike_() {
+  var out = { ok: true, version: SPIKE_VERSION };
+  try {
+    var scriptTz = Session.getScriptTimeZone();
+    out.scriptTimeZone = scriptTz;
+    var cals = CalendarApp.getAllCalendars();
+    out.calendarCount = cals.length;
+    out.calendars = cals.map(function (c) {
+      return {
+        primary: c.isMyPrimaryCalendar(),
+        writable: !c.isHidden() && c.isOwnedByMe(),
+        color: c.getColor()
+      };
+    });
+    out.probe = spikeProbe_(cals, scriptTz);
+  } catch (err) {
+    out.ok = false;
+    // Error text can carry the scope or service name, which is what the
+    // spike needs to see. It carries no calendar data.
+    out.error = String(err && err.message ? err.message : err).slice(0, 300);
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Finds one owner-named test event and reports only its start, formatted in
+// the script zone and in its own calendar's zone, plus whether it is
+// all-day. The title is never returned.
+function spikeProbe_(cals, scriptTz) {
+  var wanted = PropertiesService.getScriptProperties().getProperty('SPIKE_PROBE_TITLE');
+  if (!wanted) { return null; }
+  var from = new Date();
+  var to = new Date(from.getTime() + 14 * 24 * 60 * 60 * 1000);
+  for (var i = 0; i < cals.length; i++) {
+    var events = cals[i].getEvents(from, to);
+    for (var j = 0; j < events.length; j++) {
+      if (events[j].getTitle() !== wanted) { continue; }
+      var ev = events[j];
+      var calTz = cals[i].getTimeZone();
+      var allDay = ev.isAllDayEvent();
+      var start = allDay ? ev.getAllDayStartDate() : ev.getStartTime();
+      return {
+        allDay: allDay,
+        startInScriptZone: Utilities.formatDate(start, scriptTz, "yyyy-MM-dd'T'HH:mm:ss"),
+        startInCalendarZone: Utilities.formatDate(start, calTz, "yyyy-MM-dd'T'HH:mm:ss"),
+        calendarTimeZone: calTz
+      };
+    }
+  }
+  return { found: false };
 }
 
 // Read path — the Sheet is the cross-device source of truth the app loads
