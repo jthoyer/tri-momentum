@@ -3281,9 +3281,9 @@ if(window.caches && caches.keys){
     calMode = 'week';
     calWeekMonday = weekKey(now);
     calSelected = todayISO();
-    raceCalYear = now.getFullYear();
-    raceCalMonth = now.getMonth();
-    raceCalEditWeek = null;
+    calYear = now.getFullYear();
+    calMonthIdx = now.getMonth();
+    calEditWeek = null;
   }
 
   // One mapping from a planDayResults() result to the grid's segment class,
@@ -3312,10 +3312,13 @@ if(window.caches && caches.keys){
     var m = mins % 60;
     return Math.floor(mins / 60) + 'h' + (m < 10 ? '0' : '') + m;
   }
-  function calRangeLabel(mondayISO){
+  // "23 – 29 Nov", or "30 Nov – 6 Dec" across a month end. `sep` lets the
+  // accessible names say "to" instead of a dash.
+  function calRangeLabel(mondayISO, sep){
+    sep = sep || ' – ';
     var a = new Date(mondayISO + 'T00:00:00'), b = addDays(a, 6);
-    if(a.getMonth() === b.getMonth()){ return a.getDate() + ' – ' + b.getDate() + ' ' + MONTH_NAMES[b.getMonth()]; }
-    return a.getDate() + ' ' + MONTH_NAMES[a.getMonth()] + ' – ' + b.getDate() + ' ' + MONTH_NAMES[b.getMonth()];
+    if(a.getMonth() === b.getMonth()){ return a.getDate() + sep + b.getDate() + ' ' + MONTH_NAMES[b.getMonth()]; }
+    return a.getDate() + ' ' + MONTH_NAMES[a.getMonth()] + sep + b.getDate() + ' ' + MONTH_NAMES[b.getMonth()];
   }
   // Logged duration is always one of three buckets (30/60/120), so every sum
   // built from it is approximate — the summary says so.
@@ -3632,6 +3635,8 @@ if(window.caches && caches.keys){
     var model = calWeekModel();
     var panel = el('div', 'cal-panel');
     panel.id = 'cal-panel';
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', 'cal-tab-week');
     panel.appendChild(calWeekNav(model));
     panel.appendChild(calSummary(model));
     var still = calStillRow();
@@ -3651,6 +3656,247 @@ if(window.caches && caches.keys){
     return panel;
   }
 
+  // ── Month ─────────────────────────────────────────────────────────
+  // The month grid and per-week phase editing that lived on the Races tab
+  // (decisions 41, 42, 46, 47), moved here. Each week's number-and-days row is
+  // one button that opens Week on that week; each week's phase row is a
+  // *sibling* of it (never nested — a button cannot hold a button) whose label
+  // edits the phase in place. Both are ≥44px: the week row as a real box
+  // (28px cells + 8px padding top and bottom), the phase label as a 36px box
+  // with a ::before that completes the 44px, overlapping only the week
+  // buttons' blank padding. Month shows no per-session status; it is a shape.
+  var calYear = new Date().getFullYear(), calMonthIdx = new Date().getMonth(), calEditWeek = null;
+  function calGoMonth(delta){
+    var d = new Date(calYear, calMonthIdx + delta, 1);
+    calYear = d.getFullYear();
+    calMonthIdx = d.getMonth();
+    calEditWeek = null;
+    renderCalendar();
+    say('Showing ' + LONG_MONTHS[calMonthIdx] + ' ' + calYear + '.');
+  }
+  // A week tapped in Month opens Week on it (spec P5: today if the week holds
+  // it, else its Monday). Focus lands on the selected chip, since the button
+  // that was tapped no longer exists.
+  function calOpenWeekFromMonth(mondayISO){
+    calMode = 'week';
+    calEditWeek = null;
+    calGoWeek(mondayISO);
+    var chip = els.viewCalendar.querySelector('.cal-chip[aria-pressed="true"]');
+    if(chip){ chip.focus(); }
+    say('Showing week ' + isoWeekNumber(new Date(mondayISO + 'T00:00:00')) + ', ' + calRangeLabel(mondayISO) + '.');
+  }
+  function calMonthWeekRow(week){
+    var monday = new Date(week.mondayISO + 'T00:00:00');
+    var wnum = isoWeekNumber(monday);
+    var btn = el('button', 'race-cal-week-row');
+    btn.type = 'button';
+    var raced = [];
+    week.days.forEach(function(day){
+      if(day.race){ raced.push(day.race.name + ', ' + formatWeekdayDate(day.iso)); }
+    });
+    btn.setAttribute('aria-label', 'Week ' + wnum + ', ' + calRangeLabel(week.mondayISO, ' to ') + '.' +
+      (raced.length ? ' ' + raced.join('; ') + '.' : '') + ' Show this week');
+    btn.appendChild(el('span', 'race-cal-weeknum', String(wnum)));
+    // The spacer column between the week number and Monday — see the
+    // .race-cal-week-row grid-template-columns comment in the CSS.
+    btn.appendChild(el('span', null));
+    week.days.forEach(function(day){
+      var cls = 'race-cal-day';
+      if(!day.inMonth){ cls += ' dim'; }
+      if(day.isToday){ cls += ' today'; }
+      if(day.race){ cls += ' ' + day.race.status; }
+      var cell = el('span', cls);
+      cell.appendChild(el('span', 'race-cal-day-num', String(day.date.getDate())));
+      btn.appendChild(cell);
+    });
+    btn.addEventListener('click', function(){ calOpenWeekFromMonth(week.mondayISO); });
+    return btn;
+  }
+  function calMonthPhaseRow(week){
+    var row = el('div', 'race-cal-phase-row');
+    var weekLabel = 'the week of ' + formatWeekdayDate(week.mondayISO);
+    var pillClass = PERIOD_PILL_CLASS[week.phase];
+    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
+    bar.setAttribute('aria-hidden', 'true');
+    if(calEditWeek === week.mondayISO){
+      // Edit mode keeps the flex-row wrapper — the select needs the width.
+      var inner = el('div', 'race-cal-phase-inner');
+      var select = document.createElement('select');
+      select.className = 'race-cal-phase-select';
+      select.setAttribute('aria-label', 'Phase for ' + weekLabel);
+      PERIOD.forEach(function(p){
+        var opt = document.createElement('option');
+        opt.value = p.v; opt.textContent = p.label;
+        if(p.v === week.phase){ opt.selected = true; }
+        select.appendChild(opt);
+      });
+      function closeEdit(){
+        calEditWeek = null;
+        renderCalendar();
+        // The select is gone; put focus back on the control that opened it.
+        var back = els.viewCalendar.querySelector('[aria-label="Edit the phase for ' + weekLabel + '"]');
+        if(back){ back.focus(); }
+      }
+      select.addEventListener('change', function(){
+        setPhaseForWeek(week.mondayISO, select.value);
+        closeEdit();
+        say('Phase for ' + weekLabel + ' set to ' + PERIOD_LABEL[select.value] + '.');
+      });
+      // While a select is open the background refresh holds its redraw (see
+      // refreshVisibleViewFromSheet), so it needs a way to be abandoned.
+      select.addEventListener('keydown', function(ev){
+        if(ev.key === 'Escape'){ ev.preventDefault(); closeEdit(); }
+      });
+      inner.appendChild(select);
+      inner.appendChild(bar);
+      row.appendChild(inner);
+    } else {
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'race-cal-phase-edit';
+      editBtn.setAttribute('aria-label', 'Edit the phase for ' + weekLabel);
+      editBtn.appendChild(document.createTextNode(week.phase ? PERIOD_LABEL[week.phase] : 'Unset'));
+      editBtn.appendChild(pencilIcon());
+      editBtn.addEventListener('click', function(){
+        calEditWeek = week.mondayISO;
+        renderCalendar();
+        var sel = els.viewCalendar.querySelector('.race-cal-phase-select');
+        if(sel){ sel.focus(); }
+      });
+      row.appendChild(editBtn);
+      row.appendChild(bar);
+    }
+    return row;
+  }
+  function calMonthPanel(){
+    var weeks = raceCalMonthWeeks(calYear, calMonthIdx);
+    var wrap = el('div', 'race-cal');
+    wrap.id = 'cal-panel';
+    wrap.setAttribute('role', 'tabpanel');
+    wrap.setAttribute('aria-labelledby', 'cal-tab-month');
+    var hd = el('div', 'race-cal-hd');
+    hd.appendChild(el('div', 'race-cal-title', 'Race weeks & phase'));
+    wrap.appendChild(hd);
+
+    var nav = el('div', 'plan-week-nav');
+    var prev = el('button', 'plan-week-btn', '‹');
+    prev.type = 'button';
+    prev.setAttribute('aria-label', 'Show the previous month');
+    prev.addEventListener('click', function(){ calGoMonth(-1); });
+    nav.appendChild(prev);
+    var label = el('div', 'plan-week-nav-label');
+    label.appendChild(el('span', 'plan-week-num', MONTH_NAMES[calMonthIdx] + ' ' + calYear));
+    nav.appendChild(label);
+    var next = el('button', 'plan-week-btn', '›');
+    next.type = 'button';
+    next.setAttribute('aria-label', 'Show the next month');
+    next.addEventListener('click', function(){ calGoMonth(1); });
+    nav.appendChild(next);
+    wrap.appendChild(nav);
+
+    var weekdayRow = el('div', 'race-cal-weekdays');
+    weekdayRow.appendChild(el('span', 'race-cal-weeknum', 'Wk'));
+    weekdayRow.appendChild(el('span', null));
+    MONTH_DAYS.forEach(function(abbr){
+      weekdayRow.appendChild(el('span', 'race-cal-weekday', abbr.charAt(0)));
+    });
+    wrap.appendChild(weekdayRow);
+
+    weeks.forEach(function(week){
+      wrap.appendChild(calMonthWeekRow(week));
+      wrap.appendChild(calMonthPhaseRow(week));
+    });
+
+    var legend = el('div', 'race-cal-legend');
+    function legendRow(labelText, items){
+      var row = el('div', 'race-cal-legend-row');
+      row.appendChild(el('span', 'race-cal-legend-label', labelText));
+      items.forEach(function(it){
+        var item = el('div', 'race-cal-legend-item');
+        item.appendChild(el('span', 'race-cal-legend-dot ' + it.cls));
+        item.appendChild(document.createTextNode(it.label));
+        row.appendChild(item);
+      });
+      legend.appendChild(row);
+    }
+    legendRow('Races:', [
+      {cls: 'locked', label: 'Locked in'},
+      {cls: 'considering', label: 'Considering'},
+      {cls: 'current', label: 'Today'}
+    ]);
+    legendRow('Phase:', [
+      {cls: 'phase-base', label: 'Base'},
+      {cls: 'phase-build', label: 'Build'},
+      {cls: 'phase-peak', label: 'Peak'},
+      {cls: 'phase-taper', label: 'Taper'}
+    ]);
+    wrap.appendChild(legend);
+    return wrap;
+  }
+
+  // Week / Month, a real tablist (roving tabindex, arrow keys, Home/End), and
+  // Today. Today returns to the current week with today selected — or, in
+  // Month, the current month — keeping whichever view is up.
+  function calSetMode(mode){
+    if(mode === calMode){ return; }
+    calMode = mode;
+    calEditWeek = null;
+    if(mode === 'month'){
+      var d = new Date(calSelected + 'T00:00:00');
+      calYear = d.getFullYear();
+      calMonthIdx = d.getMonth();
+    }
+    renderCalendar();
+    say(mode === 'month' ? 'Month view.' : 'Week view.');
+  }
+  function calGoToday(){
+    var mode = calMode;
+    calResetToToday();
+    calMode = mode;
+    renderCalendar();
+    say(mode === 'month' ? 'Showing this month.' : 'Showing this week, today selected.');
+  }
+  function calViewSwitch(){
+    var wrap = el('div', 'cal-switch');
+    var tabs = el('div', 'signal-subtabs');
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', 'Calendar view');
+    var modes = [['week', 'Week'], ['month', 'Month']];
+    modes.forEach(function(pair, i){
+      var btn = el('button', 'signal-subtab', pair[1]);
+      btn.type = 'button';
+      btn.id = 'cal-tab-' + pair[0];
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', String(calMode === pair[0]));
+      btn.setAttribute('aria-controls', 'cal-panel');
+      btn.tabIndex = calMode === pair[0] ? 0 : -1;
+      btn.addEventListener('click', function(){
+        var keep = document.activeElement === btn;
+        calSetMode(pair[0]);
+        if(keep){ var again = document.getElementById('cal-tab-' + pair[0]); if(again){ again.focus(); } }
+      });
+      btn.addEventListener('keydown', function(ev){
+        var to = null;
+        if(ev.key === 'ArrowRight'){ to = modes[(i + 1) % modes.length][0]; }
+        else if(ev.key === 'ArrowLeft'){ to = modes[(i + modes.length - 1) % modes.length][0]; }
+        else if(ev.key === 'Home'){ to = modes[0][0]; }
+        else if(ev.key === 'End'){ to = modes[modes.length - 1][0]; }
+        if(!to){ return; }
+        ev.preventDefault();
+        calSetMode(to);
+        var next = document.getElementById('cal-tab-' + to);
+        if(next){ next.focus(); }
+      });
+      tabs.appendChild(btn);
+    });
+    wrap.appendChild(tabs);
+    var today = el('button', 'cal-today', 'Today');
+    today.type = 'button';
+    today.addEventListener('click', calGoToday);
+    wrap.appendChild(today);
+    return wrap;
+  }
+
   function renderCalendar(){
     var root = els.viewCalendar;
     clear(root);
@@ -3660,7 +3906,8 @@ if(window.caches && caches.keys){
     root.appendChild(h);
     var strip = calRaceStrip();
     if(strip){ root.appendChild(strip); }
-    root.appendChild(calWeekPanel());
+    root.appendChild(calViewSwitch());
+    root.appendChild(calMode === 'month' ? calMonthPanel() : calWeekPanel());
   }
 
   // Add / Edit on a card opens the Plan view on that day; its back link
