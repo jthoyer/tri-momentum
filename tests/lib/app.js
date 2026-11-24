@@ -10,7 +10,10 @@ const path = require('path');
 const http = require('http');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const INDEX = path.join(ROOT, 'index.html');
+// TRI_INDEX_PATH lets a test run against a scratch copy of index.html — used to
+// prove a check can fail by breaking the behaviour on the copy, never on the
+// shipped file. Unset in normal runs and in CI.
+const INDEX = process.env.TRI_INDEX_PATH || path.join(ROOT, 'index.html');
 
 function readIndex() {
   return fs.readFileSync(INDEX, 'utf8');

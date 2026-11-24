@@ -178,33 +178,6 @@ textarea::placeholder{color:var(--ink3)}
 .dash-section::before{content:attr(data-label);display:block;font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:.9rem}
 .dash-signal-link{display:block;margin-top:14px;padding:0;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 .dash-signal-link:hover{color:var(--blue-m)}
-/* "This week's plan" — the read-only 7-day plan listing under the Adherence
-   subtab. Own dash-plan-* namespace rather than reusing .plan-day/.plan-item:
-   those belong to the Plan view's editable rows, and one selector serving an
-   editable card and a read-only line item is how the two silently drift. */
-.dash-plan-week-sub{margin:-.35rem 0 .2rem;font-size:13px;color:var(--ink2);line-height:1.5}
-.dash-plan-days{list-style:none}
-/* Compact row: fixed-width date column on the left, stacked session lines
-   filling the rest. align-items:flex-start keeps the date pinned to the top
-   line of a multi-session day rather than centring against the stack. */
-.dash-plan-day{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--bd)}
-.dash-plan-days > li:first-child{border-top:none}
-/* Fixed width so all seven date labels form a straight column. padding-top
-   optically aligns the smaller uppercase label with the first session line. */
-.dash-plan-date{flex:none;width:52px;padding-top:13px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.dash-plan-day.is-today .dash-plan-date{color:var(--blue);font-weight:600}
-.dash-plan-lines{flex:1;min-width:0;list-style:none}
-.dash-plan-line{display:flex;align-items:center;gap:8px;min-height:44px}
-.dash-plan-dot{flex:none;width:8px;height:8px;border-radius:2px;background:var(--rest)}
-/* min-width:0 + the wrap rules let a long title wrap instead of pushing the
-   Edit button off the right edge at 320px. */
-.dash-plan-line-text{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
-.dash-plan-empty{flex:1;min-width:0;font-size:13.5px;color:var(--ink3)}
-/* Text button, matching .dash-signal-link's weight/size rather than a boxed
-   control — this section is a lower-emphasis addition under the signal panel,
-   not a second hero. min-height carries the 44px target the row height gives. */
-.dash-plan-edit{flex:none;min-width:44px;min-height:44px;padding:0 2px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-align:right;cursor:pointer}
-.dash-plan-edit:hover{color:var(--blue-m)}
 .dash-insight-strip{margin-top:.6rem;padding:.85rem 1rem;border-left:3px solid transparent;border-radius:0 10px 10px 0}
 .dash-insight-strip:first-child{margin-top:0}
 .dash-insight-strip-label{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-bottom:.4rem}
@@ -451,6 +424,9 @@ textarea::placeholder{color:var(--ink3)}
 .cal-resume-discard{min-height:44px;padding:0 4px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2);text-decoration:underline;cursor:pointer}
 .cal-switch{display:flex;align-items:center;gap:10px;margin-top:1.2rem}
 .cal-switch .signal-subtabs{flex:1;margin:0}
+/* .signal-subtab is 38px tall (Review's three-tab strip); these two carry the
+   44px rule as a modifier rather than editing the shared base. */
+.cal-switch .signal-subtab{min-height:44px}
 .cal-today{flex:none;min-width:44px;min-height:44px;padding:0 4px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
 .cal-today:hover{color:var(--blue-m)}
 .cal-week-nav{margin-top:1rem}
@@ -2473,93 +2449,6 @@ if(window.caches && caches.keys){
     }
     root.appendChild(dashLegend(state.monthSignal, adherenceLegendStageB));
   }
-  // ── "This week's plan" — Adherence subtab, This week only ──────────
-  // A read-only listing of the displayed week's plan, day by day, with a
-  // per-day link into the Plan view. It deliberately does *not* reuse
-  // planItemCard(): that card carries a Remove button whose handler calls
-  // renderPlan(), which draws into the hidden Plan view — pressed from
-  // Review the session would disappear from the data while staying on
-  // screen. Every mutation stays in the Plan view, which is exactly what
-  // the per-day button navigates to.
-  // One compact line: discipline dot, one-line summary, Edit on the right.
-  // The Edit sits on the *session*, not on the day, because a day can hold
-  // more than one — decision 27 established same-day same-discipline doubles
-  // are real here, and decision 29 already refused a day-level tap target for
-  // exactly this reason: with two sessions, one button has to guess which,
-  // and guessing wrong here silently overwrites the wrong session's fields.
-  // Stacked lines keep the day's date label appearing once, as specified.
-  function dashPlanLine(item){
-    var li = el('li', 'dash-plan-line');
-    var dot = el('span', 'dash-plan-dot');
-    // The existing discipline identity tokens (--swim/--bike/--run/--brick/
-    // --strength), same as planItemCard — no new colours.
-    dot.style.background = 'var(--' + item.disc + ')';
-    // Decorative: the discipline is named in words in the summary beside it,
-    // so the dot carries nothing on its own and needs no contrast floor.
-    dot.setAttribute('aria-hidden', 'true');
-    li.appendChild(dot);
-    var text = el('span', 'dash-plan-line-text', planSummaryLine(item));
-    li.appendChild(text);
-    // Kept even though the specified summary is "discipline — title ·
-    // duration": a key session is what decision 30 lets force a week's
-    // severity to bad, so dropping the marker from a plan listing would hide
-    // the one attribute the Adherence signal treats as load-bearing.
-    if(item.key){ li.appendChild(el('span', 'plan-item-key', 'Key')); }
-    var edit = el('button', 'dash-plan-edit', 'Edit');
-    edit.type = 'button';
-    edit.setAttribute('aria-label', 'Edit ' + (item.title || DISC_LABEL[item.disc] || 'session') + ' on ' + formatWeekdayDate(item.date));
-    edit.addEventListener('click', function(){ openPlanEditor(item); });
-    li.appendChild(edit);
-    return li;
-  }
-  function dashPlanDay(dateISO){
-    var row = el('li', 'dash-plan-day' + (dateISO === todayISO() ? ' is-today' : ''));
-    var d = new Date(dateISO + 'T00:00:00');
-    // Weekday + day-of-month only. The month is dropped because all seven
-    // rows are one week and the Adherence panel above already names it; the
-    // uppercase-tracked label style is the app's existing date treatment
-    // (.plan-day-date, .race-month-label), not a new one.
-    var dateLbl = el('span', 'dash-plan-date', MONTH_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate());
-    // The visible label is abbreviated; screen readers get the unabbreviated
-    // date so a row is never announced as a bare "Mon 17".
-    dateLbl.setAttribute('aria-label', formatWeekdayDate(dateISO) + (dateISO === todayISO() ? ', today' : ''));
-    row.appendChild(dateLbl);
-
-    var lines = el('ul', 'dash-plan-lines');
-    var items = planItemsFor(dateISO);
-    if(items.length){
-      lines.setAttribute('aria-label', 'Planned sessions for ' + formatWeekdayDate(dateISO));
-      items.forEach(function(item){ lines.appendChild(dashPlanLine(item)); });
-    } else {
-      // "Nothing planned", not "Rest day" — the splash Today card's "Rest
-      // day" asserts something about *today* specifically; in a full 7-day
-      // listing absence per row is already obvious and needs no claim.
-      var empty = el('li', 'dash-plan-line');
-      empty.appendChild(el('span', 'dash-plan-empty', 'Nothing planned'));
-      var add = el('button', 'dash-plan-edit', 'Add');
-      add.type = 'button';
-      add.setAttribute('aria-label', 'Add a planned session on ' + formatWeekdayDate(dateISO));
-      add.addEventListener('click', function(){ goToPlanDay(dateISO); });
-      empty.appendChild(add);
-      lines.appendChild(empty);
-    }
-    row.appendChild(lines);
-    return row;
-  }
-  function dashPlanWeekSection(mondayISO){
-    var wrap = el('section', 'dash-section dash-plan-week');
-    wrap.setAttribute('data-label', 'This week’s plan');
-    // .dash-section's eyebrow is a CSS ::before on attr(data-label) —
-    // generated content, not a heading — so the region carries its own
-    // accessible name rather than depending on it being announced.
-    wrap.setAttribute('aria-label', 'This week’s plan');
-    wrap.appendChild(el('p', 'dash-plan-week-sub', 'Every day this week, planned or not. Edit opens the Plan view on that day.'));
-    var ul = el('ul', 'dash-plan-days');
-    planWeekDates(mondayISO).forEach(function(dateISO){ ul.appendChild(dashPlanDay(dateISO)); });
-    wrap.appendChild(ul);
-    return wrap;
-  }
-
   function renderDashboard(){
     var root = els.viewDash;
     clear(root);
@@ -2615,15 +2504,9 @@ if(window.caches && caches.keys){
       }, days));
     }
     root.appendChild(dashLegend(state.weekSignal, adherenceLegendStageB));
-    // Adherence subtab only, and This week only. Month's Adherence spans
-    // several week blocks, where a 7-day listing per block is a different and
-    // much larger layout problem — deliberately not attempted there.
-    // Independent of the Stage A/B switch above: this is access to the week's
-    // plan, not a reading of it, and is as useful on a week with no plan
-    // entered (seven "Nothing planned" rows, each with an Add) as on one with.
-    if(state.weekSignal === 'adherence'){
-      root.appendChild(dashPlanWeekSection(weekKey(new Date())));
-    }
+    // (The "This week's plan" 7-day listing that used to follow the legend on
+    // the Adherence subtab was folded into the Calendar week — decision 50.
+    // The plan itself stays reachable from here via "Edit plan →" above.)
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2904,29 +2787,6 @@ if(window.caches && caches.keys){
     var freshBtn = document.querySelector('.race-add-toggle');
     if(freshBtn){ freshBtn.focus(); }
   }
-  // A real month calendar, replacing the old 52-column horizontal strip —
-  // that version read as a data strip, not a calendar; this is the design
-  // a Claude Design canvas mockup explored (weekday header, day cells,
-  // month paging) before it was wired up here. Module state rather than
-  // derived from the DOM, for the same reason planFormOpenFor/raceFormOpen
-  // are: renderRaces() rebuilds this section from scratch on every call,
-  // including a background Sheet refresh, so which month is open and
-  // which week's phase is mid-edit both have to survive that rebuild.
-  var raceCalYear = null, raceCalMonth = null, raceCalEditWeek = null;
-  function resetRaceCalToCurrentMonth(){
-    var today = new Date();
-    raceCalYear = today.getFullYear();
-    raceCalMonth = today.getMonth();
-    raceCalEditWeek = null;
-  }
-  function raceCalGoMonth(delta){
-    if(raceCalYear == null){ resetRaceCalToCurrentMonth(); }
-    var d = new Date(raceCalYear, raceCalMonth + delta, 1);
-    raceCalYear = d.getFullYear();
-    raceCalMonth = d.getMonth();
-    raceCalEditWeek = null;
-    renderRaces();
-  }
   // Six Monday-start weeks covering the given month, including the
   // leading/trailing days of the adjacent months a real month grid always
   // shows. Each week also carries the phase its own Monday resolves to —
@@ -2977,152 +2837,6 @@ if(window.caches && caches.keys){
     });
     return svg;
   }
-  function raceCalWeekRow(week){
-    var row = el('div', 'race-cal-week-row');
-    var wn = el('span', 'race-cal-weeknum', String(isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'))));
-    wn.title = 'Week ' + isoWeekNumber(new Date(week.mondayISO + 'T00:00:00'));
-    row.appendChild(wn);
-    // The spacer column between the week number and Monday — see the
-    // .race-cal-week-row grid-template-columns comment in the CSS.
-    row.appendChild(el('span', null));
-    week.days.forEach(function(day){
-      var cls = 'race-cal-day';
-      if(!day.inMonth){ cls += ' dim'; }
-      if(day.isToday){ cls += ' today'; }
-      if(day.race){ cls += ' ' + day.race.status; }
-      var cell = el('div', cls);
-      if(day.race){ cell.title = day.race.name + ' · ' + formatRaceDateLabel(day.iso); }
-      else if(day.isToday){ cell.title = 'Today'; }
-      cell.appendChild(el('span', 'race-cal-day-num', String(day.date.getDate())));
-      row.appendChild(cell);
-    });
-    return row;
-  }
-  function raceCalPhaseRow(week){
-    var row = el('div', 'race-cal-phase-row');
-    var weekLabel = 'the week of ' + formatWeekdayDate(week.mondayISO);
-    var pillClass = PERIOD_PILL_CLASS[week.phase];
-    var bar = el('div', 'race-cal-phase' + (pillClass ? ' ' + pillClass : ''));
-    bar.setAttribute('aria-hidden', 'true');
-    if(raceCalEditWeek === week.mondayISO){
-      // Edit mode keeps the flex-row wrapper — the select needs the width,
-      // and starting under Monday (grid-column 3/-1 on .race-cal-phase-inner)
-      // is unchanged from the original build.
-      var inner = el('div', 'race-cal-phase-inner');
-      var select = document.createElement('select');
-      select.className = 'race-cal-phase-select';
-      select.setAttribute('aria-label', 'Phase for ' + weekLabel);
-      PERIOD.forEach(function(p){
-        var opt = document.createElement('option');
-        opt.value = p.v; opt.textContent = p.label;
-        if(p.v === week.phase){ opt.selected = true; }
-        select.appendChild(opt);
-      });
-      select.addEventListener('change', function(){
-        setPhaseForWeek(week.mondayISO, select.value);
-        raceCalEditWeek = null;
-        renderRaces();
-        say('Phase for ' + weekLabel + ' set to ' + PERIOD_LABEL[select.value] + '.');
-      });
-      inner.appendChild(select);
-      inner.appendChild(bar);
-      row.appendChild(inner);
-    } else {
-      // View mode: the button and the bar are direct grid items (see the
-      // .race-cal-phase-edit/.race-cal-phase CSS) so the button can align
-      // with the week number while the bar stays confined to Monday-Sunday.
-      // Word leads, icon trails.
-      var editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.className = 'race-cal-phase-edit';
-      editBtn.setAttribute('aria-label', 'Edit the phase for ' + weekLabel);
-      editBtn.appendChild(document.createTextNode(week.phase ? PERIOD_LABEL[week.phase] : 'Unset'));
-      editBtn.appendChild(pencilIcon());
-      editBtn.addEventListener('click', function(){
-        raceCalEditWeek = week.mondayISO;
-        renderRaces();
-      });
-      row.appendChild(editBtn);
-      row.appendChild(bar);
-    }
-    return row;
-  }
-  // A real month calendar, race weeks and the current training phase
-  // overlaid, built from real `races`/`phasePlan` data. Tapping a week's
-  // phase label edits that week directly — setPhaseForWeek writes an
-  // ordinary phasePlan block dated that week's Monday, the same model the
-  // Phase Plan editor and "Change phase" both already write to.
-  function raceCalendarSection(){
-    if(raceCalYear == null){ resetRaceCalToCurrentMonth(); }
-    var weeks = raceCalMonthWeeks(raceCalYear, raceCalMonth);
-
-    var wrap = el('div', 'race-cal');
-    var hd = el('div', 'race-cal-hd');
-    hd.appendChild(el('div', 'race-cal-title', 'Race weeks & phase'));
-    wrap.appendChild(hd);
-
-    var nav = el('div', 'plan-week-nav');
-    var prev = el('button', 'plan-week-btn', '‹');
-    prev.type = 'button';
-    prev.setAttribute('aria-label', 'Show the previous month');
-    prev.addEventListener('click', function(){ raceCalGoMonth(-1); });
-    nav.appendChild(prev);
-    var label = el('div', 'plan-week-nav-label');
-    label.appendChild(el('span', 'plan-week-num', MONTH_NAMES[raceCalMonth] + ' ' + raceCalYear));
-    nav.appendChild(label);
-    var next = el('button', 'plan-week-btn', '›');
-    next.type = 'button';
-    next.setAttribute('aria-label', 'Show the next month');
-    next.addEventListener('click', function(){ raceCalGoMonth(1); });
-    nav.appendChild(next);
-    wrap.appendChild(nav);
-
-    var weekdayRow = el('div', 'race-cal-weekdays');
-    weekdayRow.appendChild(el('span', 'race-cal-weeknum', 'Wk'));
-    weekdayRow.appendChild(el('span', null));
-    MONTH_DAYS.forEach(function(abbr){
-      weekdayRow.appendChild(el('span', 'race-cal-weekday', abbr.charAt(0)));
-    });
-    wrap.appendChild(weekdayRow);
-
-    weeks.forEach(function(week){
-      wrap.appendChild(raceCalWeekRow(week));
-      wrap.appendChild(raceCalPhaseRow(week));
-    });
-
-    var legend = el('div', 'race-cal-legend');
-    function legendRow(labelText, items){
-      var row = el('div', 'race-cal-legend-row');
-      row.appendChild(el('span', 'race-cal-legend-label', labelText));
-      items.forEach(function(it){
-        var item = el('div', 'race-cal-legend-item');
-        item.appendChild(el('span', 'race-cal-legend-dot ' + it.cls));
-        item.appendChild(document.createTextNode(it.label));
-        row.appendChild(item);
-      });
-      legend.appendChild(row);
-    }
-    legendRow('Races:', [
-      {cls: 'locked', label: 'Locked in'},
-      {cls: 'considering', label: 'Considering'},
-      {cls: 'current', label: 'Today'}
-    ]);
-    legendRow('Phase:', [
-      {cls: 'phase-base', label: 'Base'},
-      {cls: 'phase-build', label: 'Build'},
-      {cls: 'phase-peak', label: 'Peak'},
-      {cls: 'phase-taper', label: 'Taper'}
-    ]);
-    wrap.appendChild(legend);
-
-    // "Plan back from a race →" / "Edit phase plan →" removed on request —
-    // per-week editing directly on the calendar (above) is now the only way
-    // in. view-phasebuild and view-phaseplan still exist (goToPhaseBuild(),
-    // goToPhasePlan()) but are deliberately left with no navigation path to
-    // them; see CLAUDE.md decision 46's follow-up note.
-
-    return wrap;
-  }
   function renderRaces(){
     var root = els.viewRaces;
     clear(root);
@@ -3138,8 +2852,6 @@ if(window.caches && caches.keys){
     formWrap.hidden = !raceFormOpen;
     renderRaceForm(formWrap, closeRaceForm);
     root.appendChild(formWrap);
-
-    root.appendChild(raceCalendarSection());
 
     root.appendChild(raceListSection('Upcoming', upcomingRaces(), {
       emptyText: 'No upcoming races yet — add one above.', markFirstAsNext: true
@@ -3162,7 +2874,7 @@ if(window.caches && caches.keys){
   // Which week is showing, which day is selected and which view is up are
   // module state, never read back from the DOM: renderCalendar() rebuilds
   // everything, including on a background Sheet refresh, and must not lose the
-  // athlete's place (same reason planFormOpenFor and raceCalYear are).
+  // athlete's place (same reason planFormOpenFor and the Month paging state are).
   // ═══════════════════════════════════════════════════════════════
   var calMode = 'week';                   // 'week' | 'month'
   var calWeekMonday = weekKey(new Date()); // Monday (ISO) of the week showing
@@ -3808,7 +3520,7 @@ if(window.caches && caches.keys){
   // returns here (planBackTo), to the same week.
   function calOpenPlan(dateISO, item){
     planBackTo = 'calendar';
-    openPlanDayForm(dateISO, item || null);
+    if(item){ openPlanEditor(item); } else { goToPlanDay(dateISO); }
   }
   // A check-in is "in progress" when the flow holds answers (or a chosen
   // date) and is asking or reviewing. flowIsPristine() is false for 'saved'
@@ -4969,8 +4681,8 @@ if(window.caches && caches.keys){
   function goToPhaseBuild(){ showView('phasebuild'); }
   // Opens the Plan view at one specific day with that day's form showing.
   // `editItem` (optional) makes it a pre-filled edit of that session rather
-  // than a blank add. Both entry points — the Plan view's own card and the
-  // Adherence day list in Review — go through here, so the two can't drift.
+  // than a blank add. Every entry point — the Plan view's own card and the
+  // Calendar's Add / Edit — goes through here, so they can't drift.
   function openPlanDayForm(dateISO, editItem){
     state.planWeek = weekKey(new Date(dateISO + 'T00:00:00'));
     // The same module state the Plan view's own "+ Add session" button sets —
@@ -5845,7 +5557,7 @@ if(window.caches && caches.keys){
     if(isTrends){ renderTrends(); }
     if(isStrength){ sizeStrengthFrame(); }
     if(isWarmup){ renderWarmup(); }
-    if(isRaces){ resetRaceCalToCurrentMonth(); renderRaces(); }
+    if(isRaces){ renderRaces(); }
     if(isPlan){ renderPlan(); }
     if(isPhasePlan){ renderPhasePlan(); }
     if(isPhaseBuild){ renderPhaseBuild(); }

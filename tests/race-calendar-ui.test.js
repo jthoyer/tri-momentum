@@ -1,7 +1,9 @@
 'use strict';
-// The Races tab's month calendar (CLAUDE.md decision 46), driven through the
-// real UI. Replaces the old 52-column horizontal week strip with an actual
-// month grid, and adds a per-week tap-to-edit-phase interaction.
+// The month calendar (CLAUDE.md decision 46) with its per-week tap-to-edit-phase
+// interaction, driven through the real UI. It lived on the Races tab; decision
+// 50 moved it to Calendar -> Month, so every assertion below now opens it via
+// the Check-in tab and the Month switch — none was dropped. The last test is
+// the other half of the move: Races no longer carries a calendar.
 //
 // Runs against the shipped index.html over http, with only the Apps Script URL
 // blanked so a live Sheet fetch can't overwrite the seeded scenario mid-test.
@@ -25,7 +27,7 @@ const PLAN = [
   { id: 'p6', from: '2026-10-26', phase: 'base' },
 ];
 
-describe('race calendar — month view', { concurrency: false }, () => {
+describe('calendar month — the race calendar and per-week phase edit, moved from Races', { concurrency: false }, () => {
   let server, browser, ctx, page, errors;
 
   before(async () => {
@@ -46,7 +48,8 @@ describe('race calendar — month view', { concurrency: false }, () => {
     );
     await page.goto(server.origin);
     await page.waitForTimeout(400);
-    await page.click('#tab-races');
+    await page.click('#tab-flow');
+    await page.click('#cal-tab-month');
     await page.waitForTimeout(300);
   });
 
@@ -64,7 +67,7 @@ describe('race calendar — month view', { concurrency: false }, () => {
     assert.strictEqual(todayCount, 1, 'exactly one .today cell in the current month');
   });
 
-  test('the Races calendar no longer offers the phase-plan/phase-build links', async () => {
+  test('the calendar month does not offer the phase-plan/phase-build links', async () => {
     // Removed on request — per-week editing directly on the calendar is now
     // the only way in; view-phaseplan and view-phasebuild still exist
     // (goToPhasePlan()/goToPhaseBuild()) but are deliberately unreachable
@@ -149,6 +152,17 @@ describe('race calendar — month view', { concurrency: false }, () => {
     const blocksAtThatMonday = storedPlan.filter((b) => b.from === '2026-10-12');
     assert.strictEqual(blocksAtThatMonday.length, 1, 'exactly one block for that Monday — no duplicate row');
     assert.strictEqual(blocksAtThatMonday[0].phase, 'peak');
+  });
+
+  test('Races no longer carries a calendar, but keeps its hero, add toggle and Upcoming list (A21)', async () => {
+    await page.click('#tab-races');
+    await page.waitForTimeout(200);
+    assert.strictEqual(await page.$$eval('#view-races .race-cal', (ns) => ns.length), 0, 'no .race-cal on Races');
+    assert.strictEqual(await page.$$eval('#view-races .race-cal-day', (ns) => ns.length), 0, 'no month grid cells on Races');
+    assert.ok(await page.$('#view-races .race-hero'), 'hero remains');
+    assert.ok(await page.$('#view-races .race-add-toggle'), 'add toggle remains');
+    const sections = await page.$$eval('#view-races .race-section-eyebrow', (ns) => ns.map((n) => n.textContent.trim()));
+    assert.ok(sections.includes('Upcoming'), 'Upcoming list remains: ' + JSON.stringify(sections));
   });
 
   test('no page errors were raised at any point', async () => {
