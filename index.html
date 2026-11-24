@@ -417,6 +417,7 @@ textarea::placeholder{color:var(--ink3)}
    existing tokens only. Nothing here is hidden with the `hidden` attribute:
    every conditional part (race strip, resume bar, still-to-log row, quiet
    line) is simply not rendered, so none needs a [hidden] rule. ── */
+.cal[hidden]{display:none}
 .cal-title{margin-top:.5rem}
 .cal-race{margin-top:.9rem;padding:10px 14px;border-radius:var(--rmd);background:var(--blue-l);color:var(--ink);font-family:var(--fd);font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
 .cal-resume{margin-top:.9rem;padding:12px 14px;background:var(--s1);border:1px solid var(--blue);border-radius:var(--rmd)}
@@ -424,7 +425,6 @@ textarea::placeholder{color:var(--ink3)}
 .cal-resume-line{margin-top:2px;font-size:13.5px;line-height:1.5;color:var(--ink2);overflow-wrap:anywhere}
 .cal-resume-actions{display:flex;flex-wrap:wrap;align-items:center;gap:0 14px;margin-top:6px}
 .cal-resume-go{min-height:44px;padding:0 20px;border:none;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--fd);font-size:14px;font-weight:600;cursor:pointer}
-.cal-resume-go:hover{background:#1246ad}
 .cal-resume-discard{min-height:44px;padding:0 4px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2);text-decoration:underline;cursor:pointer}
 .cal-switch{display:flex;align-items:center;gap:10px;margin-top:1.2rem}
 .cal-switch .signal-subtabs{flex:1;margin:0}
@@ -503,7 +503,7 @@ textarea::placeholder{color:var(--ink3)}
    Check-in landing screen was retired.) */
 .cal-unplanned{display:block;width:100%;min-height:44px;margin-top:.6rem;padding:12px 14px;background:none;border:none;font-family:var(--fd);font-size:14px;font-weight:600;color:var(--blue);cursor:pointer;text-align:center}
 .cal-unplanned:hover{color:var(--blue-m);text-decoration:underline}
-.cal-quiet{margin-top:.8rem;font-size:13.5px;color:var(--ink2)}
+.cal-quiet{margin-top:.8rem;font-size:13.5px;color:var(--ink2);text-align:center}
 .cal-quiet-link{min-height:44px;padding:0 2px;background:none;border:none;font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--blue);cursor:pointer}
 .cal-quiet-link:hover{color:var(--blue-m)}
 /* ── Training plan ───────────────────────────────────────────────────
@@ -667,7 +667,7 @@ fieldset.plan-field{border:0;min-width:0}
   <section class="period" id="view-period" hidden aria-labelledby="period-h">
     <p class="eyebrow">TRI Momentum</p>
     <h1 id="period-h" tabindex="-1">What phase is this training block?</h1>
-    <p class="hint">Sets the context This week and Month review your sessions against. Change it any time from the dashboard.</p>
+    <p class="hint">Needed to start a check-in: each session you log is stamped with it. You can change it any time with “Change phase”.</p>
     <div class="choices-wrap">
       <div class="choices grid2" id="period-choices"></div>
     </div>
@@ -1158,9 +1158,13 @@ if(window.caches && caches.keys){
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(!data || !data.ok || !Array.isArray(data.sessions)){ throw new Error('bad response'); }
-        log = data.sessions.map(parseSheetSession);
+        var next = data.sessions.map(parseSheetSession);
+        // "changed" means the data differs, not that the read succeeded: every
+        // caller redraws on true, and a redraw destroys keyboard focus.
+        var changed = JSON.stringify(next) !== JSON.stringify(log);
+        log = next;
         persistLog();
-        return true;
+        return changed;
       })
       .catch(function(){ return false; })
       .then(function(ok){ sheetFetchInFlight = null; return ok; });
@@ -1196,9 +1200,10 @@ if(window.caches && caches.keys){
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(!data || !data.ok || !Array.isArray(data.races)){ throw new Error('bad response'); }
+        var changed = JSON.stringify(data.races) !== JSON.stringify(races);
         races = data.races;
         persistRaces();
-        return true;
+        return changed;
       })
       .catch(function(){ return false; })
       .then(function(ok){ racesFetchInFlight = null; return ok; });
@@ -1262,9 +1267,11 @@ if(window.caches && caches.keys){
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(!data || !data.ok || !Array.isArray(data.plan)){ throw new Error('bad response'); }
-        plan = data.plan.map(parseSheetPlanItem);
+        var next = data.plan.map(parseSheetPlanItem);
+        var changed = JSON.stringify(next) !== JSON.stringify(plan);
+        plan = next;
         persistPlan();
-        return true;
+        return changed;
       })
       .catch(function(){ return false; })
       .then(function(ok){ planFetchInFlight = null; return ok; });
@@ -1345,11 +1352,13 @@ if(window.caches && caches.keys){
           }
           return false;
         }
-        phasePlan = data.phases.map(parseSheetPhaseBlock);
+        var next = data.phases.map(parseSheetPhaseBlock);
+        var changed = JSON.stringify(next) !== JSON.stringify(phasePlan);
+        phasePlan = next;
         persistPhasePlan();
         recomputeCurrentPhase();
         markPhasePlanPushed();
-        return true;
+        return changed;
       })
       .catch(function(){ return false; })
       .then(function(ok){ phasePlanFetchInFlight = null; return ok; });
@@ -2889,7 +2898,26 @@ if(window.caches && caches.keys){
   var calMode = 'week';                   // 'week' | 'month'
   var calWeekMonday = weekKey(new Date()); // Monday (ISO) of the week showing
   var calSelected = todayISO();           // the day whose agenda is showing
+  // state.ans is seeded with *today's* date at load (and by startNew / an
+  // unplanned check-in dated today). An app left open past midnight then holds
+  // yesterday's date, which flowIsPristine() rightly treats as a typed answer —
+  // so a spurious resume bar would appear and Resume would open a blank
+  // check-in dated yesterday. flowSeedDate remembers which date was *seeded*
+  // (null when the athlete or a card chose it), so a stale untouched seed can
+  // be rolled forward without loosening flowIsPristine(): a deliberately
+  // changed date, or any answer, is never touched.
+  var flowSeedDate = todayISO();
+  function reseedFlowToToday(){
+    var today = todayISO();
+    if(!flowSeedDate || flowSeedDate === today){ return; }
+    var keys = Object.keys(state.ans);
+    if(state.mode === 'ask' && !state.note && keys.length === 1 && keys[0] === 'date' && state.ans.date === flowSeedDate){
+      state.ans = {date: today};
+      flowSeedDate = today;
+    }
+  }
   function calResetToToday(){
+    reseedFlowToToday();
     var now = new Date();
     calMode = 'week';
     calWeekMonday = weekKey(now);
@@ -2986,6 +3014,23 @@ if(window.caches && caches.keys){
     if(!hadFocus){ return; }
     var again = els.viewCalendar.querySelector(selector);
     if(again){ again.focus(); }
+  }
+  // Snapshot of which Calendar control has focus, as a selector that finds its
+  // twin after a rebuild: a chip by date, anything else by id or accessible
+  // name, else by class. null when focus is elsewhere.
+  function calFocusKey(){
+    var a = document.activeElement;
+    if(!a || a === document.body || !els.viewCalendar.contains(a)){ return null; }
+    if(a.classList.contains('cal-chip')){ return '.cal-chip[data-date="' + a.getAttribute('data-date') + '"]'; }
+    if(a.id){ return '#' + a.id; }
+    var label = a.getAttribute('aria-label');
+    if(label && label.indexOf('"') === -1){ return '[aria-label="' + label + '"]'; }
+    return a.className ? '.' + String(a.className).split(' ')[0] : null;
+  }
+  function calRestoreFocus(key){
+    if(!key){ return; }
+    var again = els.viewCalendar.querySelector(key);
+    if(again){ again.focus({preventScroll: true}); }
   }
   function calGoWeek(mondayISO, selectISO){
     calWeekMonday = mondayISO;
@@ -3661,25 +3706,6 @@ if(window.caches && caches.keys){
     if(item.intensity){ bits.push(PLAN_INTENSITY_LABEL[item.intensity] || item.intensity); }
     if(item.key && includeKey !== false){ bits.push('Key'); }
     return bits.join(' · ');
-  }
-  // The single-line form used by the Review week list: the discipline and
-  // title, then planMetaLine's fields. Built on planMetaLine rather than
-  // re-listing duration/intensity, so this row can never word the same facts
-  // differently from the splash and check-in cards.
-  function planSummaryLine(item){
-    var head = DISC_LABEL[item.disc] || item.disc;
-    if(item.title){
-      // An em-dash separates discipline from title — except when the title
-      // already contains one, which is the common case here rather than an
-      // edge case (the add-session form's own placeholder is "Squad — 8×100
-      // CSS"). Left alone it renders "Swim — Squad — 8×100 CSS", two dashes
-      // both trying to set off a clause: the same punctuation collision
-      // decision 30 fixed in the missed-key-session headline.
-      head += (item.title.indexOf('—') === -1 ? ' — ' : ' · ') + item.title;
-    }
-    // includeKey false — the standalone "Key" pill sits beside this text.
-    var meta = planMetaLine(item, false);
-    return meta ? (head + ' · ' + meta) : head;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -5169,6 +5195,7 @@ if(window.caches && caches.keys){
     clearAutoProgress();
     exitPeriodScreen();
     state.ans = {date: action.date}; state.note = ''; state.step = 0; state.mode = 'ask';
+    flowSeedDate = (!action.item && action.date === todayISO()) ? action.date : null;
     if(action.item){ applyPlanPrefill(action.item); }
     showView('flow');
     if(action.item){
@@ -5179,7 +5206,6 @@ if(window.caches && caches.keys){
       say('Logging an unplanned session. Nothing pre-filled.');
     }
   }
-  function startCheckInFromPlan(item){ beginCheckIn({item: item, date: item.date}); }
   // Splits a day's planned sessions into the ones still to log and the ones
   // already logged — using the *same* greedy matcher the Adherence signal
   // runs on (planDayResults), never a second rule that could disagree with
@@ -5546,6 +5572,7 @@ if(window.caches && caches.keys){
     showView('dashboard', 'Session saved. ' + n + ' of ' + WEEK_FLOOR + ' sessions logged this week. Showing this week’s dashboard.');
   }
   function startNew(){
+    flowSeedDate = todayISO();
     state.ans = {date: todayISO()}; state.note = ''; state.step = 0; state.mode = 'ask';
     render(); focusHeading();
     say('New session started. Step 1 of ' + steps().length + '.');
@@ -5598,6 +5625,9 @@ if(window.caches && caches.keys){
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
     if(isFlow){ renderChrome(); }
+    // Leaving the flow must not leave its 450ms auto-advance armed: it would
+    // step a hidden flow on, and the resume bar would then name the wrong step.
+    if(!isFlow){ clearAutoProgress(); }
     refreshVisibleViewFromSheet();
     if(opts && opts.quiet){ return; }
     window.scrollTo(0, 0);
@@ -5631,7 +5661,12 @@ if(window.caches && caches.keys){
         // its redraw for an open form: a rebuild would close the select under
         // the athlete's thumb. The next render picks the data up.
         if(calMode === 'month' && calEditWeek){ return; }
+        // Belt and braces with the changed/unchanged signal above: when data
+        // really did change, the rebuild still must not cost a keyboard user
+        // their place.
+        var key = calFocusKey();
         renderCalendar();
+        calRestoreFocus(key);
       };
       refreshLogFromSheet().then(redrawCalendar);
       refreshPlanFromSheet().then(redrawCalendar);
@@ -5708,6 +5743,7 @@ if(window.caches && caches.keys){
   // part-way through (the resume bar is the way back to that one). The phase
   // question moved to the start of a check-in; see beginCheckIn().
   els.tabFlow.addEventListener('click', function(){
+    clearAutoProgress();
     exitPeriodScreen();
     calResetToToday();
     showView('calendar');
@@ -5762,6 +5798,7 @@ if(window.caches && caches.keys){
     // detour, not a way into a check-in: decision 19's rule is that it returns
     // to the question you were on, and it must never resume a held check-in.
     pendingCheckIn = null;
+    clearAutoProgress();
     phaseReturnView = els.viewDash.hidden ? (els.viewTrends.hidden ? 'flow' : 'trends') : 'dashboard';
     els.appMain.hidden = true;
     els.periodScreen.hidden = false;
@@ -5821,7 +5858,10 @@ if(window.caches && caches.keys){
   // another device changes something. Re-sync whichever view is on screen
   // whenever the app regains foreground.
   document.addEventListener('visibilitychange', function(){
-    if(!document.hidden){ refreshVisibleViewFromSheet(); }
+    if(!document.hidden){
+      reseedFlowToToday();
+      refreshVisibleViewFromSheet();
+    }
   });
 })();
 </script>

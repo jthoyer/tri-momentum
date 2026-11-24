@@ -932,3 +932,131 @@ describe('background refresh', { concurrency: false }, () => {
     assert.ok(await page.isVisible('.cal-resume-discard'), 'the question is module state, not DOM');
   });
 });
+
+// ───────────────────── background refresh: focus and identity ─────────────────────
+// The Calendar must not rebuild when a Sheet read succeeds with data that has
+// not changed — a rebuild destroys the node a keyboard user is on. The older
+// tests in this file mocked only the route under test; every other read got
+// the app's own HTML back and failed quietly, which is why a redraw-on-every-
+// success defect passed them. These mock ALL FOUR reads to succeed.
+function sheetRoutes(fx, over) {
+  const sessions = (fx.log || []).map((e) => ({
+    when: e.date, disc: e.disc, duration: e.duration, intensity: e.intensity, rpe: e.rpe,
+    a1: e.a1, a2: e.a2, a3: e.a3 || '', b2: e.b2, b3: e.b3, note: e.note, phase: e.phase,
+  }));
+  const base = {
+    'list=1': { ok: true, sessions },
+    'plan=1': { ok: true, plan: fx.plan || [] },
+    'races=1': { ok: true, races: fx.races || [] },
+    'phases=1': { ok: true, phases: fx.phases || [] },
+  };
+  return Object.fromEntries(Object.entries({ ...base, ...(over || {}) }).map(([k, v]) => [k, JSON.stringify(v)]));
+}
+const FOCUS_TARGETS = [
+  ['a day chip', '.cal-chip[data-date="2026-11-25"]'],
+  ['a card Edit button', '.cal-card-edit'],
+  ['the week stepper', '.cal-week-nav [aria-label="Show the next week"]'],
+  ['the Week tab', '#cal-tab-week'],
+];
+describe('background refresh keeps the node and the focus', { concurrency: false }, () => {
+  const fire = (page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  const activeKey = (page) => page.evaluate(() => {
+    const a = document.activeElement;
+    return a && (a.getAttribute('data-keep') || 'other:' + (a.getAttribute('aria-label') || a.id || a.className));
+  });
+  for (const [name, sel] of FOCUS_TARGETS) {
+    scenario('H1 unchanged reads (all four mocked): ' + name + ' is not rebuilt and keeps focus', F1, { routes: sheetRoutes(F1) }, async (page) => {
+      await page.waitForTimeout(300);
+      await page.$eval(sel, (n) => n.setAttribute('data-keep', 'same-node'));
+      await page.focus(sel);
+      for (let i = 0; i < 2; i++) { await fire(page); await page.waitForTimeout(400); }
+      assert.ok(await page.$(sel + '[data-keep="same-node"]'), 'the very same node is still in the page (no rebuild)');
+      assert.strictEqual(await activeKey(page), 'same-node', 'focus did not move');
+    });
+    scenario('H1 changed data: ' + name + ' redraws and focus is restored to its twin', F1, { routes: sheetRoutes(F1) }, async (page) => {
+      await page.waitForTimeout(300);
+      await page.$eval(sel, (n) => n.setAttribute('data-keep', 'old-node'));
+      await page.focus(sel);
+      routes['plan=1'] = JSON.stringify({ ok: true, plan: F1.plan.concat([planItem('chg1', '2026-11-26', 'swim', 'Changed elsewhere', 30, 'easy')]) });
+      await fire(page);
+      await page.waitForTimeout(500);
+      assert.ok((await page.$(sel + '[data-keep="old-node"]')) === null, 'the view was rebuilt');
+      // Focus is on the equivalent control, not on <body>.
+      const sameSpot = await page.evaluate((s) => document.activeElement === document.querySelector(s), sel);
+      assert.ok(sameSpot, 'focus was restored to the rebuilt control');
+    });
+  }
+  scenario('H1 unchanged reads in Month: nothing rebuilt either', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    await page.click('#cal-tab-month');
+    await page.$eval('.race-cal-week-row', (n) => n.setAttribute('data-keep', 'same-node'));
+    await page.focus('.race-cal-week-row');
+    await fire(page);
+    await page.waitForTimeout(400);
+    assert.ok(await page.$('.race-cal-week-row[data-keep="same-node"]'));
+  });
+});
+
+// ───────────────────────────── midnight ─────────────────────────────
+describe('an app left open past midnight', { concurrency: false }, () => {
+  const NEXT_DAY = '2026-11-25T09:00:00+11:00';
+  scenario('M1 no spurious resume bar the next day; a blank check-in is dated the new today', F1, async (page) => {
+    await page.clock.setFixedTime(new Date(NEXT_DAY));
+    await page.click('#tab-dash');
+    await page.click('#tab-flow');
+    assert.ok((await page.$('.cal-resume')) === null, 'an untouched seed is not a check-in in progress');
+    assert.strictEqual(await pressedDate(page), '2026-11-25', 'the Calendar is on the new today');
+    await page.click('.cal-unplanned');
+    assert.strictEqual((await reviewAnswers(page)).date, 'Today');
+  });
+  scenario('M1 a date the athlete chose is still preserved across midnight (flowIsPristine not loosened)', F1, async (page) => {
+    await selectDay(page, '2026-11-23');
+    await page.click('.cal-unplanned');                 // a chosen date, not the seed
+    await page.click('#tab-flow');
+    await page.clock.setFixedTime(new Date(NEXT_DAY));
+    await page.click('#tab-dash');
+    await page.click('#tab-flow');
+    assert.ok(norm(await page.textContent('.cal-resume-line')).includes('Mon 23 Nov'), 'the chosen date survived');
+  });
+  scenario('M1 an answered check-in is preserved across midnight', F1, async (page) => {
+    await page.click('.cal-card:has(.cal-card-title:text("Bike — Turbo")) .cal-card-cta');
+    await page.click('#tab-flow');
+    await page.clock.setFixedTime(new Date(NEXT_DAY));
+    await page.click('#tab-dash');
+    await page.click('#tab-flow');
+    assert.ok(await page.isVisible('.cal-resume'));
+  });
+});
+
+// ───────────────────────────── leaving the flow quickly ─────────────────────────────
+describe('leaving the flow within the auto-advance delay', { concurrency: false }, () => {
+  scenario('L1 answer, tap Check-in at once: the hidden flow does not advance and nothing is announced', F1, async (page) => {
+    await page.click('.cal-card:has(.cal-card-title:text("Bike — Turbo")) .cal-card-cta');
+    await page.waitForTimeout(200);                    // let the CTA's own "Step 2 of 5" announcement land first
+    await page.evaluate(() => {
+      window.__said = [];
+      new MutationObserver(() => {
+        const t = document.getElementById('live').textContent;
+        if (t) { window.__said.push(t); }
+      }).observe(document.getElementById('live'), { childList: true, characterData: true, subtree: true });
+    });
+    await page.click('#o-b3-nothing');                 // arms the 450ms auto-advance
+    await page.click('#tab-flow');                     // well inside it
+    await page.waitForTimeout(900);
+    assert.ok(norm(await page.textContent('.cal-resume-line')).includes('step 2 of 5'), norm(await page.textContent('.cal-resume-line')));
+    assert.deepStrictEqual(await page.evaluate(() => window.__said), [], 'no "Step 3 of 5" announced on the Calendar');
+    await page.click('.cal-resume-go');
+    assert.strictEqual(norm(await page.textContent('#step-h')), 'Any pain, tightness or niggle?', 'Resume lands on the step the bar named');
+    assert.ok(await page.isChecked('#o-b3-nothing'), 'and the answer is intact');
+  });
+});
+
+// ───────────────────────────── phase picker copy ─────────────────────────────
+describe('phase picker copy', { concurrency: false }, () => {
+  scenario('the picker says what it is for, not the retired dashboard wording', { ...F1, phases: [] }, async (page) => {
+    await page.click('.cal-unplanned');
+    const hint = norm(await page.textContent('#view-period .hint'));
+    assert.ok(hint.includes('start a check-in'), hint);
+    assert.ok(hint.includes('Change phase'), hint);
+    assert.ok(!hint.includes('dashboard') && !hint.includes('This week'), hint);
+  });
+});
