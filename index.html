@@ -414,9 +414,11 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-legend-dot.phase-taper{background:var(--phase-taper)}
 /* ── Calendar — the app's start screen and the first screen of Check-in
    (CLAUDE.md decision 50; docs/specs/calendar-start-screen.md). Built from
-   existing tokens only. Nothing here is hidden with the `hidden` attribute:
-   every conditional part (race strip, resume bar, still-to-log row, quiet
-   line) is simply not rendered, so none needs a [hidden] rule. ── */
+   existing tokens only. The view itself (#view-calendar, class `cal`) is
+   toggled with `hidden` by showView(), so it carries its own [hidden] rule
+   below — there is no global one. Every conditional part inside it (race
+   strip, resume bar, still-to-log row, quiet line) is simply not rendered, so
+   none of those needs one. ── */
 .cal[hidden]{display:none}
 .cal-title{margin-top:.5rem}
 .cal-race{margin-top:.9rem;padding:10px 14px;border-radius:var(--rmd);background:var(--blue-l);color:var(--ink);font-family:var(--fd);font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
@@ -2428,6 +2430,7 @@ if(window.caches && caches.keys){
     return tabs;
   }
   function renderTrends(){
+    viewRenderedDay = todayISO();
     var root = els.viewTrends;
     clear(root);
     var h = el('h1', 'dash-eyebrow', 'This month');
@@ -2469,6 +2472,7 @@ if(window.caches && caches.keys){
     root.appendChild(dashLegend(state.monthSignal, adherenceLegendStageB));
   }
   function renderDashboard(){
+    viewRenderedDay = todayISO();
     var root = els.viewDash;
     clear(root);
     var h = el('h1', 'dash-eyebrow', 'Review');
@@ -2857,6 +2861,7 @@ if(window.caches && caches.keys){
     return svg;
   }
   function renderRaces(){
+    viewRenderedDay = todayISO();
     var root = els.viewRaces;
     clear(root);
     root.appendChild(raceHero(function(){
@@ -2907,9 +2912,20 @@ if(window.caches && caches.keys){
   // be rolled forward without loosening flowIsPristine(): a deliberately
   // changed date, or any answer, is never touched.
   var flowSeedDate = todayISO();
+  // The day the visible views were last drawn for. A view drawn on Tuesday is
+  // wrong on Wednesday even when no Sheet data changed (today ring, "Not due
+  // yet" vs "Missed", the Monday gap row, countdowns), so a changed todayISO()
+  // counts as "changed" on resume.
+  var viewRenderedDay = todayISO();
   function reseedFlowToToday(){
     var today = todayISO();
     if(!flowSeedDate || flowSeedDate === today){ return; }
+    // Never while the flow is on screen: its date input would keep showing the
+    // old day while state.ans said the new one, and a session saved from it
+    // would be stored under a date the athlete never saw. In the flow the date
+    // is left alone (Review shows it plainly); it is rolled forward only once
+    // the flow is out of sight.
+    if(els.viewFlow && !els.viewFlow.hidden){ return; }
     var keys = Object.keys(state.ans);
     if(state.mode === 'ask' && !state.note && keys.length === 1 && keys[0] === 'date' && state.ans.date === flowSeedDate){
       state.ans = {date: today};
@@ -3015,22 +3031,32 @@ if(window.caches && caches.keys){
     var again = els.viewCalendar.querySelector(selector);
     if(again){ again.focus(); }
   }
-  // Snapshot of which Calendar control has focus, as a selector that finds its
-  // twin after a rebuild: a chip by date, anything else by id or accessible
-  // name, else by class. null when focus is elsewhere.
+  // Snapshot of which Calendar control has focus, as a plain string that finds
+  // its twin after a rebuild — never a CSS selector built from plan text (a
+  // title ending in a backslash would make querySelector throw inside a promise
+  // callback). Cards are keyed by plan id through data-focus, so two same-day
+  // sessions with the same title are told apart; chips by date; the rest by id,
+  // accessible name, or class. null when focus is elsewhere.
+  function calKeyOf(el){
+    if(el.classList.contains('cal-chip')){ return 'chip:' + el.getAttribute('data-date'); }
+    var df = el.getAttribute('data-focus');
+    if(df){ return 'df:' + df; }
+    if(el.id){ return 'id:' + el.id; }
+    var label = el.getAttribute('aria-label');
+    if(label){ return 'label:' + label; }
+    return el.className ? 'class:' + String(el.className).split(' ')[0] : null;
+  }
   function calFocusKey(){
     var a = document.activeElement;
     if(!a || a === document.body || !els.viewCalendar.contains(a)){ return null; }
-    if(a.classList.contains('cal-chip')){ return '.cal-chip[data-date="' + a.getAttribute('data-date') + '"]'; }
-    if(a.id){ return '#' + a.id; }
-    var label = a.getAttribute('aria-label');
-    if(label && label.indexOf('"') === -1){ return '[aria-label="' + label + '"]'; }
-    return a.className ? '.' + String(a.className).split(' ')[0] : null;
+    return calKeyOf(a);
   }
   function calRestoreFocus(key){
     if(!key){ return; }
-    var again = els.viewCalendar.querySelector(key);
-    if(again){ again.focus({preventScroll: true}); }
+    var nodes = els.viewCalendar.querySelectorAll('button, select, [tabindex]');
+    for(var i = 0; i < nodes.length; i++){
+      if(calKeyOf(nodes[i]) === key){ nodes[i].focus({preventScroll: true}); return; }
+    }
   }
   function calGoWeek(mondayISO, selectISO){
     calWeekMonday = mondayISO;
@@ -3207,6 +3233,7 @@ if(window.caches && caches.keys){
     var edit = el('button', 'cal-card-edit', 'Edit');
     edit.type = 'button';
     edit.setAttribute('aria-label', 'Edit ' + what + ' on ' + formatWeekdayDate(item.date));
+    edit.setAttribute('data-focus', 'edit:' + item.id);
     edit.addEventListener('click', function(){ calOpenPlan(item.date, item); });
     actions.appendChild(edit);
     // "Check in on this" only where a check-in can be dated: a planned card
@@ -3219,6 +3246,7 @@ if(window.caches && caches.keys){
       var cta = el('button', 'cal-card-cta', 'Check in on this →');
       cta.type = 'button';
       cta.setAttribute('aria-label', 'Check in on this: ' + splashTodayName(item) + ', ' + formatWeekdayDate(item.date));
+      cta.setAttribute('data-focus', 'cta:' + item.id);
       cta.addEventListener('click', function(){ calRequestCheckIn({item: item, date: item.date}); });
       actions.appendChild(cta);
     }
@@ -3575,6 +3603,7 @@ if(window.caches && caches.keys){
   }
 
   function renderCalendar(){
+    viewRenderedDay = todayISO();
     var root = els.viewCalendar;
     clear(root);
     root.appendChild(el('p', 'dash-eyebrow', 'Check-in'));
@@ -4297,6 +4326,7 @@ if(window.caches && caches.keys){
   }
 
   function renderPlan(){
+    viewRenderedDay = todayISO();
     var root = els.viewPlan;
     clear(root);
     root.appendChild(planHero());
@@ -5598,6 +5628,9 @@ if(window.caches && caches.keys){
     var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan && !isPhaseBuild && !isCalendar;
     els.viewFlow.hidden = !isFlow;
     els.viewCalendar.hidden = !isCalendar;
+    // The flow has just been left: an untouched seed from an earlier day can
+    // be rolled forward now, before anything renders the resume bar.
+    if(!isFlow){ reseedFlowToToday(); }
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
     els.viewStrength.hidden = !isStrength;
@@ -5645,7 +5678,30 @@ if(window.caches && caches.keys){
   // fetch fires — without this, a phone left sitting on Races (or This
   // week/Month) would keep showing whatever was cached from before another
   // device added or removed something.
-  function refreshVisibleViewFromSheet(){
+  // Redraws whatever is showing for a new day, without waiting for a Sheet
+  // change. Held (and retried on the next resume) where a redraw would destroy
+  // work in progress: an open Month phase select, an open plan form, a race
+  // form half-filled.
+  function redrawForNewDay(){
+    var prevToday = viewRenderedDay;
+    if(!els.viewCalendar.hidden && !(calMode === 'month' && calEditWeek)){
+      // Selection that was parked on the old today follows it; one the athlete
+      // moved elsewhere stays put.
+      if(calSelected === prevToday && calWeekMonday === weekKey(new Date(prevToday + 'T00:00:00'))){
+        calWeekMonday = weekKey(new Date());
+        calSelected = todayISO();
+      }
+      var key = calFocusKey();
+      renderCalendar();
+      calRestoreFocus(key);
+    }
+    if(!els.viewDash.hidden){ renderDashboard(); }
+    if(!els.viewTrends.hidden){ renderTrends(); }
+    if(!els.viewRaces.hidden && !raceFormOpen){ renderRaces(); }
+    if(!els.viewPlan.hidden && !planFormOpenFor && !planCopyOpen){ renderPlan(); }
+  }
+  function refreshVisibleViewFromSheet(dayRolled){
+    if(dayRolled){ redrawForNewDay(); }
     // Calendar reads all four synced tables — the log (what is logged), the
     // plan, the races (the strip and the Month markers) and the phase plan
     // (the summary pill and the Month band) — so it re-checks every one when
@@ -5860,7 +5916,7 @@ if(window.caches && caches.keys){
   document.addEventListener('visibilitychange', function(){
     if(!document.hidden){
       reseedFlowToToday();
-      refreshVisibleViewFromSheet();
+      refreshVisibleViewFromSheet(todayISO() !== viewRenderedDay);
     }
   });
 })();
