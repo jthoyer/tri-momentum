@@ -104,7 +104,7 @@ Calendar state (shown week, selected date, view, shown month, the week whose pha
 | Meta | `planMetaLine(item)`. |
 | Status word and strip | One `.dash-cell-seg` segment and one word, mapped exactly as below. The word is always present, so colour never carries meaning alone. |
 | Edit | Opens `openPlanEditor(item)`. On every planned card, logged or not. |
-| "Check in on this →" | Only under P3. Calls `startCheckInFromPlan(item)`. A logged card is a static record: no CTA, rendered as decisions 32(b) and 34 render logged items. |
+| "Check in on this →" | Only under P3. Goes through the Resume/Discard guard (`calRequestCheckIn`), then starts the check-in dated `item.date`; it never calls `beginCheckIn` directly, which would skip the guard. A logged card is a static record: no CTA, rendered as decisions 32(b) and 34 render logged items. |
 | "Not in Google yet" | Stage c only. Rules in C9. |
 
 **Status mapping.** One mapping, shared with `planDashCell()` (1878) so the grid and the cards cannot disagree. Do not write a second copy.
@@ -135,7 +135,7 @@ Keep the `.race-cal`, `.race-cal-phase`, `.race-cal-legend-dot` and `.race-cal-p
 
 ### 5.4 Resume bar
 
-Shown under the race strip when a check-in is part-way through: `flowIsPristine()` is false **and** `state.mode` is `'ask'` or `'review'`. Never in `'saved'` (`flowIsPristine()` returns false for saved, 5028, so that mode must be excluded explicitly). Content: "Check-in in progress", a line naming what is known (discipline and duration if answered, the date if not today, and "question X of Y" or "ready to review"), and a "Resume check-in" button that shows the flow exactly where it was. Nothing in `state` changes on resume. If it is hidden with `.hidden`, it needs its own `[hidden]` rule and a `HIDEABLE` row (there is no global `[hidden]` rule).
+Shown under the race strip when a check-in is part-way through: `flowIsPristine()` is false **and** `state.mode` is `'ask'` or `'review'`. Never in `'saved'` (`flowIsPristine()` returns false for saved, 5028, so that mode must be excluded explicitly). Content: "Check-in in progress", a line naming what is known (discipline and duration if answered, the date if not today, and "step X of Y" (the flow counts pages, which can hold several questions) or "ready to review"), and a "Resume check-in" button that shows the flow exactly where it was. Nothing in `state` changes on resume. If it is hidden with `.hidden`, it needs its own `[hidden]` rule and a `HIDEABLE` row (there is no global `[hidden]` rule).
 
 ### 5.5 Empty state
 
@@ -143,7 +143,7 @@ When the shown week has no planned sessions **and** Google reading is not set up
 
 ### 5.6 Check-in from Calendar
 
-- **Planned card:** `startCheckInFromPlan(item)`, dated `item.date`, pre-filled with `disc`, `intensity` and the duration bucket only.
+- **Planned card:** `calRequestCheckIn` (guarded), dated `item.date`, pre-filled with `disc`, `intensity` and the duration bucket only.
 - **Unplanned:** a fresh check-in, dated the selected day, nothing pre-filled. Decision 29's "Use these details" hint cards still appear on the date page (decision 32 kept them).
 - **Phase gate:** if no phase resolves for today, either action goes to the phase picker first, then lands on the action it was aimed at, with the same date and pre-fill. Calendar itself never needs a phase.
 
