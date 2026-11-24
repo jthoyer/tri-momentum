@@ -158,6 +158,7 @@ textarea::placeholder{color:var(--ink3)}
 .flow-plan-meta{display:block;margin-top:4px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
 .flow-plan-notes{display:block;margin-top:8px;font-family:var(--fb);font-size:13.5px;color:var(--ink2);line-height:1.5;overflow-wrap:anywhere}
 .flow-plan-cta{display:block;margin-top:10px;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue)}
+
 /* ── One-time training phase screen ── */
 .period{min-height:100vh;min-height:100dvh;margin:0 -1.25rem;padding:2.5rem 1.25rem calc(2.5rem + var(--tabbar-h) + var(--tabbar-lift));display:flex;flex-direction:column;justify-content:center}
 .period[hidden]{display:none}
@@ -381,12 +382,15 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-phase.phase-build{background:var(--phase-build)}
 .race-cal-phase.phase-peak{background:var(--phase-peak)}
 .race-cal-phase.phase-taper{background:var(--phase-taper)}
-/* The visible button is small — the row's own height, not a fixed 44px box
-   — but its ::before extends the real tap target to 44px via absolute
-   positioning, which doesn't add to layout height. Shrinking the visible
-   control while keeping the touch target real (not just visually smaller)
-   is the difference between condensing the row and quietly dropping the
-   44px rule every prior pass here has held to. Word leads, icon trails —
+/* The visible button is a 36px box; its ::before completes the 44px target
+   (4px above and below) via absolute positioning, which doesn't add to
+   layout height. Those 4px overlap only the blank padding of the week
+   buttons above and below it (Calendar → Month made each week row a 44px
+   button), never their visible content — asserted by calendar-ui's
+   "visible area ... not a neighbour's hit zone" check. Shrinking the
+   visible control while keeping the touch target real (not just visually
+   smaller) is the difference between condensing the row and quietly
+   dropping the 44px rule every prior pass here has held to. Word leads, icon trails —
    flipped from the original build — and the left padding is zero so the
    text starts flush with the week number's own left edge, not offset from
    it by the button's own inset. */
@@ -449,6 +453,12 @@ textarea::placeholder{color:var(--ink3)}
 .cal-chips{display:grid;grid-template-columns:repeat(7,1fr);margin:.9rem -1.25rem 0;padding:0 2px}
 .cal-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:76px;padding:8px 0 6px;background:none;border:none;border-radius:12px;font-family:var(--fd);color:var(--ink);cursor:pointer}
 .cal-chip:hover{background:var(--s3)}
+/* The strip is full-bleed, so the first and last chips sit on the viewport
+   edge and the global outset focus ring (outline-offset 2px) would be clipped
+   there. Inset it instead; on a selected chip the fill is --blue, so the ring
+   is white (7.86:1) and sits inside the white today ring. */
+.cal-chip:focus,.cal-chip:focus-visible{outline-offset:-3px}
+.cal-chip[aria-pressed="true"]:focus,.cal-chip[aria-pressed="true"]:focus-visible{outline-color:#fff;outline-offset:-5px}
 .cal-chip-wd{font-family:var(--fm);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
 .cal-chip-num{font-size:17px;font-weight:600;line-height:1.2;color:var(--ink)}
 .cal-chip-dots{display:flex;align-items:center;justify-content:center;gap:3px;height:6px}
