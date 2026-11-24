@@ -470,7 +470,11 @@ textarea::placeholder{color:var(--ink3)}
    date columns" template so everything stays aligned. */
 .race-cal-weekdays{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;margin-top:12px}
 .race-cal-weekday{text-align:center;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.race-cal-week-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;margin-top:0}
+/* The week row is one button (Calendar → Month tap-through to that week), so
+   it carries the 44px target as a real box: 28px day cells + 8px padding top
+   and bottom. A button, so its children are spans, never divs. */
+.race-cal-week-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);gap:0;align-items:center;width:100%;min-height:44px;margin-top:0;padding:8px 0;background:none;border:none;border-radius:var(--rmd);font:inherit;text-align:left;color:inherit;cursor:pointer}
+.race-cal-week-row:hover{background:var(--s3)}
 .race-cal-weeknum{display:flex;align-items:center;justify-content:flex-start;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--ink3)}
 .race-cal-day{display:flex;align-items:center;justify-content:center;height:28px}
 .race-cal-day-num{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:11.5px;font-weight:500;color:var(--ink)}
@@ -492,7 +496,7 @@ textarea::placeholder{color:var(--ink3)}
    the width and was never part of this alignment. Top margin stays 0 — the
    gap to this row's own dates stays as tight as condensing left it; only
    the gap to the NEXT week's dates below opens up, via the bottom margin. */
-.race-cal-phase-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);column-gap:8px;align-items:center;margin:0 0 10px}
+.race-cal-phase-row{display:grid;grid-template-columns:22px 64px repeat(7,1fr);column-gap:8px;align-items:center;margin:0 0 4px}
 .race-cal-phase-inner{grid-column:3 / -1;display:flex;align-items:center;gap:8px}
 .race-cal-phase{flex:1;grid-column:3 / -1;height:7px;border-radius:4px}
 .race-cal-phase.phase-base{background:var(--phase-base)}
@@ -508,7 +512,7 @@ textarea::placeholder{color:var(--ink3)}
    flipped from the original build — and the left padding is zero so the
    text starts flush with the week number's own left edge, not offset from
    it by the button's own inset. */
-.race-cal-phase-edit{grid-column:1 / 3;position:relative;padding:1px 4px 1px 0;background:none;border:none;display:flex;align-items:center;justify-content:flex-start;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
+.race-cal-phase-edit{grid-column:1 / 3;position:relative;min-height:36px;padding:1px 4px 1px 0;background:none;border:none;display:flex;align-items:center;justify-content:flex-start;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);cursor:pointer}
 .race-cal-phase-edit::before{content:'';position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
 .race-cal-phase-edit:hover{color:var(--blue)}
 .race-cal-phase-edit svg{flex:none;width:13px;height:13px;color:var(--ink3)}
@@ -526,6 +530,91 @@ textarea::placeholder{color:var(--ink3)}
 .race-cal-legend-dot.phase-build{background:var(--phase-build)}
 .race-cal-legend-dot.phase-peak{background:var(--phase-peak)}
 .race-cal-legend-dot.phase-taper{background:var(--phase-taper)}
+/* ── Calendar — the app's start screen and the first screen of Check-in
+   (CLAUDE.md decision 50; docs/specs/calendar-start-screen.md). Built from
+   existing tokens only. Nothing here is hidden with the `hidden` attribute:
+   every conditional part (race strip, resume bar, still-to-log row, quiet
+   line) is simply not rendered, so none needs a [hidden] rule. ── */
+.cal-title{margin-top:.5rem}
+.cal-race{margin-top:.9rem;padding:10px 14px;border-radius:var(--rmd);background:var(--blue-l);color:var(--ink);font-family:var(--fd);font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.cal-resume{margin-top:.9rem;padding:12px 14px;background:var(--s1);border:1px solid var(--blue);border-radius:var(--rmd)}
+.cal-resume-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink)}
+.cal-resume-line{margin-top:2px;font-size:13.5px;line-height:1.5;color:var(--ink2);overflow-wrap:anywhere}
+.cal-resume-actions{display:flex;flex-wrap:wrap;align-items:center;gap:0 14px;margin-top:6px}
+.cal-resume-go{min-height:44px;padding:0 20px;border:none;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--fd);font-size:14px;font-weight:600;cursor:pointer}
+.cal-resume-go:hover{background:#1246ad}
+.cal-resume-discard{min-height:44px;padding:0 4px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2);text-decoration:underline;cursor:pointer}
+.cal-switch{display:flex;align-items:center;gap:10px;margin-top:1.2rem}
+.cal-switch .signal-subtabs{flex:1;margin:0}
+.cal-today{flex:none;min-width:44px;min-height:44px;padding:0 4px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+.cal-today:hover{color:var(--blue-m)}
+.cal-week-nav{margin-top:1rem}
+.cal-week-nav .plan-week-nav-label{flex-direction:column;gap:0}
+.cal-week-range{font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.cal-summary{margin-top:.9rem;padding:12px 14px;background:var(--s1);border-radius:var(--rmd);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
+.cal-summary-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.cal-summary-week{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink)}
+.cal-stat{font-family:var(--fd);font-size:13px;color:var(--ink2)}
+.cal-stat b{font-weight:600;color:var(--ink)}
+.cal-stats{display:flex;flex-wrap:wrap;gap:4px 12px;margin-left:auto}
+.cal-meter{height:6px;margin-top:10px;border-radius:3px;background:var(--s4);overflow:hidden}
+.cal-meter i{display:block;height:100%;border-radius:3px;background:var(--blue)}
+.cal-note{margin-top:8px;font-size:12.5px;line-height:1.4;color:var(--ink2)}
+.cal-still{display:block;width:100%;min-height:44px;margin-top:.4rem;padding:0 2px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-align:left;cursor:pointer}
+.cal-still:hover{color:var(--blue-m)}
+/* Seven day chips must each be 44px wide at a 320px viewport, and the page
+   content is only 280px wide there — so the strip runs full-bleed (negative
+   margin cancels #app's side padding): (320 - 4) / 7 = 45.1px per chip. */
+.cal-chips{display:grid;grid-template-columns:repeat(7,1fr);margin:.9rem -1.25rem 0;padding:0 2px}
+.cal-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:76px;padding:8px 0 6px;background:none;border:none;border-radius:12px;font-family:var(--fd);color:var(--ink);cursor:pointer}
+.cal-chip:hover{background:var(--s3)}
+.cal-chip-wd{font-family:var(--fm);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.cal-chip-num{font-size:17px;font-weight:600;line-height:1.2;color:var(--ink)}
+.cal-chip-dots{display:flex;align-items:center;justify-content:center;gap:3px;height:6px}
+.cal-chip-dot{flex:none;width:6px;height:6px;border-radius:2px;box-shadow:0 0 0 1px #fff}
+.cal-chip-min{font-size:11px;font-weight:500;color:var(--ink2)}
+.cal-chip.is-today{box-shadow:inset 0 0 0 2px var(--blue)}
+.cal-chip[aria-pressed="true"]{background:var(--blue)}
+.cal-chip[aria-pressed="true"] .cal-chip-wd,.cal-chip[aria-pressed="true"] .cal-chip-num,.cal-chip[aria-pressed="true"] .cal-chip-min{color:#fff}
+.cal-chip[aria-pressed="true"].is-today{box-shadow:inset 0 0 0 2px #fff}
+.cal-agenda{margin-top:1.4rem}
+.cal-agenda-hd{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px}
+.cal-agenda-title{font-family:var(--fd);font-size:17px;font-weight:600;line-height:1.3;color:var(--ink)}
+.cal-agenda-date{margin-left:6px;font-size:13px;font-weight:500;color:var(--ink2)}
+.cal-agenda-logged{font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.cal-agenda-race{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--ink2)}
+.cal-cards{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:.8rem}
+.cal-card{padding:12px 14px 4px;background:var(--s1);border-radius:var(--rmd);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16)}
+/* Already logged: muted and flat so it sits visibly behind the sessions still
+   to log, as flowPlanCard's logged variant did (decisions 32(b), 34). */
+.cal-card.is-logged{background:var(--s3);box-shadow:none}
+.cal-card-hd{display:flex;align-items:flex-start;gap:10px}
+.cal-card-dot{flex:none;width:10px;height:10px;margin-top:5px;border-radius:3px;background:var(--rest)}
+.cal-card-main{flex:1;min-width:0}
+.cal-card-title{display:block;font-family:var(--fd);font-size:15px;font-weight:600;line-height:1.35;color:var(--ink);overflow-wrap:anywhere}
+.cal-card-meta{display:block;margin-top:2px;font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.cal-card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 8px;margin-top:4px}
+.cal-card-status{display:flex;align-items:center;gap:8px;min-height:44px}
+.dash-cell-seg.cal-card-seg{flex:none;width:36px;height:10px}
+.cal-card-word{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2)}
+.cal-card-word.is-off{color:var(--dash-bad)}
+.cal-card-word.is-done{color:var(--done)}
+.cal-card-actions{display:flex;align-items:center;margin-left:auto}
+.cal-card-edit,.cal-card-cta{min-height:44px;padding:0 8px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);cursor:pointer}
+.cal-card-edit{min-width:44px}
+.cal-card-edit:hover,.cal-card-cta:hover{color:var(--blue-m)}
+.cal-empty{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;margin-top:.8rem;font-size:14px;color:var(--ink2)}
+.cal-empty-add{flex:none;min-width:44px;min-height:44px;padding:0 4px;background:none;border:none;font-family:var(--fd);font-size:13px;font-weight:600;color:var(--blue);text-align:right;cursor:pointer}
+.cal-empty-add:hover{color:var(--blue-m)}
+/* Secondary by construction: a full-width text button with no fill, so
+   "log something else" never competes with a planned session above it.
+   (These are the declarations .flow-landing-other carried before the
+   Check-in landing screen was retired.) */
+.cal-unplanned{display:block;width:100%;min-height:44px;margin-top:.6rem;padding:12px 14px;background:none;border:none;font-family:var(--fd);font-size:14px;font-weight:600;color:var(--blue);cursor:pointer;text-align:center}
+.cal-unplanned:hover{color:var(--blue-m);text-decoration:underline}
+.cal-quiet{margin-top:.8rem;font-size:13.5px;color:var(--ink2)}
+.cal-quiet-link{min-height:44px;padding:0 2px;background:none;border:none;font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--blue);cursor:pointer}
+.cal-quiet-link:hover{color:var(--blue-m)}
 /* ── Training plan ───────────────────────────────────────────────────
    The athlete's own planned sessions, transcribed by hand. Deliberately
    reuses the Races component language rather than inventing a second one:
@@ -729,6 +818,9 @@ fieldset.plan-field{border:0;min-width:0}
   </div>
 
   <div id="app-main" hidden>
+
+  <!-- ══════════ CALENDAR — the start screen, and the first screen of Check-in ══════════ -->
+  <div class="dash cal" id="view-calendar" role="tabpanel" aria-labelledby="tab-flow" hidden></div>
 
   <div id="view-flow">
 
@@ -1554,8 +1646,18 @@ if(window.caches && caches.keys){
     return races.filter(function(r){ return r.date < today; })
       .sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
   }
+  // A real YYYY-MM-DD: the Races tab is hand-editable, so a date can be "TBC".
+  // That string sorts after every real date, so upcomingRaces() keeps it, and
+  // daysUntil() of it is NaN — which raceCountdownLabel() would print as
+  // "NaN weeks". Round-trips through Date so a rolled-over date such as
+  // 2026-13-45 is refused too, not silently read as a different day.
+  function isRealISODate(s){
+    if(typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)){ return false; }
+    var d = new Date(s + 'T00:00:00');
+    return !isNaN(d.getTime()) && isoDate(d) === s;
+  }
   function nextRace(){
-    var up = upcomingRaces().filter(function(r){ return r.status === 'locked'; });
+    var up = upcomingRaces().filter(function(r){ return r.status === 'locked' && isRealISODate(r.date); });
     return up.length ? up[0] : null;
   }
 
@@ -1880,9 +1982,7 @@ if(window.caches && caches.keys){
     var segs = [];
     r.results.forEach(function(res){
       if(res.disc !== disc){ return; }
-      if(res.cat === 'pending'){ segs.push('planned'); }
-      else if(res.cat === 'bad' && !res.entry){ segs.push('missed'); }
-      else { segs.push(res.cat); }
+      segs.push(planResultSeg(res));
     });
     r.extras.forEach(function(e){ if(e.disc === disc){ segs.push('extra'); } });
     var cell = el('div', 'dash-cell' + (segs.length > 1 ? ' multi' : ''));
@@ -3158,6 +3258,427 @@ if(window.caches && caches.keys){
       root.appendChild(raceListSection('Past', past, {emptyText: ''}));
     }
   }
+  // ═══════════════════════════════════════════════════════════════
+  // CALENDAR — the app's start screen and the first screen of Check-in
+  // (CLAUDE.md decision 50; docs/specs/calendar-start-screen.md). A read-only
+  // view of what was planned, what was logged and how each planned session
+  // scored, with a check-in one tap away. It computes nothing of its own:
+  // every status comes from planDayResults(), the matcher the Adherence
+  // signal runs on, and "is it still to log?" comes from dayPlanSplit(), which
+  // defers to the same matcher. No second "is it logged" rule lives here —
+  // that is the defect class decisions 32(b), 34 and 37 each had to fix.
+  //
+  // Which week is showing, which day is selected and which view is up are
+  // module state, never read back from the DOM: renderCalendar() rebuilds
+  // everything, including on a background Sheet refresh, and must not lose the
+  // athlete's place (same reason planFormOpenFor and raceCalYear are).
+  // ═══════════════════════════════════════════════════════════════
+  var calMode = 'week';                   // 'week' | 'month'
+  var calWeekMonday = weekKey(new Date()); // Monday (ISO) of the week showing
+  var calSelected = todayISO();           // the day whose agenda is showing
+  function calResetToToday(){
+    var now = new Date();
+    calMode = 'week';
+    calWeekMonday = weekKey(now);
+    calSelected = todayISO();
+    raceCalYear = now.getFullYear();
+    raceCalMonth = now.getMonth();
+    raceCalEditWeek = null;
+  }
+
+  // One mapping from a planDayResults() result to the grid's segment class,
+  // shared by the Review grid (planDashCell) and the Calendar cards so the two
+  // cannot disagree: `missed` (planned, no logged entry) and `bad` (logged,
+  // reported as not done) are different facts, and `pending` is "not due yet".
+  function planResultSeg(res){
+    if(res.cat === 'pending'){ return 'planned'; }
+    if(res.cat === 'bad' && !res.entry){ return 'missed'; }
+    return res.cat;
+  }
+  // The word that always sits beside a strip, so colour never carries the
+  // meaning alone. `extra` is a logged session with no matching plan row.
+  var PLAN_SEG_WORD = {good:'As planned', mid:'Adjusted', bad:'Off plan', missed:'Missed', planned:'Not due yet', extra:'Unplanned'};
+
+  var LONG_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var LONG_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // "Tuesday 24 November" (+ " 2026" when withYear) — for headings and the
+  // accessible names, where the abbreviated "Tue 24 Nov" would be ambiguous.
+  function formatLongDate(iso, withYear){
+    var d = new Date(iso + 'T00:00:00');
+    return LONG_DAYS[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + LONG_MONTHS[d.getMonth()] + (withYear ? ' ' + d.getFullYear() : '');
+  }
+  // 425 -> "7h05", 120 -> "2h00", 45 -> "0h45".
+  function formatHM(mins){
+    var m = mins % 60;
+    return Math.floor(mins / 60) + 'h' + (m < 10 ? '0' : '') + m;
+  }
+  function calRangeLabel(mondayISO){
+    var a = new Date(mondayISO + 'T00:00:00'), b = addDays(a, 6);
+    if(a.getMonth() === b.getMonth()){ return a.getDate() + ' – ' + b.getDate() + ' ' + MONTH_NAMES[b.getMonth()]; }
+    return a.getDate() + ' ' + MONTH_NAMES[a.getMonth()] + ' – ' + b.getDate() + ' ' + MONTH_NAMES[b.getMonth()];
+  }
+  // Logged duration is always one of three buckets (30/60/120), so every sum
+  // built from it is approximate — the summary says so.
+  function calDayLoggedMin(day){
+    return day.entries.reduce(function(n, e){
+      var m = parseInt(e.duration, 10);
+      return n + (isFinite(m) && m > 0 ? m : 0);
+    }, 0);
+  }
+  function calWeekModel(){
+    var monday = new Date(calWeekMonday + 'T00:00:00');
+    var days = buildWeek(monday);
+    var planItems = planItemsInWeek(calWeekMonday);
+    var plannedMin = 0, loggedMin = 0;
+    // Every planned session counts toward planned time and every logged
+    // session toward logged time, planned or not — so the summary adds up to
+    // the chips (spec P2).
+    planItems.forEach(function(p){ var n = parseInt(p.duration, 10); if(isFinite(n) && n > 0){ plannedMin += n; } });
+    days.forEach(function(d){ loggedMin += calDayLoggedMin(d); });
+    return {monday: monday, days: days, planItems: planItems, plannedMin: plannedMin, loggedMin: loggedMin, hasPlan: planItems.length > 0};
+  }
+
+  // The decision 37 Monday gap. On the current week every earlier day is a
+  // chip away, but the Sunday before a new week belongs to last week's grid
+  // and would be invisible — so on a Monday, yesterday's still-open sessions
+  // are surfaced as one quiet row. Reaches exactly one day back, never
+  // further. The count comes from dayPlanSplit() (the Adherence matcher), never
+  // a hand-rolled "any log entry that day" test.
+  function calStillToLogDays(){
+    var yesterdayISO = isoDate(addDays(new Date(), -1));
+    if(yesterdayISO >= weekKey(new Date())){ return []; }
+    var open = dayPlanSplit(yesterdayISO).open;
+    return open.length ? [{date: yesterdayISO, items: open}] : [];
+  }
+
+  // Race strip: the nearest locked race, as the splash's countdown card showed
+  // it. Static text, not a control; not rendered at all with no qualifying race.
+  function calRaceStrip(){
+    var next = nextRace();
+    if(!next){ return null; }
+    var days = daysUntil(next.date);
+    return el('p', 'cal-race', next.name + ' · ' + raceCountdownLabel(days) + (days >= 7 ? ' to go' : ''));
+  }
+
+  function calGoWeek(mondayISO, selectISO){
+    calWeekMonday = mondayISO;
+    // Today when the week holds it, else its Monday (spec P5).
+    calSelected = selectISO || (planWeekDates(mondayISO).indexOf(todayISO()) !== -1 ? todayISO() : mondayISO);
+    renderCalendar();
+  }
+  function calStepWeek(delta){
+    calGoWeek(isoDate(addDays(new Date(calWeekMonday + 'T00:00:00'), delta)));
+    say('Showing week ' + isoWeekNumber(new Date(calWeekMonday + 'T00:00:00')) + ', ' + calRangeLabel(calWeekMonday) + '.');
+  }
+  // Keeps keyboard focus on the same chip across the rebuild, as
+  // renderSignalSubtabs() does for its tabs: choosing re-renders the whole
+  // view, which would otherwise drop focus to <body>.
+  function calSelectDay(dateISO){
+    var keep = document.activeElement && document.activeElement.classList.contains('cal-chip');
+    calSelected = dateISO;
+    renderCalendar();
+    if(keep){
+      var chip = els.viewCalendar.querySelector('.cal-chip[data-date="' + dateISO + '"]');
+      if(chip){ chip.focus(); }
+    }
+    say('Showing ' + formatLongDate(dateISO) + '.');
+  }
+
+  function calWeekNav(model){
+    var nav = el('div', 'plan-week-nav cal-week-nav');
+    var prev = el('button', 'plan-week-btn', '‹');
+    prev.type = 'button';
+    prev.setAttribute('aria-label', 'Show the previous week');
+    prev.addEventListener('click', function(){ calStepWeek(-7); });
+    nav.appendChild(prev);
+    var label = el('div', 'plan-week-nav-label');
+    label.appendChild(el('span', 'plan-week-num', 'Week ' + isoWeekNumber(model.monday)));
+    label.appendChild(el('span', 'cal-week-range', calRangeLabel(calWeekMonday)));
+    nav.appendChild(label);
+    var next = el('button', 'plan-week-btn', '›');
+    next.type = 'button';
+    next.setAttribute('aria-label', 'Show the next week');
+    next.addEventListener('click', function(){ calStepWeek(7); });
+    nav.appendChild(next);
+    return nav;
+  }
+
+  // Week number, phase, planned and logged time, and a meter of one over the
+  // other. The phase is resolvePhaseForDate(monday) — the very value
+  // setPhaseForWeek() writes — so an edit in Month shows here at once (spec
+  // P1). No pill when nothing resolves; no meter when nothing is planned.
+  function calSummary(model){
+    var wrap = el('div', 'cal-summary');
+    var row = el('div', 'cal-summary-row');
+    row.appendChild(el('span', 'cal-summary-week', 'Week ' + isoWeekNumber(model.monday)));
+    var phase = resolvePhaseForDate(calWeekMonday);
+    if(phase){
+      var pillClass = PERIOD_PILL_CLASS[phase];
+      row.appendChild(el('span', 'month-week-pill' + (pillClass ? ' ' + pillClass : ''), PERIOD_LABEL[phase] || phase));
+    }
+    function stat(label, mins){
+      var s = el('span', 'cal-stat');
+      s.appendChild(document.createTextNode(label + ' '));
+      s.appendChild(el('b', null, formatHM(mins)));
+      return s;
+    }
+    var stats = el('span', 'cal-stats');
+    stats.appendChild(stat('Planned', model.plannedMin));
+    stats.appendChild(stat('Logged', model.loggedMin));
+    row.appendChild(stats);
+    wrap.appendChild(row);
+    if(model.plannedMin > 0){
+      var meter = el('div', 'cal-meter');
+      meter.setAttribute('role', 'img');
+      meter.setAttribute('aria-label', 'Logged ' + formatHM(model.loggedMin) + ' of ' + formatHM(model.plannedMin) + ' planned');
+      var fill = document.createElement('i');
+      fill.style.width = Math.min(100, Math.round(model.loggedMin / model.plannedMin * 100)) + '%';
+      meter.appendChild(fill);
+      wrap.appendChild(meter);
+    }
+    wrap.appendChild(el('p', 'cal-note', 'Times are approximate'));
+    return wrap;
+  }
+
+  function calStillRow(){
+    if(calWeekMonday !== weekKey(new Date())){ return null; }
+    var days = calStillToLogDays();
+    var n = days.reduce(function(sum, d){ return sum + d.items.length; }, 0);
+    if(!n){ return null; }
+    var btn = el('button', 'cal-still', 'Still to log: ' + n + ' earlier session' + (n === 1 ? '' : 's') + ' →');
+    btn.type = 'button';
+    btn.addEventListener('click', function(){
+      var target = days[0].date;
+      calGoWeek(weekKey(new Date(target + 'T00:00:00')), target);
+      say('Showing ' + formatLongDate(target) + '.');
+    });
+    return btn;
+  }
+
+  function calChips(model){
+    var today = todayISO();
+    var group = el('div', 'cal-chips');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Days of week ' + isoWeekNumber(model.monday));
+    model.days.forEach(function(d){
+      var r = planDayResults(d);
+      var mins = calDayLoggedMin(d);
+      var btn = el('button', 'cal-chip' + (d.date === today ? ' is-today' : ''));
+      btn.type = 'button';
+      btn.setAttribute('data-date', d.date);
+      btn.setAttribute('aria-pressed', String(d.date === calSelected));
+      var name = formatLongDate(d.date, true) + (d.date === today ? ', today' : '') + '. ' + r.results.length + ' planned';
+      if(r.extras.length){ name += ', ' + r.extras.length + ' unplanned'; }
+      name += ', ' + (mins ? mins + ' minutes logged' : 'nothing logged');
+      btn.setAttribute('aria-label', name);
+      btn.appendChild(el('span', 'cal-chip-wd', d.day));
+      btn.appendChild(el('span', 'cal-chip-num', String(new Date(d.date + 'T00:00:00').getDate())));
+      // At most four dots, so seven chips fit 320px (spec P7). The dots are
+      // decorative: the counts are in the accessible name above.
+      var dots = el('span', 'cal-chip-dots');
+      dots.setAttribute('aria-hidden', 'true');
+      r.results.map(function(res){ return res.disc; }).concat(r.extras.map(function(e){ return e.disc; }))
+        .slice(0, 4).forEach(function(disc){
+          var dot = el('span', 'cal-chip-dot');
+          dot.style.background = 'var(--' + disc + ')';
+          dots.appendChild(dot);
+        });
+      btn.appendChild(dots);
+      var minEl = el('span', 'cal-chip-min', mins ? mins + 'm' : '–');
+      minEl.setAttribute('aria-hidden', 'true');
+      btn.appendChild(minEl);
+      btn.addEventListener('click', function(){ calSelectDay(d.date); });
+      group.appendChild(btn);
+    });
+    return group;
+  }
+
+  function calCardStatus(seg, word, wordCls){
+    var st = el('div', 'cal-card-status');
+    if(seg){
+      var strip = el('span', 'dash-cell-seg cal-card-seg ' + seg);
+      strip.setAttribute('aria-hidden', 'true');
+      st.appendChild(strip);
+    }
+    st.appendChild(el('span', 'cal-card-word' + (wordCls ? ' ' + wordCls : ''), word));
+    return st;
+  }
+  function calCardHead(disc, title, metaText, keyed){
+    var hd = el('div', 'cal-card-hd');
+    var dot = el('span', 'cal-card-dot');
+    dot.style.background = 'var(--' + disc + ')';
+    dot.setAttribute('aria-hidden', 'true');
+    hd.appendChild(dot);
+    var main = el('div', 'cal-card-main');
+    main.appendChild(el('span', 'cal-card-title', title));
+    if(metaText){ main.appendChild(el('span', 'cal-card-meta', metaText)); }
+    hd.appendChild(main);
+    if(keyed){ hd.appendChild(el('span', 'plan-item-key', 'Key')); }
+    return hd;
+  }
+  function calPlannedCard(res, dateISO){
+    var item = res.item;
+    var seg = planResultSeg(res);
+    var word = PLAN_SEG_WORD[seg];
+    // Today's still-open session is "To log", not "Not due yet" (owner answer
+    // Q5): it is due, and it is the one thing the athlete can act on now.
+    if(seg === 'planned' && dateISO === todayISO()){ word = 'To log'; }
+    var li = el('li', 'cal-card' + (res.entry ? ' is-logged' : ''));
+    li.appendChild(calCardHead(item.disc, splashTodayName(item), planMetaLine(item, false), item.key));
+    var foot = el('div', 'cal-card-foot');
+    foot.appendChild(calCardStatus(seg, word, (seg === 'missed' || seg === 'bad') ? 'is-off' : ''));
+    var actions = el('div', 'cal-card-actions');
+    var what = item.title || DISC_LABEL[item.disc] || 'session';
+    var edit = el('button', 'cal-card-edit', 'Edit');
+    edit.type = 'button';
+    edit.setAttribute('aria-label', 'Edit ' + what + ' on ' + formatWeekdayDate(item.date));
+    edit.addEventListener('click', function(){ calOpenPlan(item.date, item); });
+    actions.appendChild(edit);
+    // "Check in on this" only where a check-in can be dated: a planned card
+    // with no matched log entry whose date is today or earlier (spec P3).
+    // dateField() caps the date at today, and planDayResults() already scores
+    // future cards `pending`. A logged card is a static record — no CTA — so
+    // tapping it can never write a duplicate that the matcher would then
+    // report as an unplanned `extra`.
+    if(!res.entry && dateISO <= todayISO()){
+      var cta = el('button', 'cal-card-cta', 'Check in on this →');
+      cta.type = 'button';
+      cta.setAttribute('aria-label', 'Check in on this: ' + splashTodayName(item) + ', ' + formatWeekdayDate(item.date));
+      cta.addEventListener('click', function(){ calRequestCheckIn({item: item, date: item.date}); });
+      actions.appendChild(cta);
+    }
+    foot.appendChild(actions);
+    li.appendChild(foot);
+    return li;
+  }
+  // A logged session with no matching plan row. In a week that has a plan it
+  // is "Unplanned" (counted, never scored bad). In a week with no planned
+  // session at all there is nothing to be unplanned *against*, so it just
+  // reads "Logged", with no strip and no Adherence word (owner answer Q3).
+  function calExtraCard(entry, weekHasPlan){
+    var li = el('li', 'cal-card is-logged');
+    var dur = parseInt(entry.duration, 10);
+    var mins = isFinite(dur) && dur > 0 ? dur + ' min' : '';
+    var meta = weekHasPlan ? (mins ? mins + ' · logged' : 'logged') : mins;
+    li.appendChild(calCardHead(entry.disc, DISC_LABEL[entry.disc] || 'Session', meta, false));
+    var foot = el('div', 'cal-card-foot');
+    foot.appendChild(weekHasPlan ? calCardStatus('extra', PLAN_SEG_WORD.extra) : calCardStatus(null, 'Logged', 'is-done'));
+    li.appendChild(foot);
+    return li;
+  }
+
+  function calAgenda(model){
+    var today = todayISO();
+    var sel = model.days.filter(function(d){ return d.date === calSelected; })[0] || model.days[0];
+    var r = planDayResults(sel);
+    var isToday = sel.date === today;
+    var wrap = el('section', 'cal-agenda');
+    wrap.setAttribute('aria-labelledby', 'cal-agenda-h');
+    var hd = el('div', 'cal-agenda-hd');
+    var h = el('h2', 'cal-agenda-title');
+    h.id = 'cal-agenda-h';
+    if(isToday){
+      h.appendChild(document.createTextNode('Today'));
+      h.appendChild(el('span', 'cal-agenda-date', formatLongDate(sel.date)));
+    } else {
+      h.appendChild(document.createTextNode(formatLongDate(sel.date)));
+    }
+    hd.appendChild(h);
+    var mins = calDayLoggedMin(sel);
+    hd.appendChild(el('span', 'cal-agenda-logged', mins ? mins + ' min logged' : 'Nothing logged'));
+    wrap.appendChild(hd);
+
+    // A race on this day — locked over considering, as the Month grid picks.
+    var race = races.filter(function(x){ return x.date === sel.date; }).sort(function(a, b){
+      return (a.status === 'locked' ? 0 : 1) - (b.status === 'locked' ? 0 : 1);
+    })[0];
+    if(race){
+      var rr = el('div', 'cal-agenda-race');
+      rr.appendChild(el('span', 'race-status-pill ' + (race.status === 'locked' ? 'locked' : 'considering'), 'Race day'));
+      rr.appendChild(el('span', null, race.name));
+      wrap.appendChild(rr);
+    }
+
+    if(r.results.length || r.extras.length){
+      var ul = el('ul', 'cal-cards');
+      ul.setAttribute('aria-labelledby', 'cal-agenda-h');
+      r.results.forEach(function(res){ ul.appendChild(calPlannedCard(res, sel.date)); });
+      r.extras.forEach(function(e){ ul.appendChild(calExtraCard(e, model.hasPlan)); });
+      wrap.appendChild(ul);
+    }
+    // "Nothing planned" + Add only where the week has a plan: in a week with
+    // none at all the quiet line below carries the invitation instead.
+    if(model.hasPlan && !r.results.length){
+      var empty = el('div', 'cal-empty');
+      empty.appendChild(el('span', null, 'Nothing planned'));
+      var add = el('button', 'cal-empty-add', 'Add');
+      add.type = 'button';
+      add.setAttribute('aria-label', 'Add a planned session on ' + formatWeekdayDate(sel.date));
+      add.addEventListener('click', function(){ calOpenPlan(sel.date, null); });
+      empty.appendChild(add);
+      wrap.appendChild(empty);
+    }
+    // Hidden for a future day: the check-in's date field is capped at today.
+    if(sel.date <= today){
+      var other = el('button', 'cal-unplanned', 'Log an unplanned session');
+      other.type = 'button';
+      other.addEventListener('click', function(){ calRequestCheckIn({item: null, date: sel.date}); });
+      wrap.appendChild(other);
+    }
+    return wrap;
+  }
+
+  function calWeekPanel(){
+    var model = calWeekModel();
+    var panel = el('div', 'cal-panel');
+    panel.id = 'cal-panel';
+    panel.appendChild(calWeekNav(model));
+    panel.appendChild(calSummary(model));
+    var still = calStillRow();
+    if(still){ panel.appendChild(still); }
+    panel.appendChild(calChips(model));
+    panel.appendChild(calAgenda(model));
+    if(!model.hasPlan){
+      // Empty state: the week still renders, logged sessions included, with
+      // one quiet line. (Stage b adds "or connect Google Calendar".)
+      var q = el('p', 'cal-quiet');
+      var link = el('button', 'cal-quiet-link', 'Add a plan');
+      link.type = 'button';
+      link.addEventListener('click', function(){ calOpenPlan(calSelected, null); });
+      q.appendChild(link);
+      panel.appendChild(q);
+    }
+    return panel;
+  }
+
+  function renderCalendar(){
+    var root = els.viewCalendar;
+    clear(root);
+    root.appendChild(el('p', 'dash-eyebrow', 'Check-in'));
+    var h = el('h1', 'cal-title', 'Calendar');
+    h.id = 'calendar-h'; h.tabIndex = -1;
+    root.appendChild(h);
+    var strip = calRaceStrip();
+    if(strip){ root.appendChild(strip); }
+    root.appendChild(calWeekPanel());
+  }
+
+  // Add / Edit on a card opens the Plan view on that day; its back link
+  // returns here (planBackTo), to the same week.
+  function calOpenPlan(dateISO, item){
+    planBackTo = 'calendar';
+    openPlanDayForm(dateISO, item || null);
+  }
+  // Interim wiring: stage-3 replaces this with the resume-bar / phase-gate
+  // request path.
+  function calRequestCheckIn(action){
+    if(action.item){ startCheckInFromPlan(action.item); return; }
+    state.ans = {date: action.date}; state.note = ''; state.step = 0; state.mode = 'ask';
+    showView('flow');
+    render();
+    focusHeading();
+  }
+
   function renderSplashCountdown(){
     var next = nextRace();
     if(!next){ els.splashCountdown.hidden = true; return; }
@@ -3481,6 +4002,10 @@ if(window.caches && caches.keys){
   // not wipe the message before it has been read. It is cleared by the next
   // plan action instead (opening a form, changing week, any mutation).
   var planNotice = null;
+  // Which view opened the Plan view — it is reached from Review ("Edit plan →")
+  // and from the Calendar's Add / Edit, and its back link returns to whichever
+  // it was. Set by the entry points, never derived from the DOM.
+  var planBackTo = 'dashboard';
   function clearPlanNotice(){ planNotice = null; }
 
   function planWeekDates(mondayISO){
@@ -4029,8 +4554,8 @@ if(window.caches && caches.keys){
     var back = document.createElement('button');
     back.type = 'button';
     back.className = 'dash-phase-change';
-    back.textContent = '← Back to this week';
-    back.addEventListener('click', function(){ showView('dashboard'); });
+    back.textContent = planBackTo === 'calendar' ? '← Back to calendar' : '← Back to this week';
+    back.addEventListener('click', function(){ showView(planBackTo === 'calendar' ? 'calendar' : 'dashboard'); });
     root.appendChild(back);
 
     root.appendChild(planWeekNav());
@@ -4050,7 +4575,7 @@ if(window.caches && caches.keys){
     tools.appendChild(clearBtn);
     root.appendChild(tools);
   }
-  function goToPlan(){ showView('plan'); }
+  function goToPlan(){ planBackTo = 'dashboard'; showView('plan'); }
 
   // ═══════════════════════════════════════════════════════════════
   // PHASE PLAN — dated Base/Taper·Build 1·Build 2·Peak blocks, each running
@@ -4721,6 +5246,7 @@ if(window.caches && caches.keys){
     tabWarmup: document.getElementById('tab-warmup'),
     tabRaces: document.getElementById('tab-races'),
     viewFlow: document.getElementById('view-flow'),
+    viewCalendar: document.getElementById('view-calendar'),
     viewDash: document.getElementById('view-dashboard'),
     viewTrends: document.getElementById('view-trends'),
     viewStrength: document.getElementById('view-strength'),
@@ -5428,10 +5954,12 @@ if(window.caches && caches.keys){
     var isPlan = view === 'plan';
     var isPhasePlan = view === 'phaseplan';
     var isPhaseBuild = view === 'phasebuild';
+    var isCalendar = view === 'calendar';
     // isFlow is "none of the named views" — every new view must be added to
     // this chain, or the check-in flow renders underneath it as well.
-    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan && !isPhaseBuild;
+    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan && !isPhaseBuild && !isCalendar;
     els.viewFlow.hidden = !isFlow;
+    els.viewCalendar.hidden = !isCalendar;
     els.viewDash.hidden = !isDash;
     els.viewTrends.hidden = !isTrends;
     els.viewStrength.hidden = !isStrength;
@@ -5440,7 +5968,8 @@ if(window.caches && caches.keys){
     els.viewPlan.hidden = !isPlan;
     els.viewPhasePlan.hidden = !isPhasePlan;
     els.viewPhaseBuild.hidden = !isPhaseBuild;
-    els.tabFlow.setAttribute('aria-selected', String(isFlow));
+    // Calendar is the first screen of Check-in, so the tab stays selected for it.
+    els.tabFlow.setAttribute('aria-selected', String(isFlow || isCalendar));
     els.tabDash.setAttribute('aria-selected', String(isDash));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
     els.tabWarmup.setAttribute('aria-selected', String(isWarmup));
@@ -5453,12 +5982,13 @@ if(window.caches && caches.keys){
     if(isPlan){ renderPlan(); }
     if(isPhasePlan){ renderPhasePlan(); }
     if(isPhaseBuild){ renderPhaseBuild(); }
+    if(isCalendar){ renderCalendar(); }
     // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
     if(isFlow){ renderChrome(); }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : (isPhaseBuild ? 'phasebuild-h' : 'step-h'))))))));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : (isPhaseBuild ? 'phasebuild-h' : (isCalendar ? 'calendar-h' : 'step-h')))))))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
     refreshVisibleViewFromSheet();
