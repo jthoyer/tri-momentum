@@ -185,7 +185,7 @@ Stage c. A small pill on a planned card: "Not in Google yet". Existing tokens (t
 - The "Which session?" landing retires: `state.mode === 'plan'`, `renderPlanLanding()`, its branches in `renderChrome()`, `renderFoot()`, `render()` and the Back/Next guards, and `startUnplannedCheckIn()`. `startCheckIn()` either becomes "show Calendar" or goes. `phaseReturnWantsLanding` is replaced by a held action (planned item or unplanned date) that `choosePeriod()` resumes. Keep the `.flow-foot[hidden]` CSS rule: its `HIDEABLE` row still applies.
 - `flowIsPristine()` gains a second caller (the resume bar). Its comment at 5030 to 5036 says `startCheckIn()` is its only caller; update the comment. Do not loosen its date rule.
 - **Decision 19 holds:** "Change phase" inside the flow still returns to the question you were on (`openPhasePicker()`, 5639).
-- **Decision 32's guard holds in a new form:** a half-finished check-in is never discarded without the athlete choosing to (A13). How that choice is offered is open question Q2.
+- **Decision 32's guard holds in a new form:** a half-finished check-in is never discarded without the athlete choosing to (A13). The choice is an inline "Resume" / "Discard and start this one" (closed, Q2).
 - After save, the app still goes to Review (5411), unchanged.
 
 ### 6.3 Review (decision 31)
@@ -314,13 +314,13 @@ Each criterion names the test that checks it. "cal-ui" is the new `tests/calenda
 | A4 | The week summary for fixture F1 reads "Week 48", phase "Build 1", "Planned 7h05", "Logged 2h00". | cal-ui "week summary" |
 | A5 | Chips: seven buttons; Tue 24 is pressed and ringed; logged minutes read Mon "60m", Tue "60m", all others "–"; each accessible name includes the full date. | cal-ui "chips" |
 | A6 | Race strip reads "Sample race · 16 weeks · 4 days to go" (or the equivalent DOM text) for the locked race on 2027-03-20. With only considering races, or a locked race whose date is "TBC", the strip is absent from the DOM (today `raceCountdownLabel(NaN)` would print "NaN weeks"). | cal-ui "race strip" |
-| A7 | Cards for F1 carry exactly these words: Mon swim "As planned", Mon strength "Missed", Tue run "Adjusted", Tue bike "Not due yet", Tue swim "Unplanned", Wed swim, Fri run and Sat ride "Not due yet". Fri run has a "Key" pill. Each card's segment class matches the word per the mapping table. | cal-ui "status words" |
+| A7 | Cards for F1 carry exactly these words: Mon swim "As planned", Mon strength "Missed", Tue run "Adjusted", Tue bike "To log" (today only, owner answer Q5), Tue swim "Unplanned", Wed swim, Fri run and Sat ride "Not due yet". Fri run has a "Key" pill. Each card's segment class matches the word per the mapping table. | cal-ui "status words" |
 | A8 | "Check in on this" appears on Mon strength and Tue bike only. It never appears on a logged card, the Unplanned card, or Wed to Sun. | cal-ui "CTA placement" |
 | A9 | Tapping Tue bike's CTA opens the flow with `date` 2026-11-24, `disc` bike, `intensity` and duration bucket from the plan, and `a1`, `a2`, `a3`, `b2`, `b3`, `rpe` all unset. Tapping Mon strength's CTA gives `date` 2026-11-23. | cal-ui "a1 never pre-filled" |
 | A10 | With an empty `phasePlan`, Calendar shows on boot without the picker. Tapping a CTA shows the picker; choosing a phase lands in the flow with A9's date and pre-fill. The same holds for "Log an unplanned session". | cal-ui "phase gate moves to check-in start" |
 | A11 | In the flow, "Change phase", then a phase, returns to the same question with every answer intact (decision 19). | cal-ui "decision 19" |
 | A12 | "Log an unplanned session" on Mon 23 opens the flow with `date` 2026-11-23 and no other answer set. It is absent when Wed 25 is selected. | cal-ui "unplanned path" |
-| A13 | Start a check-in, answer one question, tap Check-in: the resume bar shows; "Resume check-in" returns to the same step with the answer intact. The bar is absent when the flow is pristine and after a save. Starting another check-in while the bar shows never discards the first one without an explicit choice (mechanism per Q2). | cal-ui "resume bar" |
+| A13 | Start a check-in, answer one question, tap Check-in: the resume bar shows; "Resume check-in" returns to the same step with the answer intact. The bar is absent when the flow is pristine and after a save. Starting another check-in while the bar shows never discards the first one without an explicit choice (mechanism: inline "Resume" / "Discard and start this one", Q2 closed). | cal-ui "resume bar" |
 | A14 | "Still to log" (fixture F3, clock Mon 30 Nov): with Sun 29 run open, the row reads "Still to log: 1 earlier session →"; tapping it shows week 48 with Sun 29 selected. Logging a swim on Sun 29 leaves the row in place (a run is still open). Logging the run removes it. An open session on Sun 22 (eight days back) is never counted. The row is absent on any week other than the current one. The count comes from `dayPlanSplit()`, never a second rule. | cal-ui "still to log" |
 | A15 | Week stepping: `›` then `‹` returns to week 48. Stepping to week 49 selects Mon 30. Today returns to week 48 with Tue 24 selected. | cal-ui "stepping" |
 | A16 | Month: the tablist switches with a click and with arrow keys. November 2026 shows six weeks with week numbers 44 to 49, exactly one `.race-cal-day.today`, and the considering race on 6 Dec marked. Tapping week 49's row opens Week on week 49. | cal-ui "month" |
@@ -483,7 +483,7 @@ Logged total 120 min = **2h00**. Chips: Mon 60m, Tue 60m. The mock's "73 min", "
 
 ### 14.2 Fixture F2 (empty state)
 
-Clock Tue 24 Nov. No plan, no Google settings. Log: Mon 23 run 60. See Q3 for the word this card shows.
+Clock Tue 24 Nov. No plan, no Google settings. Log: Mon 23 run 60. Q3 closed: with no planned session in the week the card reads "Logged", with no strip word.
 
 ### 14.3 Fixture F3 (Monday gap)
 
@@ -567,18 +567,24 @@ The Implementer updates `CLAUDE.md` in the same change as each stage, as a new d
 | R11 | `/exec` does not stay on the deployed version after a save. | Spike step 6 |
 | R12 | Time-zone trap: all-day or zone-less events land a day out. | Spike step 7, C8 |
 | R13 | Copying several weeks forward hits Calendar throttling beyond the documented 5,000 a day. | C13, per-row failure recording |
-| R14 | Changing the write calendar later leaves old events in a calendar that may now be read (echoes). | Q4 |
+| R14 | Changing the write calendar later leaves old events in a calendar that may now be read (echoes). | Q4 closed: also hide script-tagged events from every read (stages b and c) |
 | R15 | Strangers read or write the owner's calendar through the public URL. | Q1, section 11 |
 
 ---
 
-## 18. Open questions (could not be closed from the material)
+## 18. Open questions
 
-- **Q1 (blocks stage b). How are the calendar features gated against strangers?** The public `/exec` URL means anyone can read every calendar and rewrite Settings (section 11). Options: (a) accept it, with names withheld and fields minimised; (b) a passphrase stored in Script Properties, typed once per device and kept in that device's `localStorage` (never in the repo), sent with calendar reads and Settings writes; it cannot stop someone holding the device, and as a query parameter it can show up in browser history and Google's logs; (c) an allowlist of readable and writable calendar ids kept in Script Properties, edited only in the Apps Script editor, so the in-app picker can only choose inside it; (d) busy blocks only, no titles. Under each answer: the picker's checkboxes list (a) every calendar, (b) every calendar after the passphrase, (c) only allowlisted calendars, (d) every calendar; the Week blocks show titles in (a), (b), (c) and "Busy" in (d); the write radios in stage c follow the same list.
-- **Q2. A check-in is in progress and the athlete taps another "Check in on this" or "Log an unplanned session".** The hard rule is no silent discard (A13). Offer an inline choice ("Resume" / "Discard and start this one"), or disable new starts until resumed or discarded? Under the first, both CTAs and the unplanned button stay live and show the choice; under the second, they show as unavailable with a reason and the resume bar gains a "Discard" action.
-- **Q3. Logged sessions in a week with no plan at all.** `planDayResults()` makes every one an `extra`, so the F2 card reads "Unplanned" for an athlete who never plans. Review avoids this with its Stage A/B switch (`daysHavePlan()`, decision 30). Recommended: in a week with no planned sessions, logged cards show "Logged" with no strip word; once any plan row exists in the week, the six words apply.
-- **Q4. Echoes after the write calendar changes.** The read leaves out the *current* write calendar only. Old events stay in the old one, which may be read. Also hide events carrying the script's tag from every read (the owner's fallback, used as a second guard), or accept the edge?
-- **Q5. Copy.** Today's still-open session reads "Not due yet" (that is what `planDayResults()` says for today). Keep, or use "To log" for today only, as the mock did? And logged minutes are bucket values (30, 60, 120); keep the plain "60m", or mark them as approximate?
+**Closed by the owner on 24 Nov 2026 (each answered "yes" to the recommendation):**
+
+- **Q2 closed.** A check-in is in progress and the athlete taps another "Check in on this" or "Log an unplanned session": show an inline choice, "Resume" or "Discard and start this one". Never discard silently.
+- **Q3 closed.** In a week with no planned sessions, logged cards read "Logged" with no strip word. Once any plan row exists in that week, the six Adherence words apply.
+- **Q4 closed.** Also hide events carrying the script's tag from every read, as a second guard. Applies to stages b and c only.
+- **Q5 closed.** Today's still-open session reads "To log". Past and future days use the Adherence words. Logged minutes show as "60m", with a plain "Times are approximate" note in the week summary.
+
+**Still open:**
+
+- **Q1 (blocks stage b only).** Owner answered "yes" to the recommended allowlist of readable and writable calendar ids, kept in Script Properties and edited only in the Apps Script editor, so the in-app picker can only choose inside it. Treat Q1 as **decided: option (c)**. Stage b specifies it. It is not part of stage a.
+- The spike's answers on version pinning, the Advanced service, time zones and Strava after the scope pin.
 
 ---
 
@@ -588,4 +594,4 @@ The Implementer updates `CLAUDE.md` in the same change as each stage, as a new d
 - **Needs attention most:** Q1. The public `/exec` URL makes the Settings read list a preference, not a security bound, so stage b cannot ship until the owner picks a gate.
 - **Biggest risk area:** the Check-in rewiring (phase gate, landing retirement, resume bar, decision 19). Also two existing `phase-plan-sync` checks that would pass vacuously unless retargeted.
 - **Do not relitigate:** owner decisions 1 to 10 and this session's confirmations: Option A, no sixth tab, the six Adherence words, read-exclusion for echoes, "Create a new TRI Momentum calendar" as the default, the Settings tab, the staging.
-- **Still open:** Q1 to Q5, and the spike's answers on version pinning, the Advanced service, time zones and Strava after the scope pin.
+- **Still open:** the spike's answers on version pinning, the Advanced service, time zones and Strava after the scope pin.
