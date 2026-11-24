@@ -2977,6 +2977,16 @@ if(window.caches && caches.keys){
     return el('p', 'cal-race', next.name + ' · ' + raceCountdownLabel(days) + (days >= 7 ? ' to go' : ''));
   }
 
+  // renderCalendar() rebuilds everything, which destroys whichever control the
+  // athlete just used and would drop a keyboard user to <body>. Controls that
+  // are rebuilt in place (the steppers, Today) are found again by their
+  // accessible name / class and re-focused — the same repair
+  // renderSignalSubtabs() makes for its tabs.
+  function calRefocus(selector, hadFocus){
+    if(!hadFocus){ return; }
+    var again = els.viewCalendar.querySelector(selector);
+    if(again){ again.focus(); }
+  }
   function calGoWeek(mondayISO, selectISO){
     calWeekMonday = mondayISO;
     // Today when the week holds it, else its Monday (spec P5).
@@ -2984,7 +2994,10 @@ if(window.caches && caches.keys){
     renderCalendar();
   }
   function calStepWeek(delta){
+    var label = delta < 0 ? 'Show the previous week' : 'Show the next week';
+    var had = !!document.activeElement && document.activeElement.getAttribute('aria-label') === label;
     calGoWeek(isoDate(addDays(new Date(calWeekMonday + 'T00:00:00'), delta)));
+    calRefocus('.cal-week-nav [aria-label="' + label + '"]', had);
     say('Showing week ' + isoWeekNumber(new Date(calWeekMonday + 'T00:00:00')) + ', ' + calRangeLabel(calWeekMonday) + '.');
   }
   // Keeps keyboard focus on the same chip across the rebuild, as
@@ -3281,11 +3294,14 @@ if(window.caches && caches.keys){
   // buttons' blank padding. Month shows no per-session status; it is a shape.
   var calYear = new Date().getFullYear(), calMonthIdx = new Date().getMonth(), calEditWeek = null;
   function calGoMonth(delta){
+    var label = delta < 0 ? 'Show the previous month' : 'Show the next month';
+    var had = !!document.activeElement && document.activeElement.getAttribute('aria-label') === label;
     var d = new Date(calYear, calMonthIdx + delta, 1);
     calYear = d.getFullYear();
     calMonthIdx = d.getMonth();
     calEditWeek = null;
     renderCalendar();
+    calRefocus('.race-cal [aria-label="' + label + '"]', had);
     say('Showing ' + LONG_MONTHS[calMonthIdx] + ' ' + calYear + '.');
   }
   // A week tapped in Month opens Week on it (spec P5: today if the week holds
@@ -3465,9 +3481,11 @@ if(window.caches && caches.keys){
   }
   function calGoToday(){
     var mode = calMode;
+    var had = document.activeElement && document.activeElement.classList.contains('cal-today');
     calResetToToday();
     calMode = mode;
     renderCalendar();
+    calRefocus('.cal-today', had);
     say(mode === 'month' ? 'Showing this month.' : 'Showing this week, today selected.');
   }
   function calViewSwitch(){
@@ -3576,8 +3594,12 @@ if(window.caches && caches.keys){
     if(calCheckInInProgress()){
       calPending = action;
       renderCalendar();
+      // The choice sits at the top, far from the card that was tapped: bring
+      // the whole bar into view (not just the button focus would scroll to).
+      var bar = els.viewCalendar.querySelector('.cal-resume');
       var go = els.viewCalendar.querySelector('.cal-resume-go');
-      if(go){ go.focus(); }
+      if(go){ go.focus({preventScroll: true}); }
+      if(bar){ bar.scrollIntoView({block: 'center'}); }
       say('A check-in is already in progress. Resume it, or discard it and start this one.');
       return;
     }

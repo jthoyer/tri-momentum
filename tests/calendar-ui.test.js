@@ -588,6 +588,22 @@ describe('still to log, and stepping', { concurrency: false }, () => {
     assert.strictEqual(await week(), 'Week 48');
     assert.strictEqual(await pressedDate(page), '2026-11-24');
   });
+  scenario('keyboard focus survives the rebuild: steppers, Today and chips keep it', F1, async (page) => {
+    const active = () => page.evaluate(() => document.activeElement && (document.activeElement.getAttribute('aria-label') || document.activeElement.className));
+    await page.focus('.cal-week-nav [aria-label="Show the next week"]');
+    await page.keyboard.press('Enter');
+    assert.strictEqual(await active(), 'Show the next week');
+    await page.focus('.cal-today');
+    await page.keyboard.press('Enter');
+    assert.strictEqual(await active(), 'cal-today');
+    await page.focus('.cal-chip[data-date="2026-11-26"]');
+    await page.keyboard.press('Enter');
+    assert.ok((await active()).includes('Thursday 26 November'), 'the chip stays focused');
+    await page.click('#cal-tab-month');
+    await page.focus('.race-cal [aria-label="Show the next month"]');
+    await page.keyboard.press('Enter');
+    assert.strictEqual(await active(), 'Show the next month');
+  });
   scenario('A15 week 49 shows the phase the plan gives it (P1) and a different week total', F1, async (page) => {
     await page.click('.plan-week-btn[aria-label="Show the next week"]');
     assert.strictEqual(norm(await page.textContent('.cal-summary .month-week-pill')), 'Build 2');
