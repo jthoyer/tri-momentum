@@ -1060,3 +1060,86 @@ describe('phase picker copy', { concurrency: false }, () => {
     assert.ok(!hint.includes('dashboard') && !hint.includes('This week'), hint);
   });
 });
+
+// ───────────────────── a day change while the app is open ─────────────────────
+describe('resuming after midnight (visibilitychange)', { concurrency: false }, () => {
+  const NEXT_DAY = '2026-11-25T00:05:00+11:00';
+  const fire = (page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  const lastLogged = (page) => page.evaluate((k) => { const a = JSON.parse(localStorage.getItem(k)); return a[a.length - 1]; }, KEYS.log);
+
+  scenario('M1-new flow visible and untouched across midnight: the date shown is the date saved', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    await page.click('.cal-unplanned');                       // flow on its date page, seeded with Tue 24
+    assert.strictEqual(await page.inputValue('#o-date'), '2026-11-24');
+    await page.clock.setFixedTime(new Date(NEXT_DAY));
+    await fire(page);
+    await page.waitForTimeout(300);
+    assert.strictEqual(await page.inputValue('#o-date'), '2026-11-24', 'the input still shows what it showed');
+    // Pick a session and run the flow to Save; the stored date must be the one on screen.
+    await page.click('#o-disc-swim'); await page.waitForTimeout(650);
+    await page.click('#o-b3-nothing'); await page.waitForTimeout(650);
+    await page.click('#o-duration-30');
+    await page.click('#o-intensity-easy');
+    await page.click('#o-rpe-6');
+    await page.click('#o-a1-intent'); await page.waitForTimeout(650);
+    await page.click('#o-a2-planned');
+    await page.click('#o-b2-solid'); await page.waitForTimeout(650);
+    const rows = await page.$$eval('.review-row', (ns) => ns.map((n) => n.textContent));
+    assert.ok(rows.some((r) => r.includes('Tue 24 Nov')), 'Review shows the date plainly: ' + rows.join(' | '));
+    await page.click('#btn-next');
+    await page.waitForSelector('#view-dashboard:not([hidden])');
+    assert.strictEqual((await lastLogged(page)).date, '2026-11-24', 'saved under the date the athlete saw');
+  });
+  scenario('M1-new Calendar showing across midnight: no phantom resume bar', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    await page.click('.cal-unplanned');                       // pristine, dated today
+    await page.click('#tab-flow');
+    assert.ok((await page.$('.cal-resume')) === null);
+    await page.clock.setFixedTime(new Date(NEXT_DAY));
+    await fire(page);
+    await page.waitForTimeout(400);
+    assert.ok((await page.$('.cal-resume')) === null, 'an untouched seed from yesterday is not a check-in in progress');
+    assert.strictEqual(await pressedDate(page), '2026-11-25');
+  });
+  scenario('M2 Calendar rolls to the new day on resume with every read UNCHANGED, and keeps focus', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    await page.waitForTimeout(300);
+    await page.focus('.cal-chip[data-date="2026-11-27"]');
+    await page.clock.setFixedTime(new Date('2026-11-25T09:00:00+11:00'));
+    await fire(page);
+    await page.waitForTimeout(400);
+    assert.strictEqual(await page.$eval('.cal-chip.is-today', (n) => n.getAttribute('data-date')), '2026-11-25', 'the today ring moved');
+    assert.strictEqual(await pressedDate(page), '2026-11-25', 'a selection parked on the old today follows it');
+    assert.strictEqual(await page.evaluate(() => document.activeElement.getAttribute('data-date')), '2026-11-27', 'focus kept on the chip the athlete was on');
+    await selectDay(page, '2026-11-24');
+    const bike = (await cards(page)).find((c) => c.title === 'Bike — Turbo');
+    assert.deepStrictEqual([bike.word, bike.seg], ['Missed', 'missed'], 'yesterday\'s open session is Missed now, not "To log"');
+    await selectDay(page, '2026-11-25');
+    assert.strictEqual((await cards(page))[0].word, 'To log', "today's open session reads To log");
+  });
+  scenario('M2 Races countdown rolls on resume with every read UNCHANGED', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    await page.click('#tab-races');
+    const read = () => page.$$eval('.race-card-countdown', (ns) => ns.map((n) => n.textContent.trim()));
+    const before = await read();
+    await page.clock.setFixedTime(new Date('2026-11-25T09:00:00+11:00'));
+    await fire(page);
+    await page.waitForTimeout(400);
+    const after = await read();
+    assert.notDeepStrictEqual(after, before, 'countdowns changed: ' + JSON.stringify([before, after]));
+  });
+});
+
+// ───────────────────── focus restore keys ─────────────────────
+describe('focus restore does not build selectors from plan text', { concurrency: false }, () => {
+  const fire = (page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  const NASTY = 'He said "go"\\';                      // ends in a backslash and holds a quote
+  const twin = (id) => planItem(id, '2026-11-26', 'swim', NASTY, 30, 'easy');
+  const fx = { ...F1, plan: F1.plan.concat([twin('tw1'), twin('tw2')]) };
+  scenario('L-a two same-title same-day cards: focus returns to the right one; no throw', fx, { routes: sheetRoutes(fx) }, async (page) => {
+    await page.waitForTimeout(300);
+    await selectDay(page, '2026-11-26');
+    assert.strictEqual((await cards(page)).length, 2);
+    await page.focus('[data-focus="edit:tw2"]');
+    routes['plan=1'] = JSON.stringify({ ok: true, plan: fx.plan.concat([planItem('tw3', '2026-11-27', 'run', 'Another', 20, 'easy')]) });
+    await fire(page);
+    await page.waitForTimeout(500);
+    assert.strictEqual(await page.evaluate(() => document.activeElement.getAttribute('data-focus')), 'edit:tw2', 'the second twin, not the first');
+  });
+});
