@@ -82,8 +82,8 @@ const HIDEABLE = [
   { name: '.flow-foot', classes: ['flow-foot'] },
   { name: '.plan-form-wrap', classes: ['plan-form-wrap'] },
   { name: '.race-form-wrap', classes: ['race-form-wrap'] },
-  { name: '.splash', classes: ['splash'] },
   { name: '.period', classes: ['period'] },
+  { name: '#view-calendar', classes: ['cal'] },
 ];
 
 test('every component hidden via .hidden has a [hidden] rule that can win', () => {

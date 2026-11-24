@@ -30,6 +30,25 @@ const SHEET_PLAN = [
   { id: 'sheet2', from: '2099-01-01', phase: 'taper' },
 ];
 
+// Decision 50 moved the phase gate from the Check-in tab to the *start of a
+// check-in*: tapping Check-in now always shows the Calendar, whatever the phase.
+// "The picker is hidden after tapping #tab-flow" therefore proves nothing about
+// whether a phase resolved. What does is starting a check-in — "Log an
+// unplanned session" under today's cards — and seeing whether the picker
+// gates it. These two helpers are that proof, used by the three checks below.
+async function startUnplannedCheckIn(page) {
+  await page.click('#tab-flow');
+  await page.waitForTimeout(100);
+  await page.click('.cal-unplanned');
+  await page.waitForTimeout(150);
+}
+async function pickerHidden(page) {
+  return page.$eval('#view-period', (el) => el.hidden);
+}
+async function flowShowing(page) {
+  return page.$eval('#view-flow', (el) => !el.hidden);
+}
+
 async function launch(routes) {
   const server = await serveApp({ routes });
   const browser = await chromium.launch({ executablePath: chromiumPath() });
@@ -69,11 +88,10 @@ describe('phase plan sync — an empty Sheet response never wipes a real local p
     assert.strictEqual(flag, '1');
   });
 
-  test('Check-in does not show the phase picker — a real phase is still in effect', async () => {
-    await page.click('#tab-flow');
-    await page.waitForTimeout(150);
-    const pickerHidden = await page.$eval('#view-period', (el) => el.hidden);
-    assert.strictEqual(pickerHidden, true, 'state.periodisation should still resolve from the untouched local plan');
+  test('starting a check-in does not show the phase picker — a real phase is still in effect', async () => {
+    await startUnplannedCheckIn(page);
+    assert.strictEqual(await pickerHidden(page), true, 'state.periodisation should still resolve from the untouched local plan');
+    assert.strictEqual(await flowShowing(page), true, 'the check-in flow itself is showing, so the picker really was skipped');
   });
 
   test('no page errors were raised', async () => {
@@ -109,11 +127,59 @@ describe('phase plan sync — a real Sheet response reaches a fresh device', { c
     assert.strictEqual(flag, '1');
   });
 
-  test('Check-in does not show the phase picker — the synced plan reached state.periodisation, not just storage', async () => {
+  test('starting a check-in does not show the phase picker — the synced plan reached state.periodisation, not just storage', async () => {
+    await startUnplannedCheckIn(page);
+    assert.strictEqual(await pickerHidden(page), true, 'a freshly-synced plan should resolve a phase for today just like a locally-set one would');
+    assert.strictEqual(await flowShowing(page), true, 'the check-in flow itself is showing, so the picker really was skipped');
+  });
+
+  test('no page errors were raised', async () => {
+    assert.deepStrictEqual(errors, []);
+  });
+});
+
+// The counter-case that makes the two checks above discriminate. With no phase
+// anywhere (nothing local, nothing on the Sheet) the Calendar still opens and
+// Check-in still shows it — but starting a check-in is gated by the picker.
+// If a check above passed no matter what the phase was, this describe is where
+// that would show: the very same helper must come out the other way here.
+describe('phase plan sync — with no phase anywhere, the picker gates the start of a check-in, not the Calendar', { concurrency: false }, () => {
+  let server, browser, page, errors;
+
+  before(async () => {
+    ({ server, browser, page, errors } = await launch({
+      'phases=1': JSON.stringify({ ok: true, phases: [] }),
+    }));
+    await page.goto(server.origin);
+    await page.waitForTimeout(400);
+  });
+
+  after(async () => {
+    await browser.close();
+    await server.close();
+  });
+
+  test('the Calendar shows on boot and after tapping Check-in, with the picker hidden', async () => {
+    assert.strictEqual(await page.$eval('#view-calendar', (el) => !el.hidden), true);
+    assert.strictEqual(await pickerHidden(page), true);
     await page.click('#tab-flow');
+    await page.waitForTimeout(100);
+    assert.strictEqual(await page.$eval('#view-calendar', (el) => !el.hidden), true, 'Check-in shows the Calendar');
+    assert.strictEqual(await pickerHidden(page), true, 'the Check-in tab no longer opens the picker');
+  });
+
+  test('"Log an unplanned session" opens the picker instead of the flow', async () => {
+    await page.click('.cal-unplanned');
     await page.waitForTimeout(150);
-    const pickerHidden = await page.$eval('#view-period', (el) => el.hidden);
-    assert.strictEqual(pickerHidden, true, 'a freshly-synced plan should resolve a phase for today just like a locally-set one would');
+    assert.strictEqual(await pickerHidden(page), false, 'no phase resolved, so the picker gates the check-in');
+    assert.strictEqual(await flowShowing(page), false);
+  });
+
+  test('choosing a phase lands in the flow', async () => {
+    await page.click('#period-choices .choice:has-text("Base")');
+    await page.waitForTimeout(150);
+    assert.strictEqual(await pickerHidden(page), true);
+    assert.strictEqual(await flowShowing(page), true);
   });
 
   test('no page errors were raised', async () => {
