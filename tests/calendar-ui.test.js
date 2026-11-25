@@ -51,12 +51,19 @@ function scenario(name, fx, opts, fn) {
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
+    // opts.posts: an array that collects every JSON body the page POSTs (the
+    // fire-and-forget Sheet writes), from before the first load.
+    if (opts.posts) {
+      page.on('request', (r) => {
+        if (r.method() === 'POST') { try { opts.posts.push(JSON.parse(r.postData())); } catch (e) { opts.posts.push({unparsed: r.postData()}); } }
+      });
+    }
     try {
       await page.clock.setFixedTime(new Date(opts.now || fx.now || F1.now));
       await page.addInitScript(([keys, data, raw]) => {
         if (localStorage.getItem('__seeded')) { return; }
         localStorage.setItem('__seeded', '1');
-        for (const k of ['log', 'plan', 'races', 'phases']) {
+        for (const k of ['log', 'plan', 'races', 'phases', 'settings', 'gcalEvents']) {
           if (raw && raw[k] !== undefined) { localStorage.setItem(keys[k], raw[k]); }
           else if (data[k]) { localStorage.setItem(keys[k], JSON.stringify(data[k])); }
         }
@@ -711,7 +718,7 @@ describe('empty state, edit and back, and Review', { concurrency: false }, () =>
     assert.strictEqual(got.length, 1);
     assert.deepStrictEqual([got[0].title, got[0].word, got[0].seg], ['Run', 'Logged', null], 'reads "Logged" with no strip');
     assert.ok(!(await page.textContent('.cal-agenda')).includes('Unplanned'));
-    assert.strictEqual(norm(await page.textContent('.cal-quiet')), 'Add a plan');
+    assert.strictEqual(norm(await page.textContent('.cal-quiet')), 'Add a plan or connect Google Calendar');
     assert.ok((await page.$('.cal-empty')) === null, 'no "Nothing planned" row; the quiet line carries the invitation');
     assert.strictEqual(norm(await page.textContent('.cal-agenda-logged')), '60 min logged');
     await selectDay(page, '2026-11-24');
@@ -1141,5 +1148,272 @@ describe('focus restore does not build selectors from plan text', { concurrency:
     await fire(page);
     await page.waitForTimeout(500);
     assert.strictEqual(await page.evaluate(() => document.activeElement.getAttribute('data-focus')), 'edit:tw2', 'the second twin, not the first');
+  });
+});
+
+// ═════════════════ Stage (b): Google Calendar read, Settings, picker ═════════════════
+// Criteria B8-B14 and B16 (docs/specs/calendar-start-screen.md section 10). The
+// Apps Script is never reached: `routes` answers the exact query strings the page
+// builds, so a mocked ?calendar=1&from=…&to=… must use the dates the pinned clock
+// produces, in that parameter order.
+const CAL_A = 'work@group.calendar.google.com';
+const CAL_B = 'family@group.calendar.google.com';
+const WEEK_EVENTS = 'calendar=1&from=2026-11-23&to=2026-11-29';
+const settingsJson = (obj) => JSON.stringify({ ok: true, settings: obj });
+const calendarsJson = (cals, configured) => JSON.stringify({
+  ok: true, timeZone: 'Australia/Sydney', configured: configured !== false,
+  calendars: cals.map((c) => ({ primary: false, writable: false, color: '#123456', read: false, write: false, ...c })),
+});
+const ev = (title, start, end, allDay) => ({ cal: CAL_A, title, allDay: !!allDay, start, end, tz: 'Australia/Sydney' });
+const F1_EVENTS = [
+  ev('Team lunch', '2026-11-25T12:30', '2026-11-25T13:30'),
+  ev('<img src=x onerror=window.__pwned=1>', '2026-11-26', '2026-11-27', true),
+  ev('Dentist', '2026-11-27T08:00', '2026-11-27T08:45'),
+];
+const eventsJson = (events) => JSON.stringify({ ok: true, from: '2026-11-23', to: '2026-11-29', timeZone: 'Australia/Sydney', events, truncated: false });
+const withGoogle = { ...F1, settings: { 'gcal.read': [CAL_A] } };
+const googleRoutes = (extra) => ({ 'settings=1': settingsJson({ 'gcal.read': [CAL_A] }), [WEEK_EVENTS]: eventsJson(F1_EVENTS), ...(extra || {}) });
+const stored = (page, key) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEYS[key]);
+const summaryStats = (page) => page.$$eval('.cal-stat', (ns) => ns.map((n) => n.textContent.replace(/\s+/g, ' ').trim()));
+const eventsLoaded = (page) => page.waitForFunction(() => {
+  const v = localStorage.getItem('triMomentumGcalEvents_v1');
+  return !!v && Object.keys(JSON.parse(v)).length > 0;
+});
+const chipMinutes = (page) => page.$$eval('.cal-chip', (ns) => ns.map((n) => n.getAttribute('data-date') + ':' + (n.querySelector('.cal-chip-min') ? n.querySelector('.cal-chip-min').textContent : '')));
+
+describe('B8 Settings sync follows the four rules (7.1)', { concurrency: false }, () => {
+  scenario('rule 1: a key present in the response wins, including []', { ...F1, settings: { 'gcal.read': [CAL_A] } }, {
+    routes: { 'settings=1': settingsJson({ 'gcal.read': [] }) },
+  }, async (page) => {
+    await page.waitForTimeout(300);
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [], 'local overwritten by []');
+    assert.strictEqual(norm(await page.textContent('.cal-gcal-row-sub')), 'Not set up');
+  });
+  scenario('rule 1: a present non-empty key replaces local and the row reads Reading 2', { ...F1, settings: { 'gcal.read': [CAL_A] } }, {
+    routes: { 'settings=1': settingsJson({ 'gcal.read': [CAL_A, CAL_B] }) },
+  }, async (page) => {
+    await page.waitForTimeout(300);
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [CAL_A, CAL_B]);
+    assert.strictEqual(norm(await page.textContent('.cal-gcal-row-sub')), 'Reading 2');
+  });
+  const posts = [];
+  scenario('rule 2: an absent key with a local value is pushed once, the flag set, local kept', { ...F1, settings: { 'gcal.read': [CAL_A] } }, {
+    routes: { 'settings=1': settingsJson({}) }, posts,
+  }, async (page) => {
+    await page.waitForTimeout(400);
+    const sets = posts.filter((p) => p.kind === 'settings');
+    assert.strictEqual(sets.length, 1, 'exactly one push: ' + JSON.stringify(posts));
+    assert.deepStrictEqual(sets[0], { kind: 'settings', action: 'set', key: 'gcal.read', value: [CAL_A] });
+    assert.strictEqual(await page.evaluate(() => localStorage.getItem('triMomentumSettingsSynced_v1')), '1');
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [CAL_A], 'local kept');
+    // Pushed once, not on every refresh: reopen Calendar twice more.
+    await page.click('#tab-races'); await page.click('#tab-flow'); await page.waitForTimeout(300);
+    assert.strictEqual(posts.filter((p) => p.kind === 'settings').length, 1, 'the flag stops a second push');
+  });
+  const posts3 = [];
+  scenario('rule 3: absent and nothing local stays unset, and nothing is pushed', F1, {
+    routes: { 'settings=1': settingsJson({}) }, posts: posts3,
+  }, async (page) => {
+    await page.waitForTimeout(300);
+    assert.strictEqual(posts3.filter((p) => p.kind === 'settings').length, 0);
+    assert.strictEqual(norm(await page.textContent('.cal-gcal-row-sub')), 'Not set up');
+  });
+  scenario('rule 4: a failed or malformed read changes nothing', { ...F1, settings: { 'gcal.read': [CAL_A] } }, {
+    routes: { 'settings=1': 'this is the old health-check text, not JSON' },
+  }, async (page) => {
+    await page.waitForTimeout(300);
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [CAL_A]);
+    routes['settings=1'] = JSON.stringify({ ok: false, error: 'unavailable' });
+    await page.click('#tab-races'); await page.click('#tab-flow'); await page.waitForTimeout(300);
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [CAL_A]);
+    routes['settings=1'] = JSON.stringify({ ok: true, settings: { 'gcal.read': 'not-an-array' } });
+    await page.click('#tab-races'); await page.click('#tab-flow'); await page.waitForTimeout(300);
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [CAL_A], 'a malformed value is ignored');
+  });
+});
+
+describe('B9-B11 Google blocks', { concurrency: false }, () => {
+  scenario('B9 blocks follow the cards, carry no dot, strip, word or action, and are not focusable', withGoogle, { routes: googleRoutes() }, async (page) => {
+    await eventsLoaded(page);
+    await selectDay(page, '2026-11-25');
+    const blocks = await page.$$eval('.cal-gblock', (ns) => ns.map((n) => ({
+      time: n.querySelector('.cal-gblock-time').textContent,
+      title: n.querySelector('.cal-gblock-title').textContent,
+      tag: n.querySelector('.cal-gblock-tag').textContent,
+      role: n.getAttribute('role'),
+      label: n.getAttribute('aria-label'),
+      focusable: !!n.querySelector('button,a,input,[tabindex]') || n.hasAttribute('tabindex'),
+      extras: n.querySelectorAll('.cal-card-dot,.cal-card-seg,.cal-card-word,.cal-card-cta,.cal-card-edit,.dash-cell-seg').length,
+    })));
+    assert.deepStrictEqual(blocks.map((b) => [b.time, b.title, b.tag]), [['12:30', 'Team lunch', 'Google']]);
+    assert.strictEqual(blocks[0].role, 'note');
+    assert.strictEqual(blocks[0].label, 'Google Calendar event, 12:30 Team lunch');
+    assert.strictEqual(blocks[0].focusable, false);
+    assert.strictEqual(blocks[0].extras, 0);
+    // After the cards, in the DOM.
+    assert.ok(await page.$eval('.cal-agenda', (a) => {
+      const cards = a.querySelector('.cal-cards'); const g = a.querySelector('.cal-gblocks');
+      return !!(cards && g && (cards.compareDocumentPosition(g) & Node.DOCUMENT_POSITION_FOLLOWING));
+    }), 'blocks come after the cards');
+    await selectDay(page, '2026-11-27');
+    assert.deepStrictEqual(await page.$$eval('.cal-gblock-time', (ns) => ns.map((n) => n.textContent)), ['08:00']);
+    await selectDay(page, '2026-11-26');
+    assert.deepStrictEqual(await page.$$eval('.cal-gblock-time', (ns) => ns.map((n) => n.textContent)), ['All day'], 'an all-day event shows on the day it covers');
+    await selectDay(page, '2026-11-27');
+    assert.ok(!(await page.$$eval('.cal-gblock-time', (ns) => ns.map((n) => n.textContent))).includes('All day'), 'its exclusive end day does not show it');
+  });
+  scenario('B9 Google events change neither planned nor logged time nor chip minutes', withGoogle, { routes: googleRoutes() }, async (page) => {
+    const before = [await summaryStats(page), await chipMinutes(page)];
+    await eventsLoaded(page);
+    await selectDay(page, '2026-11-25');
+    await page.waitForSelector('.cal-gblock');
+    assert.deepStrictEqual(await summaryStats(page), ['Planned 7h05', 'Logged 2h00']);
+    assert.deepStrictEqual(await chipMinutes(page), before[1]);
+    assert.deepStrictEqual((await cards(page)).map((c) => c.word), ['Not due yet'], 'the Wednesday session is scored as before');
+    assert.ok(!(await page.textContent('.cal-agenda-logged')).includes('min logged'), 'Wednesday has nothing logged');
+  });
+  scenario('B10 an event titled with markup renders as that literal text', withGoogle, { routes: googleRoutes() }, async (page) => {
+    await selectDay(page, '2026-11-26');
+    await page.waitForSelector('.cal-gblock');
+    assert.strictEqual(await page.$eval('.cal-gblock-title', (n) => n.textContent), '<img src=x onerror=window.__pwned=1>');
+    assert.strictEqual(await page.$$eval('.cal-agenda img', (ns) => ns.length), 0, 'no img element inside the agenda');
+    assert.strictEqual(await page.evaluate(() => window.__pwned), undefined, 'nothing ran');
+    assert.ok((await page.getAttribute('.cal-gblock', 'aria-label')).includes('<img src=x'), 'the accessible name carries the same literal text');
+  });
+  scenario('B11 Month shows no Google events', withGoogle, { routes: googleRoutes() }, async (page) => {
+    await eventsLoaded(page);
+    await page.click('#cal-tab-month');
+    assert.strictEqual(await page.$$eval('.cal-gblock', (ns) => ns.length), 0);
+    assert.ok(await page.$('.cal-gcal-row'), 'the Google row is still there');
+  });
+});
+
+describe('B12-B13 the picker', { concurrency: false }, () => {
+  scenario('B12 the row reads Not set up, then Reading 2, and opens the picker', F1, {
+    routes: { 'settings=1': settingsJson({}), 'calendar=1': calendarsJson([{ id: CAL_A, name: 'Work' }]) },
+  }, async (page) => {
+    assert.strictEqual(norm(await page.textContent('.cal-gcal-row-sub')), 'Not set up');
+    await page.click('.cal-gcal-row');
+    assert.ok(await page.isVisible('#view-gcal'));
+    assert.ok(!(await calVisible(page)) && !(await flowVisible(page)), 'only the picker shows');
+    assert.strictEqual((await tabStates(page))['tab-flow'], 'true', 'Check-in stays the selected tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement.id), 'gcal-h', 'focus lands on the heading');
+    await page.click('text=‹ Calendar');
+    assert.ok(await calVisible(page));
+  });
+  scenario('B12 two chosen calendars read Reading 2', { ...F1, settings: { 'gcal.read': [CAL_A, CAL_B] } }, { routes: googleRoutes({ 'settings=1': settingsJson({ 'gcal.read': [CAL_A, CAL_B] }) }) }, async (page) => {
+    assert.strictEqual(norm(await page.textContent('.cal-gcal-row-sub')), 'Reading 2');
+  });
+  scenario('B12 the empty state\'s "connect Google Calendar" opens the same picker', F2, {
+    routes: { 'settings=1': settingsJson({}), 'calendar=1': calendarsJson([{ id: CAL_A, name: 'Work' }]) },
+  }, async (page) => {
+    assert.strictEqual(norm(await page.textContent('.cal-quiet')), 'Add a plan or connect Google Calendar');
+    await page.click('text=connect Google Calendar');
+    assert.ok(await page.isVisible('#view-gcal'));
+    assert.strictEqual(norm(await page.textContent('#gcal-h')), 'Google Calendar');
+  });
+  const posts = [];
+  scenario('B13 lists every calendar, Save posts one set and re-reads, and a stale read does not undo it', F1, {
+    routes: {
+      'settings=1': settingsJson({ 'gcal.read': [] }),     // the OLD value, answered after the Save too
+      'calendar=1': calendarsJson([{ id: CAL_A, name: 'Work' }, { id: CAL_B, name: 'Family' }, { id: 'x@y.z', name: 'Birthdays', primary: true }]),
+    }, posts,
+  }, async (page) => {
+    await page.waitForTimeout(300);
+    await page.click('.cal-gcal-row');
+    await page.waitForSelector('.gcal-opt');
+    assert.deepStrictEqual(await page.$$eval('.gcal-opt-name', (ns) => ns.map((n) => n.textContent)), ['Work', 'Family', 'Birthdays (primary)']);
+    assert.strictEqual(await page.$$eval('.gcal-opt input:checked', (ns) => ns.length), 0);
+    assert.strictEqual(await page.$$eval('#view-gcal [aria-describedby]', (ns) => ns.length), 1);
+    assert.ok(norm(await page.textContent('#gcal-hint')).includes('Never scored'));
+    let rereads = 0;
+    page.on('request', (r) => { if (r.url().endsWith('?settings=1')) rereads += 1; });
+    const before = posts.length;
+    await page.check('.gcal-opt:nth-child(4) input');   // legend is child 1, hint child 2, Work 3
+    await page.check('.gcal-opt:nth-child(5) input');
+    await page.click('.btn-primary');
+    assert.strictEqual(norm(await page.textContent('#gcal-status')), 'Saved.');
+    const sets = posts.slice(before).filter((p) => p.kind === 'settings');
+    assert.strictEqual(sets.length, 1, 'one set');
+    assert.deepStrictEqual(sets[0], { kind: 'settings', action: 'set', key: 'gcal.read', value: [CAL_B, 'x@y.z'] });
+    await page.waitForTimeout(2200);
+    assert.ok(rereads >= 1, 'Settings were re-read after Save');
+    assert.deepStrictEqual((await stored(page, 'settings'))['gcal.read'], [CAL_B, 'x@y.z'], 'the stale response did not undo the choice');
+    await page.click('text=‹ Calendar');
+    assert.strictEqual(norm(await page.textContent('.cal-gcal-row-sub')), 'Reading 2');
+  });
+  scenario('B13 a failed list shows the error and a working Try again; no write section exists', F1, {
+    routes: { 'settings=1': settingsJson({}), 'calendar=1': 'not json at all' },
+  }, async (page) => {
+    await page.click('.cal-gcal-row');
+    await page.waitForSelector('.gcal-status.is-error');
+    assert.strictEqual(norm(await page.textContent('.gcal-status.is-error')), 'Couldn’t reach Google Calendar. Try again.');
+    assert.strictEqual(await page.getAttribute('.gcal-status.is-error', 'role'), 'alert');
+    assert.ok(!(await page.textContent('#view-gcal')).toLowerCase().includes('write planned sessions'), 'stage c is not here');
+    routes['calendar=1'] = calendarsJson([{ id: CAL_A, name: 'Work' }]);
+    await page.click('button:has-text("Try again")');
+    await page.waitForSelector('.gcal-opt');
+    assert.deepStrictEqual(await page.$$eval('.gcal-opt-name', (ns) => ns.map((n) => n.textContent)), ['Work']);
+  });
+  scenario('B13 an unconfigured script says what to do, with a Try again', F1, {
+    routes: { 'settings=1': settingsJson({}), 'calendar=1': calendarsJson([], false) },
+  }, async (page) => {
+    await page.click('.cal-gcal-row');
+    await page.waitForSelector('#view-gcal button:has-text("Try again")');
+    assert.ok(norm(await page.textContent('#view-gcal')).includes('GCAL_ALLOWLIST'));
+    assert.strictEqual(await page.$$eval('.gcal-opt', (ns) => ns.length), 0);
+  });
+});
+
+describe('B14 Google down', { concurrency: false }, () => {
+  scenario('Calendar still renders sessions, with no error banner and no events', withGoogle, {
+    routes: { 'settings=1': settingsJson({ 'gcal.read': [CAL_A] }), [WEEK_EVENTS]: 'the old deployment answers with plain text' },
+  }, async (page) => {
+    await page.waitForTimeout(400);
+    await selectDay(page, '2026-11-24');
+    assert.strictEqual((await cards(page)).length, 3, 'sessions render as always');
+    assert.strictEqual(await page.$$eval('.cal-gblock', (ns) => ns.length), 0);
+    assert.strictEqual(await page.$$eval('#view-calendar [role="alert"]', (ns) => ns.length), 0, 'no error banner');
+  });
+  scenario('cached events for that range keep showing when the read fails', {
+    ...withGoogle,
+    gcalEvents: { '2026-11-23|2026-11-29': { at: 1, events: [ev('Cached lunch', '2026-11-25T12:30', '2026-11-25T13:30')] } },
+  }, {
+    routes: { 'settings=1': settingsJson({ 'gcal.read': [CAL_A] }), [WEEK_EVENTS]: 'down' },
+  }, async (page) => {
+    await selectDay(page, '2026-11-25');
+    await page.waitForTimeout(400);
+    assert.deepStrictEqual(await page.$$eval('.cal-gblock-title', (ns) => ns.map((n) => n.textContent)), ['Cached lunch']);
+  });
+  scenario('no calendar chosen: no events are shown even from a stale cache, and none is fetched', {
+    ...F1,
+    gcalEvents: { '2026-11-23|2026-11-29': { at: 1, events: [ev('Stale', '2026-11-25T12:30', '2026-11-25T13:30')] } },
+  }, { routes: { 'settings=1': settingsJson({}) } }, async (page) => {
+    await selectDay(page, '2026-11-25');
+    assert.strictEqual(await page.$$eval('.cal-gblock', (ns) => ns.length), 0);
+  });
+});
+
+describe('B16 the picker and blocks at 320px', { concurrency: false }, () => {
+  const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  const tooSmall = (page, sel) => page.$$eval(sel, (ns) => ns.map((n) => { const r = n.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), n.className]; }).filter(([w, h]) => w < 44 || h < 44));
+  scenario('B16 Week with blocks: no overflow, and the Google row is a 44px target', withGoogle, { width: 320, routes: googleRoutes() }, async (page) => {
+    await eventsLoaded(page);
+    await selectDay(page, '2026-11-26');
+    await page.waitForSelector('.cal-gblock');
+    assert.ok((await overflow(page)) <= 0, 'horizontal overflow');
+    assert.deepStrictEqual(await tooSmall(page, '.cal-gcal-row'), []);
+  });
+  scenario('B16 the picker: no overflow; back, options, Save and Try again are all >= 44px', F1, {
+    width: 320, routes: { 'settings=1': settingsJson({}), 'calendar=1': calendarsJson([{ id: CAL_A, name: 'A calendar with a long name that has to wrap onto a second line on a phone' }, { id: CAL_B, name: 'Family' }]) },
+  }, async (page) => {
+    await page.click('.cal-gcal-row');
+    await page.waitForSelector('.gcal-opt');
+    assert.ok((await overflow(page)) <= 0, 'horizontal overflow');
+    assert.deepStrictEqual(await tooSmall(page, '#view-gcal .dash-phase-change, #view-gcal .gcal-opt, #view-gcal .btn-primary'), []);
+    routes['calendar=1'] = 'down';
+    await page.click('text=‹ Calendar'); await page.click('.cal-gcal-row');
+    await page.waitForSelector('.gcal-status.is-error');
+    assert.deepStrictEqual(await tooSmall(page, '#view-gcal .cal-quiet-link'), []);
   });
 });

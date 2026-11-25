@@ -54,6 +54,13 @@
  * exist because a week is ~10 sessions and firing 10 concurrent no-cors
  * POSTs races on appendRow. See handlePlanPost_ / listPlan_ below.
  *
+ * Google Calendar read + Settings (calendar start screen, stage b): a fifth
+ * sheet tab, "Settings" (Key, Value, UpdatedAt), read via `?settings=1` and
+ * written via `{ kind: 'settings', action: 'set', key: 'gcal.read', value:
+ * [ids] }`; and `?calendar=1` (calendars) / `?calendar=1&from=&to=` (events).
+ * Read-only: pin oauthScopes to calendar.readonly. Only calendars on the
+ * GCAL_ALLOWLIST Script Property are ever visible. See the block below.
+ *
  * Training phase plan: a fourth sheet tab named "Phases" (also created on
  * first use), holding the athlete's dated phase blocks (index.html's
  * `phasePlan` — {id, from, phase}, each block running until the next one
@@ -157,6 +164,14 @@ function isoWeekNumber_(iso) {
 }
 
 function doGet(e) {
+  // Calendar and Settings first, so a request such as `?calendar=1&list=1`
+  // cannot be shadowed by (or leak) the session list below.
+  if (e && e.parameter && e.parameter.calendar === '1') {
+    return handleCalendarGet_(e.parameter);
+  }
+  if (e && e.parameter && e.parameter.settings === '1') {
+    return listSettings_();
+  }
   if (e && e.parameter && e.parameter.stravaCallback === '1') {
     return handleStravaCallback_(e);
   }
@@ -172,83 +187,322 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.phases === '1') {
     return listPhases_();
   }
-  // SPIKE (calendar start screen, stage b precursor). Throwaway: stage b
-  // replaces it. Deliberately not `list=1`: doGet checks that first.
-  if (e && e.parameter && e.parameter.calendar === '1') {
-    return calendarSpike_();
-  }
   return ContentService
     .createTextOutput('TRI Momentum training log endpoint is live.')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-// ---------------------------------------------------------------------
-// SPIKE: Google Calendar read probe (docs/specs/calendar-start-screen.md,
-// section 9). Answers the UNVERIFIED Apps Script points before stage b is
-// built. Remove or replace when stage b lands.
+/* ===================== Google Calendar read (stage b) ====================== */
 //
-// SAFETY: this /exec URL is in a public repo, so anyone can call this while
-// it is deployed. It therefore returns NO calendar names, NO event titles
-// and NO calendar ids: only counts, flags, colours, time zones and one
-// start time. It writes nothing. Set the Script Property SPIKE_PROBE_TITLE
-// (Project Settings -> Script properties) to the exact title of one test
-// event you made in the next 14 days; if it is unset the probe is null.
+// docs/specs/calendar-start-screen.md, sections 7 and 10. Read-only: the
+// script asks Google for calendar.readonly and nothing wider (pin it in
+// appsscript.json; see the PR notes).
 //
-// Pin oauthScopes in appsscript.json (see the spec) so CalendarApp asks for
-// calendar.readonly and NOT the full calendar scope.
-var SPIKE_VERSION = 'spike-1';
+// SECURITY MODEL, stated plainly. The /exec URL is in a public repo and the
+// web app runs as the owner with access "Anyone", so any stranger can send
+// any GET or POST this script accepts. Two things follow:
+//   1. The Settings tab is web-writable, so the choice of which calendars to
+//      read is a *preference*, not a security bound.
+//   2. The real bound is the ALLOWLIST below, which lives in Script
+//      Properties and can only be edited in the Apps Script editor. A
+//      calendar that is not on it is invisible to every request: it is not
+//      listed, not readable, and a Settings write that names it has no
+//      effect. An empty or missing allowlist exposes nothing (fail closed).
+//
+// To set it up (owner, once): run listMyCalendarIds() from the editor, read
+// the ids in View -> Logs, then Project Settings -> Script properties ->
+// add GCAL_ALLOWLIST = a JSON array of the ids you are happy for the app to
+// offer, e.g. ["you@example.com","abc123@group.calendar.google.com"].
+// Comma or newline separated ids also work.
+//
+// Only these fields leave the script for an event: calendar id, title (cut
+// to 200 characters), all-day flag, start, end and the calendar's time zone.
+// No description, location, guests, organiser, attachments, conference links
+// or event ids. A raw exception message never goes back in a response.
 
-function calendarSpike_() {
-  var out = { ok: true, version: SPIKE_VERSION };
-  try {
-    var scriptTz = Session.getScriptTimeZone();
-    out.scriptTimeZone = scriptTz;
-    var cals = CalendarApp.getAllCalendars();
-    out.calendarCount = cals.length;
-    out.calendars = cals.map(function (c) {
-      return {
-        primary: c.isMyPrimaryCalendar(),
-        writable: !c.isHidden() && c.isOwnedByMe(),
-        color: c.getColor()
-      };
-    });
-    out.probe = spikeProbe_(cals, scriptTz);
-  } catch (err) {
-    out.ok = false;
-    // Error text can carry the scope or service name, which is what the
-    // spike needs to see. It carries no calendar data.
-    out.error = String(err && err.message ? err.message : err).slice(0, 300);
+var GCAL_ALLOWLIST_PROP = 'GCAL_ALLOWLIST';
+var GCAL_ALLOWLIST_MAX = 50;
+var GCAL_ID_MAX = 256;
+var GCAL_RANGE_MAX_DAYS = 42;
+var GCAL_EVENT_CAP = 300;
+var GCAL_TITLE_MAX = 200;
+// Events the script itself creates (stage c write-back) carry this tag. They
+// are hidden from every read as a second guard against echoing the athlete's
+// own plan back at them (spec Q4).
+var GCAL_TAG_KEY = 'trimomentum';
+
+// Editor-only helper, never routed from doGet/doPost: run it by hand to find
+// the ids to put in GCAL_ALLOWLIST. Names go to the execution log, not to any
+// response.
+function listMyCalendarIds() {
+  var cals = CalendarApp.getAllCalendars();
+  for (var i = 0; i < cals.length; i++) {
+    Logger.log(cals[i].getName() + '  ->  ' + cals[i].getId());
   }
+}
+
+function jsonOut_(obj) {
   return ContentService
-    .createTextOutput(JSON.stringify(out))
+    .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Finds one owner-named test event and reports only its start, formatted in
-// the script zone and in its own calendar's zone, plus whether it is
-// all-day. The title is never returned.
-function spikeProbe_(cals, scriptTz) {
-  var wanted = PropertiesService.getScriptProperties().getProperty('SPIKE_PROBE_TITLE');
-  if (!wanted) { return null; }
-  var from = new Date();
-  var to = new Date(from.getTime() + 14 * 24 * 60 * 60 * 1000);
+// The allowlist as an array of ids; [] when unset or unreadable.
+function gcalAllowlist_() {
+  var raw = PropertiesService.getScriptProperties().getProperty(GCAL_ALLOWLIST_PROP);
+  if (!raw) { return []; }
+  var list = null;
+  try {
+    var parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) { list = parsed; }
+  } catch (e) { list = null; }
+  if (!list) { list = String(raw).split(/[\n,]+/); }
+  var out = [];
+  for (var i = 0; i < list.length && out.length < GCAL_ALLOWLIST_MAX; i++) {
+    var id = typeof list[i] === 'string' ? list[i].trim() : '';
+    if (id && id.length <= GCAL_ID_MAX && out.indexOf(id) === -1) { out.push(id); }
+  }
+  return out;
+}
+
+// Allowlisted calendars that actually exist (an id that no longer resolves is
+// skipped, never an error). getCalendarById is used per id rather than
+// getAllCalendars() so a calendar off the list is never even opened.
+function gcalCalendars_() {
+  var ids = gcalAllowlist_();
+  var cals = [];
+  for (var i = 0; i < ids.length; i++) {
+    var cal = null;
+    try { cal = CalendarApp.getCalendarById(ids[i]); } catch (e) { cal = null; }
+    if (cal) { cals.push(cal); }
+  }
+  return cals;
+}
+
+function handleCalendarGet_(params) {
+  try {
+    if (params.from === undefined && params.to === undefined) {
+      return gcalListCalendars_();
+    }
+    return gcalListEvents_(params.from, params.to);
+  } catch (err) {
+    Logger.log('calendar read failed: ' + err);
+    return jsonOut_({ ok: false, error: 'unavailable' });
+  }
+}
+
+function gcalListCalendars_() {
+  var settings = readSettingsMap_();
+  var readIds = Array.isArray(settings['gcal.read']) ? settings['gcal.read'] : [];
+  var writeId = typeof settings['gcal.write'] === 'string' ? settings['gcal.write'] : '';
+  var cals = gcalCalendars_();
+  var out = [];
   for (var i = 0; i < cals.length; i++) {
-    var events = cals[i].getEvents(from, to);
-    for (var j = 0; j < events.length; j++) {
-      if (events[j].getTitle() !== wanted) { continue; }
-      var ev = events[j];
-      var calTz = cals[i].getTimeZone();
-      var allDay = ev.isAllDayEvent();
-      var start = allDay ? ev.getAllDayStartDate() : ev.getStartTime();
-      return {
+    var id = cals[i].getId();
+    out.push({
+      id: id,
+      name: cals[i].getName(),
+      color: cals[i].getColor(),
+      primary: !!cals[i].isMyPrimaryCalendar(),
+      writable: !!cals[i].isOwnedByMe(),
+      read: readIds.indexOf(id) !== -1,
+      write: !!writeId && writeId === id
+    });
+  }
+  return jsonOut_({
+    ok: true,
+    timeZone: Session.getScriptTimeZone(),
+    // False when the owner has not set GCAL_ALLOWLIST yet, so the picker can
+    // say what to do instead of showing an empty list with no explanation.
+    configured: gcalAllowlist_().length > 0,
+    calendars: out
+  });
+}
+
+// A real calendar date in exactly YYYY-MM-DD form. A date that would roll
+// over (2026-02-30, 2026-13-45) must format back to something different.
+function gcalDateOk_(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) { return false; }
+  var d = new Date(s + 'T00:00:00Z');
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+function gcalAddDays_(s, n) {
+  var d = new Date(s + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function gcalRangeOk_(from, to) {
+  if (!gcalDateOk_(from) || !gcalDateOk_(to)) { return false; }
+  if (to < from) { return false; }
+  var span = (new Date(to + 'T00:00:00Z') - new Date(from + 'T00:00:00Z')) / 86400000 + 1;
+  return span <= GCAL_RANGE_MAX_DAYS;
+}
+
+function gcalListEvents_(from, to) {
+  if (!gcalRangeOk_(from, to)) { return jsonOut_({ ok: false, error: 'bad_range' }); }
+  var settings = readSettingsMap_();
+  var readIds = Array.isArray(settings['gcal.read']) ? settings['gcal.read'] : [];
+  var writeId = typeof settings['gcal.write'] === 'string' ? settings['gcal.write'] : '';
+  var cals = gcalCalendars_();
+  var events = [];
+  for (var i = 0; i < cals.length; i++) {
+    var cal = cals[i];
+    var id = cal.getId();
+    // Never the write calendar (no echoes), never one that is not chosen.
+    if (readIds.indexOf(id) === -1 || (writeId && id === writeId)) { continue; }
+    // Times are formatted in the calendar's own zone, not the script's: an
+    // event has no zone of its own, and the two can differ.
+    var tz = cal.getTimeZone();
+    var start = Utilities.parseDate(from, tz, 'yyyy-MM-dd');
+    var end = Utilities.parseDate(gcalAddDays_(to, 1), tz, 'yyyy-MM-dd');
+    var found = cal.getEvents(start, end);
+    for (var j = 0; j < found.length; j++) {
+      var ev = found[j];
+      if (ev.getTag(GCAL_TAG_KEY)) { continue; }
+      var allDay = !!ev.isAllDayEvent();
+      var s, e;
+      if (allDay) {
+        s = Utilities.formatDate(ev.getAllDayStartDate(), tz, 'yyyy-MM-dd');
+        e = Utilities.formatDate(ev.getAllDayEndDate(), tz, 'yyyy-MM-dd');
+      } else {
+        s = Utilities.formatDate(ev.getStartTime(), tz, "yyyy-MM-dd'T'HH:mm");
+        e = Utilities.formatDate(ev.getEndTime(), tz, "yyyy-MM-dd'T'HH:mm");
+      }
+      events.push({
+        cal: id,
+        title: String(ev.getTitle() || '').slice(0, GCAL_TITLE_MAX),
         allDay: allDay,
-        startInScriptZone: Utilities.formatDate(start, scriptTz, "yyyy-MM-dd'T'HH:mm:ss"),
-        startInCalendarZone: Utilities.formatDate(start, calTz, "yyyy-MM-dd'T'HH:mm:ss"),
-        calendarTimeZone: calTz
-      };
+        start: s,
+        end: e,
+        tz: tz
+      });
     }
   }
-  return { found: false };
+  events.sort(function (a, b) { return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0); });
+  var truncated = events.length > GCAL_EVENT_CAP;
+  if (truncated) { events = events.slice(0, GCAL_EVENT_CAP); }
+  return jsonOut_({
+    ok: true,
+    from: from,
+    to: to,
+    timeZone: Session.getScriptTimeZone(),
+    events: events,
+    truncated: truncated
+  });
+}
+
+/* ================================ Settings ================================ */
+//
+// A fifth sheet tab, `Settings` (Key, Value, UpdatedAt), created on demand.
+// Rows are never deleted: "none" is stored as `[]` or an empty string, never
+// as a missing row, so "absent" can only ever mean "never written from any
+// device" (spec 7.1, rule 2).
+
+var SETTINGS_SHEET_NAME = 'Settings';
+var SETTINGS_HEADERS = ['Key', 'Value', 'UpdatedAt'];
+// An exact allowlist of keys a request may write. gcal.write and gcal.created
+// arrive with stage c; until then a request naming them is refused.
+var SETTINGS_WRITABLE = { 'gcal.read': true };
+// Keys a request may read back. gcal.created is never one of them.
+var SETTINGS_READABLE = { 'gcal.read': true, 'gcal.write': true };
+
+function getSettingsSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+  if (!sheet) { sheet = ss.insertSheet(SETTINGS_SHEET_NAME); }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(SETTINGS_HEADERS);
+  }
+  return sheet;
+}
+
+// { key: parsedValue } for the keys that have a row. gcal.read is parsed to an
+// array; gcal.write stays a string. A malformed value is skipped, not guessed.
+function readSettingsMap_() {
+  var sheet = getSettingsSheet_();
+  var lastRow = sheet.getLastRow();
+  var out = {};
+  if (lastRow < 2) { return out; }
+  var values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  for (var i = 0; i < values.length; i++) {
+    var key = String(values[i][0]);
+    if (!Object.prototype.hasOwnProperty.call(SETTINGS_READABLE, key)) { continue; }
+    var raw = values[i][1];
+    if (key === 'gcal.read') {
+      try {
+        var parsed = JSON.parse(String(raw));
+        if (Array.isArray(parsed)) { out[key] = parsed; }
+      } catch (e) { /* skip a malformed row */ }
+    } else {
+      out[key] = String(raw);
+    }
+  }
+  return out;
+}
+
+function listSettings_() {
+  try {
+    return jsonOut_({ ok: true, settings: readSettingsMap_() });
+  } catch (err) {
+    Logger.log('settings read failed: ' + err);
+    return jsonOut_({ ok: false, error: 'unavailable' });
+  }
+}
+
+// Returns the text to store for a valid `gcal.read` value, or null.
+function settingsValueText_(key, value) {
+  if (key === 'gcal.read') {
+    if (!Array.isArray(value) || value.length > GCAL_ALLOWLIST_MAX) { return null; }
+    for (var i = 0; i < value.length; i++) {
+      if (typeof value[i] !== 'string' || !value[i] || value[i].length > GCAL_ID_MAX) { return null; }
+    }
+    return JSON.stringify(value);
+  }
+  return null;
+}
+
+// Upsert one row by exact key. The Value cell is forced to plain text first
+// so no request string can ever be stored as a formula (=IMPORTXML(...),
+// =HYPERLINK(...)). Caller holds the document lock.
+function settingsUpsert_(sheet, key, text) {
+  var lastRow = sheet.getLastRow();
+  var rowIndex = -1;
+  if (lastRow >= 2) {
+    var keys = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i][0]) === key) { rowIndex = i + 2; break; }
+    }
+  }
+  if (rowIndex === -1) {
+    rowIndex = lastRow + 1;
+    sheet.getRange(rowIndex, 1).setNumberFormat('@').setValue(key);
+  }
+  sheet.getRange(rowIndex, 2).setNumberFormat('@').setValue(text);
+  sheet.getRange(rowIndex, 3).setValue(new Date());
+}
+
+function handleSettingsPost_(body) {
+  try {
+    if (body.action !== 'set') { return { ok: false, error: 'bad_request' }; }
+    var key = body.key;
+    if (typeof key !== 'string' || !Object.prototype.hasOwnProperty.call(SETTINGS_WRITABLE, key)) {
+      return { ok: false, error: 'bad_key' };
+    }
+    var text = settingsValueText_(key, body.value);
+    if (text === null) { return { ok: false, error: 'bad_value' }; }
+    var sheet = getSettingsSheet_();
+    var lock = LockService.getDocumentLock();
+    lock.waitLock(20000);
+    try {
+      settingsUpsert_(sheet, key, text);
+    } finally {
+      lock.releaseLock();
+    }
+    return { ok: true };
+  } catch (err) {
+    Logger.log('settings write failed: ' + err);
+    return { ok: false, error: 'unavailable' };
+  }
 }
 
 // Read path — the Sheet is the cross-device source of truth the app loads
@@ -308,6 +562,8 @@ function doPost(e) {
       result = handlePlanPost_(body);
     } else if (body.kind === 'phase') {
       result = handlePhasePost_(body);
+    } else if (body.kind === 'settings') {
+      result = handleSettingsPost_(body);
     } else {
       result = handleSessionPost_(body);
     }

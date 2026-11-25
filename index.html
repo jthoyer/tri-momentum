@@ -508,6 +508,32 @@ textarea::placeholder{color:var(--ink3)}
 .cal-quiet{margin-top:.8rem;font-size:13.5px;color:var(--ink2);text-align:center}
 .cal-quiet-link{min-height:44px;padding:0 2px;background:none;border:none;font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--blue);cursor:pointer}
 .cal-quiet-link:hover{color:var(--blue-m)}
+/* Google Calendar (stage b). The row at the foot of Calendar, the read-only
+   event blocks in the agenda, and the picker. Existing tokens only. */
+.gcal[hidden]{display:none}
+.cal-gcal-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;margin-top:1.4rem;padding:10px 14px;background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rmd);font-family:var(--fd);text-align:left;color:var(--ink);cursor:pointer}
+.cal-gcal-row:hover{border-color:var(--bd3)}
+.cal-gcal-row-text{display:flex;flex-direction:column;min-width:0}
+.cal-gcal-row-title{font-size:15px;font-weight:600}
+.cal-gcal-row-sub{margin-top:2px;font-size:13px;color:var(--ink2)}
+.cal-gcal-row-chev{flex:none;font-size:22px;line-height:1;color:var(--ink2)}
+.cal-gblocks{display:flex;flex-direction:column;gap:6px;margin-top:.8rem}
+.cal-gblock{display:flex;align-items:baseline;gap:10px;padding:9px 12px;background:var(--s3);border:1px dashed var(--bd2);border-radius:var(--rmd);font-family:var(--fd);font-size:14px;color:var(--ink2)}
+.cal-gblock-time{flex:none;min-width:54px;font-weight:600;font-variant-numeric:tabular-nums}
+.cal-gblock-title{flex:1;min-width:0;overflow-wrap:anywhere}
+.cal-gblock-tag{flex:none;font-family:var(--fm);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+fieldset.gcal-fs{border:0;min-width:0;margin-top:1.4rem;padding:0}
+.gcal-fs legend{padding:0;font-family:var(--fd);font-size:15px;font-weight:600;color:var(--ink)}
+.gcal .dash-phase-change{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+.gcal-hint{margin-top:4px;font-size:13px;color:var(--ink2)}
+.gcal-opt{display:flex;align-items:center;gap:12px;min-height:48px;margin-top:8px;padding:10px 12px;background:var(--s1);border-radius:var(--rmd);box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16);font-family:var(--fd);font-size:15px;color:var(--ink);cursor:pointer}
+.gcal-opt input{flex:none;width:24px;height:24px;accent-color:var(--blue)}
+.gcal-opt-name{min-width:0;overflow-wrap:anywhere}
+.gcal-actions{margin-top:1.4rem}
+.gcal-actions .btn{width:100%;border-radius:999px}
+.gcal-status{margin-top:.8rem;font-size:13.5px;color:var(--ink2)}
+.gcal-status:focus{outline:none}
+.gcal-status.is-error{color:var(--dash-bad)}
 /* ── Training plan ───────────────────────────────────────────────────
    The athlete's own planned sessions, transcribed by hand. Deliberately
    reuses the Races component language rather than inventing a second one:
@@ -708,6 +734,9 @@ fieldset.plan-field{border:0;min-width:0}
 
   <!-- ══════════ CALENDAR — the start screen, and the first screen of Check-in ══════════ -->
   <div class="dash cal" id="view-calendar" role="tabpanel" aria-labelledby="tab-flow" hidden></div>
+
+  <!-- ══════════ GOOGLE CALENDAR picker (stage b) — reached from the row at the foot of Calendar ══════════ -->
+  <div class="dash gcal" id="view-gcal" role="region" aria-labelledby="gcal-h" hidden></div>
 
   <div id="view-flow">
 
@@ -1365,6 +1394,333 @@ if(window.caches && caches.keys){
       .catch(function(){ return false; })
       .then(function(ok){ phasePlanFetchInFlight = null; return ok; });
     return phasePlanFetchInFlight;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // GOOGLE CALENDAR — read-only (calendar start screen, stage b; decision 51)
+  //
+  // The Apps Script reads the athlete's Google calendars with the read-only
+  // scope and hands back plain events. The page shows them as quiet blocks
+  // beside the day's sessions: never scored, never counted in planned or
+  // logged time, never matched to a session, never in Month. Which calendars
+  // are shown is a preference kept in the Sheet's `Settings` tab, so it follows
+  // the athlete across devices. It is a preference, not a security bound: the
+  // real bound is the allowlist in the script's own properties (see Code.gs).
+  //
+  // Event titles are untrusted text (anyone can invite the athlete to an
+  // event), so every one is written with textContent / setAttribute and never
+  // as markup.
+  // ═══════════════════════════════════════════════════════════════
+  var SETTINGS_READ_URL = TRAINING_LOG_WRITE_URL + '?settings=1';
+  var GCAL_LIST_URL = TRAINING_LOG_WRITE_URL + '?calendar=1';
+  var SETTINGS_KEY = 'triMomentumSettings_v1';
+  var SETTINGS_SYNCED_KEY = 'triMomentumSettingsSynced_v1';
+  var GCAL_EVENTS_KEY = 'triMomentumGcalEvents_v1';
+  var GCAL_SETTING_KEYS = ['gcal.read'];
+  var GCAL_EVENTS_THROTTLE_MS = 20000;
+  var GCAL_EVENTS_CACHE_RANGES = 6;
+  // A Save is a fire-and-forget no-cors write, so a read that lands before it
+  // does would hand back the old value and quietly undo the athlete's choice.
+  // For this long after a Save, a response that disagrees with what was just
+  // written is ignored for that key.
+  var SETTINGS_PENDING_MS = 10000;
+
+  function loadGcalSettings(){
+    if(!storageOk){ return {}; }
+    try{
+      var raw = window.localStorage.getItem(SETTINGS_KEY);
+      var obj = raw ? JSON.parse(raw) : null;
+      return obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+    } catch(e){ return {}; }
+  }
+  function persistGcalSettings(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(gcalSettings)); } catch(e){}
+  }
+  var gcalSettings = loadGcalSettings();
+  var settingsPendingWrite = null;
+  function hasPushedSettings(){
+    if(!storageOk){ return true; }
+    try{ return window.localStorage.getItem(SETTINGS_SYNCED_KEY) === '1'; } catch(e){ return true; }
+  }
+  // Set as soon as a push is attempted, not confirmed — decision 48's trade-off.
+  function markSettingsPushed(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(SETTINGS_SYNCED_KEY, '1'); } catch(e){}
+  }
+  // No early return on a blank URL (the other writers have one): in a page
+  // served without the Apps Script URL the request is simply relative, which is
+  // what lets a test see exactly what a Save posts.
+  function submitSettingsToSheet(key, value){
+    try{
+      fetch(TRAINING_LOG_WRITE_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify({kind: 'settings', action: 'set', key: key, value: value})
+      }).catch(function(){});
+    } catch(err){ /* best-effort, same trade-off as every other writer */ }
+  }
+  function gcalReadIds(){
+    var v = gcalSettings['gcal.read'];
+    return Array.isArray(v) ? v : [];
+  }
+  function gcalReadOn(){ return gcalReadIds().length > 0; }
+
+  // Spec 7.1's four rules, per key:
+  //  1. a key present in the response wins, including `[]`;
+  //  2. a key absent while local holds a value and this device has not pushed:
+  //     push the local value once, keep local;
+  //  3. absent and nothing local: unset;
+  //  4. a failed or malformed read changes nothing.
+  // Rows are never deleted on the Sheet, so "absent" can only mean "never
+  // written from any device" — rule 2 cannot resurrect a choice another device
+  // cleared. Resolves to true when local changed.
+  var settingsFetchInFlight = null;
+  function refreshSettingsFromSheet(){
+    if(settingsFetchInFlight){ return settingsFetchInFlight; }
+    settingsFetchInFlight = fetch(SETTINGS_READ_URL)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        var s = data && data.ok ? data.settings : null;
+        if(!s || typeof s !== 'object' || Array.isArray(s)){ throw new Error('bad response'); }
+        var changed = false;
+        GCAL_SETTING_KEYS.forEach(function(key){
+          if(Object.prototype.hasOwnProperty.call(s, key)){
+            var remote = s[key];
+            if(!Array.isArray(remote)){ return; }
+            var pend = settingsPendingWrite;
+            if(pend && pend.key === key){
+              var stale = Date.now() - pend.at > SETTINGS_PENDING_MS;
+              if(!stale && JSON.stringify(remote) !== JSON.stringify(pend.value)){ return; }
+              settingsPendingWrite = null;
+            }
+            if(JSON.stringify(remote) !== JSON.stringify(gcalSettings[key])){
+              gcalSettings[key] = remote;
+              changed = true;
+            }
+          } else if(gcalSettings[key] !== undefined && !hasPushedSettings()){
+            submitSettingsToSheet(key, gcalSettings[key]);
+            markSettingsPushed();
+          }
+        });
+        if(changed){ persistGcalSettings(); }
+        return changed;
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ settingsFetchInFlight = null; return ok; });
+    return settingsFetchInFlight;
+  }
+
+  // ── Events: cached per date range, last response wins ─────────────
+  function loadGcalEvents(){
+    if(!storageOk){ return {}; }
+    try{
+      var raw = window.localStorage.getItem(GCAL_EVENTS_KEY);
+      var obj = raw ? JSON.parse(raw) : null;
+      return obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+    } catch(e){ return {}; }
+  }
+  function persistGcalEvents(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(GCAL_EVENTS_KEY, JSON.stringify(gcalEventsCache)); } catch(e){}
+  }
+  var gcalEventsCache = loadGcalEvents();
+  var gcalEventsInFlight = {};
+  var gcalEventsFetchedAt = {};
+  function gcalRangeKey(from, to){ return from + '|' + to; }
+  function gcalWeekRange(mondayISO){
+    return {from: mondayISO, to: isoDate(addDays(new Date(mondayISO + 'T00:00:00'), 6))};
+  }
+  var GCAL_WHEN_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
+  // Keeps only what the page uses, and drops anything that is not shaped like
+  // an event: a stray value in the response must not reach the DOM.
+  function gcalCleanEvent(raw){
+    if(!raw || typeof raw.start !== 'string' || typeof raw.end !== 'string'){ return null; }
+    if(!GCAL_WHEN_RE.test(raw.start) || !GCAL_WHEN_RE.test(raw.end)){ return null; }
+    return {
+      cal: String(raw.cal || ''),
+      title: String(raw.title == null ? '' : raw.title).slice(0, 200),
+      allDay: raw.allDay === true,
+      start: raw.start,
+      end: raw.end
+    };
+  }
+  // Resolves to true when the cached events for the range changed. A failed or
+  // non-JSON response (an old deployment answers the health-check text) keeps
+  // whatever is cached and resolves false.
+  function refreshGcalEvents(from, to, force){
+    if(!gcalReadOn()){ return Promise.resolve(false); }
+    var k = gcalRangeKey(from, to);
+    if(gcalEventsInFlight[k]){ return gcalEventsInFlight[k]; }
+    if(!force && gcalEventsFetchedAt[k] && Date.now() - gcalEventsFetchedAt[k] < GCAL_EVENTS_THROTTLE_MS){
+      return Promise.resolve(false);
+    }
+    gcalEventsFetchedAt[k] = Date.now();
+    gcalEventsInFlight[k] = fetch(GCAL_LIST_URL + '&from=' + from + '&to=' + to)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(!data || !data.ok || !Array.isArray(data.events)){ throw new Error('bad response'); }
+        var events = [];
+        data.events.forEach(function(e){ var c = gcalCleanEvent(e); if(c){ events.push(c); } });
+        var prev = gcalEventsCache[k];
+        var changed = !prev || JSON.stringify(prev.events) !== JSON.stringify(events);
+        gcalEventsCache[k] = {events: events, at: Date.now()};
+        var keys = Object.keys(gcalEventsCache).sort(function(a, b){ return gcalEventsCache[b].at - gcalEventsCache[a].at; });
+        keys.slice(GCAL_EVENTS_CACHE_RANGES).forEach(function(old){ delete gcalEventsCache[old]; });
+        persistGcalEvents();
+        return changed;
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ delete gcalEventsInFlight[k]; return ok; });
+    return gcalEventsInFlight[k];
+  }
+  // The events a day shows. All-day events show on every day they cover (end is
+  // exclusive); timed events on their start day only (spec P8). All-day first,
+  // then by start time. Nothing at all while no calendar is chosen.
+  function gcalEventsOn(dateISO, mondayISO){
+    if(!gcalReadOn()){ return []; }
+    var r = gcalWeekRange(mondayISO);
+    var entry = gcalEventsCache[gcalRangeKey(r.from, r.to)];
+    if(!entry || !Array.isArray(entry.events)){ return []; }
+    var out = entry.events.filter(function(e){
+      if(e.allDay){ return e.start <= dateISO && dateISO < e.end; }
+      return e.start.slice(0, 10) === dateISO;
+    });
+    out.sort(function(a, b){
+      if(a.allDay !== b.allDay){ return a.allDay ? -1 : 1; }
+      return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0);
+    });
+    return out;
+  }
+
+  // ── The picker (showView('gcal')) ─────────────────────────────────
+  // Module state, never read back from the DOM: the list arrives after the view
+  // is drawn, and a redraw must not lose the athlete's ticks.
+  var gcalPicker = {status: 'idle', calendars: [], configured: true, draft: {}, saved: false};
+  function openGcalPicker(){
+    gcalPicker.draft = {};
+    gcalReadIds().forEach(function(id){ gcalPicker.draft[id] = true; });
+    gcalPicker.saved = false;
+    gcalPicker.status = 'loading';
+    showView('gcal');
+    loadGcalCalendars();
+  }
+  function loadGcalCalendars(){
+    gcalPicker.status = 'loading';
+    if(!els.viewGcal.hidden){ renderGcalPicker(); }
+    fetch(GCAL_LIST_URL)
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(!data || !data.ok || !Array.isArray(data.calendars)){ throw new Error('bad response'); }
+        var list = [];
+        data.calendars.forEach(function(c){
+          if(c && typeof c.id === 'string' && c.id && list.length < 50){
+            list.push({id: c.id, name: String(c.name == null ? c.id : c.name), primary: c.primary === true});
+          }
+        });
+        gcalPicker.calendars = list;
+        gcalPicker.configured = data.configured !== false;
+        gcalPicker.status = 'ok';
+      })
+      .catch(function(){ gcalPicker.status = 'error'; })
+      .then(function(){ if(!els.viewGcal.hidden){ renderGcalPicker(); } });
+  }
+  function saveGcalPicker(){
+    var ids = gcalPicker.calendars.filter(function(c){ return gcalPicker.draft[c.id]; }).map(function(c){ return c.id; });
+    gcalSettings['gcal.read'] = ids;
+    persistGcalSettings();
+    settingsPendingWrite = {key: 'gcal.read', value: ids, at: Date.now()};
+    markSettingsPushed();
+    submitSettingsToSheet('gcal.read', ids);
+    // The cached events may belong to a calendar that was just unticked.
+    gcalEventsCache = {};
+    gcalEventsFetchedAt = {};
+    persistGcalEvents();
+    gcalPicker.saved = true;
+    renderGcalPicker();
+    var st = document.getElementById('gcal-status');
+    if(st){ st.focus({preventScroll: true}); }
+    say(ids.length ? 'Saved. Reading ' + ids.length + (ids.length === 1 ? ' calendar.' : ' calendars.') : 'Saved. Reading no calendars.');
+    // "Then re-reads Settings": give the write a moment to land first.
+    window.setTimeout(function(){ refreshSettingsFromSheet(); }, 1500);
+  }
+  // Every redraw rebuilds the heading, so a keyboard or screen-reader user who
+  // was sitting on it (showView puts focus there) is put back, not dropped on
+  // <body>.
+  function renderGcalPicker(){
+    var onHeading = !!document.activeElement && document.activeElement.id === 'gcal-h';
+    drawGcalPicker();
+    if(onHeading){ var hh = document.getElementById('gcal-h'); if(hh){ hh.focus({preventScroll: true}); } }
+  }
+  function drawGcalPicker(){
+    var root = els.viewGcal;
+    clear(root);
+    var back = el('button', 'dash-phase-change', '‹ Calendar');
+    back.type = 'button';
+    back.addEventListener('click', function(){ showView('calendar'); });
+    root.appendChild(back);
+    root.appendChild(el('p', 'dash-eyebrow', 'Calendar'));
+    var h = el('h1', 'cal-title', 'Google Calendar');
+    h.id = 'gcal-h'; h.tabIndex = -1;
+    root.appendChild(h);
+
+    var fs = el('fieldset', 'gcal-fs');
+    fs.appendChild(el('legend', null, 'Read events from'));
+    var hint = el('p', 'gcal-hint', 'Shown as quiet blocks beside your sessions. Never scored.');
+    hint.id = 'gcal-hint';
+    fs.appendChild(hint);
+    fs.setAttribute('aria-describedby', 'gcal-hint');
+    root.appendChild(fs);
+
+    if(gcalPicker.status === 'loading' || gcalPicker.status === 'idle'){
+      fs.appendChild(el('p', 'gcal-status', 'Loading your calendars…'));
+      return;
+    }
+    if(gcalPicker.status === 'error'){
+      var err = el('p', 'gcal-status is-error', 'Couldn’t reach Google Calendar. Try again.');
+      err.setAttribute('role', 'alert');
+      fs.appendChild(err);
+      var retry = el('button', 'cal-quiet-link', 'Try again');
+      retry.type = 'button';
+      retry.addEventListener('click', function(){
+        loadGcalCalendars();
+        var hh = document.getElementById('gcal-h');
+        if(hh){ hh.focus({preventScroll: true}); }
+      });
+      fs.appendChild(retry);
+      return;
+    }
+    if(!gcalPicker.calendars.length){
+      fs.appendChild(el('p', 'gcal-status', gcalPicker.configured
+        ? 'None of the calendars on your allowlist could be found.'
+        : 'No calendars are available to choose from yet. In the Apps Script editor, add a GCAL_ALLOWLIST script property listing the calendars this app may offer, then try again.'));
+      var again = el('button', 'cal-quiet-link', 'Try again');
+      again.type = 'button';
+      again.addEventListener('click', function(){ loadGcalCalendars(); });
+      fs.appendChild(again);
+      return;
+    }
+    gcalPicker.calendars.forEach(function(c){
+      var label = el('label', 'gcal-opt');
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = !!gcalPicker.draft[c.id];
+      box.addEventListener('change', function(){ gcalPicker.draft[c.id] = box.checked; gcalPicker.saved = false; var s = document.getElementById('gcal-status'); if(s){ s.textContent = ''; } });
+      label.appendChild(box);
+      label.appendChild(el('span', 'gcal-opt-name', c.name + (c.primary ? ' (primary)' : '')));
+      fs.appendChild(label);
+    });
+    var actions = el('div', 'gcal-actions');
+    var save = el('button', 'btn btn-primary', 'Save');
+    save.type = 'button';
+    save.addEventListener('click', saveGcalPicker);
+    actions.appendChild(save);
+    var status = el('p', 'gcal-status', gcalPicker.saved ? 'Saved.' : '');
+    status.id = 'gcal-status';
+    status.tabIndex = -1;
+    status.setAttribute('role', 'status');
+    actions.appendChild(status);
+    root.appendChild(actions);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -3270,6 +3626,56 @@ if(window.caches && caches.keys){
     return li;
   }
 
+  // Google events for a day: read-only quiet blocks after the session cards.
+  // No discipline dot, no strip, no status word, no action, not focusable, and
+  // never counted anywhere (spec 5.8). Titles are untrusted: textContent and
+  // setAttribute only.
+  function calGoogleBlocks(dateISO){
+    var evs = gcalEventsOn(dateISO, calWeekMonday);
+    if(!evs.length){ return null; }
+    var wrap = el('div', 'cal-gblocks');
+    evs.forEach(function(ev){
+      var time = ev.allDay ? 'All day' : ev.start.slice(11, 16);
+      var b = el('div', 'cal-gblock');
+      b.setAttribute('role', 'note');
+      b.setAttribute('aria-label', 'Google Calendar event, ' + time + ' ' + ev.title);
+      var t = el('span', 'cal-gblock-time', time);
+      var n = el('span', 'cal-gblock-title', ev.title);
+      var g = el('span', 'cal-gblock-tag', 'Google');
+      [t, n, g].forEach(function(x){ x.setAttribute('aria-hidden', 'true'); b.appendChild(x); });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+  // The row at the foot of Calendar that opens the picker.
+  function calGcalRow(){
+    var n = gcalReadIds().length;
+    var btn = el('button', 'cal-gcal-row');
+    btn.type = 'button';
+    var text = el('span', 'cal-gcal-row-text');
+    text.appendChild(el('span', 'cal-gcal-row-title', 'Google Calendar'));
+    text.appendChild(el('span', 'cal-gcal-row-sub', n ? 'Reading ' + n : 'Not set up'));
+    btn.appendChild(text);
+    var chev = el('span', 'cal-gcal-row-chev', '›');
+    chev.setAttribute('aria-hidden', 'true');
+    btn.appendChild(chev);
+    btn.addEventListener('click', openGcalPicker);
+    return btn;
+  }
+  // Fetches the shown week's Google events and redraws if they changed. Week
+  // only: Month shows none. The redraw is skipped if the athlete has moved on
+  // while the request was out.
+  function calEnsureGcal(force){
+    if(calMode !== 'week' || !gcalReadOn()){ return; }
+    var r = gcalWeekRange(calWeekMonday);
+    refreshGcalEvents(r.from, r.to, force).then(function(changed){
+      if(!changed || els.viewCalendar.hidden || calMode !== 'week' || calWeekMonday !== r.from){ return; }
+      var key = calFocusKey();
+      renderCalendar();
+      calRestoreFocus(key);
+    });
+  }
+
   function calAgenda(model){
     var today = todayISO();
     var sel = model.days.filter(function(d){ return d.date === calSelected; })[0] || model.days[0];
@@ -3309,6 +3715,8 @@ if(window.caches && caches.keys){
       r.extras.forEach(function(e){ ul.appendChild(calExtraCard(e, model.hasPlan)); });
       wrap.appendChild(ul);
     }
+    var gblocks = calGoogleBlocks(sel.date);
+    if(gblocks){ wrap.appendChild(gblocks); }
     // "Nothing planned" + Add only where the week has a plan: in a week with
     // none at all the quiet line below carries the invitation instead.
     if(model.hasPlan && !r.results.length){
@@ -3345,12 +3753,20 @@ if(window.caches && caches.keys){
     panel.appendChild(calAgenda(model));
     if(!model.hasPlan){
       // Empty state: the week still renders, logged sessions included, with
-      // one quiet line. (Stage b adds "or connect Google Calendar".)
+      // one quiet line, which also offers to connect Google Calendar while
+      // none is being read.
       var q = el('p', 'cal-quiet');
       var link = el('button', 'cal-quiet-link', 'Add a plan');
       link.type = 'button';
       link.addEventListener('click', function(){ calOpenPlan(calSelected, null); });
       q.appendChild(link);
+      if(!gcalReadOn()){
+        q.appendChild(document.createTextNode(' or '));
+        var gl = el('button', 'cal-quiet-link', 'connect Google Calendar');
+        gl.type = 'button';
+        gl.addEventListener('click', openGcalPicker);
+        q.appendChild(gl);
+      }
       panel.appendChild(q);
     }
     return panel;
@@ -3616,6 +4032,8 @@ if(window.caches && caches.keys){
     if(resume){ root.appendChild(resume); }
     root.appendChild(calViewSwitch());
     root.appendChild(calMode === 'month' ? calMonthPanel() : calWeekPanel());
+    root.appendChild(calGcalRow());
+    calEnsureGcal(false);
   }
 
   // Add / Edit on a card opens the Plan view on that day; its back link
@@ -5027,6 +5445,7 @@ if(window.caches && caches.keys){
     tabRaces: document.getElementById('tab-races'),
     viewFlow: document.getElementById('view-flow'),
     viewCalendar: document.getElementById('view-calendar'),
+    viewGcal: document.getElementById('view-gcal'),
     viewDash: document.getElementById('view-dashboard'),
     viewTrends: document.getElementById('view-trends'),
     viewStrength: document.getElementById('view-strength'),
@@ -5623,11 +6042,13 @@ if(window.caches && caches.keys){
     var isPhasePlan = view === 'phaseplan';
     var isPhaseBuild = view === 'phasebuild';
     var isCalendar = view === 'calendar';
+    var isGcal = view === 'gcal';
     // isFlow is "none of the named views" — every new view must be added to
     // this chain, or the check-in flow renders underneath it as well.
-    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan && !isPhaseBuild && !isCalendar;
+    var isFlow = !isDash && !isTrends && !isStrength && !isWarmup && !isRaces && !isPlan && !isPhasePlan && !isPhaseBuild && !isCalendar && !isGcal;
     els.viewFlow.hidden = !isFlow;
     els.viewCalendar.hidden = !isCalendar;
+    els.viewGcal.hidden = !isGcal;
     // The flow has just been left: an untouched seed from an earlier day can
     // be rolled forward now, before anything renders the resume bar.
     if(!isFlow){ reseedFlowToToday(); }
@@ -5640,7 +6061,7 @@ if(window.caches && caches.keys){
     els.viewPhasePlan.hidden = !isPhasePlan;
     els.viewPhaseBuild.hidden = !isPhaseBuild;
     // Calendar is the first screen of Check-in, so the tab stays selected for it.
-    els.tabFlow.setAttribute('aria-selected', String(isFlow || isCalendar));
+    els.tabFlow.setAttribute('aria-selected', String(isFlow || isCalendar || isGcal));
     els.tabDash.setAttribute('aria-selected', String(isDash));
     els.tabStrength.setAttribute('aria-selected', String(isStrength));
     els.tabWarmup.setAttribute('aria-selected', String(isWarmup));
@@ -5654,6 +6075,7 @@ if(window.caches && caches.keys){
     if(isPhasePlan){ renderPhasePlan(); }
     if(isPhaseBuild){ renderPhaseBuild(); }
     if(isCalendar){ renderCalendar(); }
+    if(isGcal){ renderGcalPicker(); }
     // The flow's own chrome (eyebrow, phase row) reads state.periodisation,
     // which can change out from under it — e.g. via "Change phase" mid-flow
     // — so refresh it whenever this view is (re)shown, not just on render().
@@ -5664,7 +6086,7 @@ if(window.caches && caches.keys){
     refreshVisibleViewFromSheet();
     if(opts && opts.quiet){ return; }
     window.scrollTo(0, 0);
-    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : (isPhaseBuild ? 'phasebuild-h' : (isCalendar ? 'calendar-h' : 'step-h')))))))));
+    var h = document.getElementById(isDash ? 'dash-h' : (isTrends ? 'trends-h' : (isStrength ? 'strength-h' : (isWarmup ? 'warmup-h' : (isRaces ? 'races-h' : (isPlan ? 'plan-h' : (isPhasePlan ? 'phaseplan-h' : (isPhaseBuild ? 'phasebuild-h' : (isCalendar ? 'calendar-h' : (isGcal ? 'gcal-h' : 'step-h'))))))))));
     if(h){ h.focus({preventScroll:true}); }
     if(announceMsg){ say(announceMsg); }
   }
@@ -5728,6 +6150,12 @@ if(window.caches && caches.keys){
       refreshPlanFromSheet().then(redrawCalendar);
       refreshRacesFromSheet().then(redrawCalendar);
       refreshPhasePlanFromSheet().then(redrawCalendar);
+      // Which Google calendars are read follows the athlete across devices; a
+      // changed choice redraws, and the events are re-fetched either way.
+      refreshSettingsFromSheet().then(function(changed){
+        if(changed){ redrawCalendar(true); }
+        calEnsureGcal(true);
+      });
     }
     if(!els.viewDash.hidden || !els.viewTrends.hidden){
       refreshLogFromSheet().then(function(changed){
