@@ -11,6 +11,8 @@ const KEYS = {
   plan: 'triMomentumPlan_v1',
   races: 'triMomentumRaces_v1',
   phases: 'triMomentumPhasePlan_v1',
+  settings: 'triMomentumSettings_v1',
+  gcalEvents: 'triMomentumGcalEvents_v1',
 };
 
 function planItem(id, date, disc, title, duration, intensity, key) {
