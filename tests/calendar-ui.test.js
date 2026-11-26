@@ -977,12 +977,18 @@ describe('background refresh keeps the node and the focus', { concurrency: false
     const a = document.activeElement;
     return a && (a.getAttribute('data-keep') || 'other:' + (a.getAttribute('aria-label') || a.id || a.className));
   });
+  // "Unchanged" only means something if a read really happened: a held or
+  // never-reading app would keep its nodes trivially. Count the mock's GETs of
+  // the four data tables (log, races, plan, phases): each refresh reads all four.
+  const gets = (sb) => sb.backend.dataRequests().filter((r) => r.method === 'GET').length;
   for (const [name, sel] of FOCUS_TARGETS) {
-    scenario('H1 unchanged reads (all four mocked): ' + name + ' is not rebuilt and keeps focus', F1, { sb: true }, async (page) => {
+    scenario('H1 unchanged reads (all four mocked): ' + name + ' is not rebuilt and keeps focus', F1, { sb: true }, async (page, ctx, sb) => {
       await page.waitForTimeout(300);
       await page.$eval(sel, (n) => n.setAttribute('data-keep', 'same-node'));
       await page.focus(sel);
+      const before = gets(sb);
       for (let i = 0; i < 2; i++) { await fire(page); await page.waitForTimeout(400); }
+      assert.ok(gets(sb) - before >= 8, 'two refreshes read all four tables each (GETs seen: ' + (gets(sb) - before) + ')');
       assert.ok(await page.$(sel + '[data-keep="same-node"]'), 'the very same node is still in the page (no rebuild)');
       assert.strictEqual(await activeKey(page), 'same-node', 'focus did not move');
     });
@@ -999,12 +1005,14 @@ describe('background refresh keeps the node and the focus', { concurrency: false
       assert.ok(sameSpot, 'focus was restored to the rebuilt control');
     });
   }
-  scenario('H1 unchanged reads in Month: nothing rebuilt either', F1, { sb: true }, async (page) => {
+  scenario('H1 unchanged reads in Month: nothing rebuilt either', F1, { sb: true }, async (page, ctx, sb) => {
     await page.click('#cal-tab-month');
     await page.$eval('.race-cal-week-row', (n) => n.setAttribute('data-keep', 'same-node'));
     await page.focus('.race-cal-week-row');
+    const before = gets(sb);
     await fire(page);
     await page.waitForTimeout(400);
+    assert.ok(gets(sb) - before >= 4, 'the refresh read all four tables (GETs seen: ' + (gets(sb) - before) + ')');
     assert.ok(await page.$('.race-cal-week-row[data-keep="same-node"]'));
   });
 });
