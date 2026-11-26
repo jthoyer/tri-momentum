@@ -76,16 +76,12 @@ function scanAddress(files) {
 
 // The project this app first pointed at no longer exists. Built from parts.
 const OLD_REF = 'ghfvmsyx' + 'fovwaeeuzlzn';
-// supabase/README.md still names it, and still writes out the secret-key prefix
-// in prose; chunk 4 (docs) owns that file. Remove this entry when that lands:
-// it is the ONLY exemption, and it covers those two findings in that one file.
-const OLD_REF_PENDING_DOCS = ['supabase/README.md'];
 
 const files = realFiles(ROOT);
 const plant = (p, text) => files.concat([{ path: p, text }]);
 
 describe('AC-S1 — no secret key, personal access token, Google client secret or privileged JWT in any tracked text file', () => {
-  test('the real tree is clean', () => { assert.deepStrictEqual(scanSecrets(files, OLD_REF_PENDING_DOCS), []); });
+  test('the real tree is clean', () => { assert.deepStrictEqual(scanSecrets(files), []); });
   test('the scan reads a real number of files (it is not scanning nothing)', () => {
     assert.ok(files.length > 30, 'only ' + files.length + ' files scanned');
     assert.ok(files.some((f) => f.path === 'index.html') && files.some((f) => f.path === 'CLAUDE.md'));
@@ -126,13 +122,13 @@ describe('AC-S2 — committed project constants', () => {
     const key = /var SUPABASE_PUBLISHABLE_KEY = '([^']*)';/.exec(src)[1];
     assert.ok(key === '' || /^sb_publishable_[A-Za-z0-9_-]+$/.test(key) || (key.split('.').length === 3 && jwtRole(key) === 'anon'));
   });
-  test('the deleted project\'s ref appears in no tracked file outside z_Archive (README exempt until the docs chunk)', () => {
-    const hits = files.filter((f) => f.text.includes(OLD_REF) && !OLD_REF_PENDING_DOCS.includes(f.path)).map((f) => f.path);
+  test('the deleted project\'s ref appears in no tracked file outside z_Archive', () => {
+    const hits = files.filter((f) => f.text.includes(OLD_REF)).map((f) => f.path);
     assert.deepStrictEqual(hits, []);
   });
   test('discriminates: the old ref planted in a test file is flagged', () => {
     const planted = plant('tests/planted.js', "const u = 'https://" + OLD_REF + ".supabase.co';");
-    assert.deepStrictEqual(planted.filter((f) => f.text.includes(OLD_REF) && !OLD_REF_PENDING_DOCS.includes(f.path)).map((f) => f.path), ['tests/planted.js']);
+    assert.deepStrictEqual(planted.filter((f) => f.text.includes(OLD_REF)).map((f) => f.path), ['tests/planted.js']);
   });
 });
 
