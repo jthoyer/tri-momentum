@@ -11,6 +11,18 @@ select t.is('second sees 0 of the owner''s races', (select count(*) from public.
 select t.is('second sees 0 of the owner''s plan_sessions', (select count(*) from public.plan_sessions where user_id = :'owner_id'), 0::bigint);
 select t.is('second sees 0 of the owner''s phase_blocks', (select count(*) from public.phase_blocks where user_id = :'owner_id'), 0::bigint);
 select t.is('second sees 0 of the owner''s sheet_import', (select count(*) from public.sheet_import where user_id = :'owner_id'), 0::bigint);
+select t.is('second sees 0 of the owner''s activities', (select count(*) from public.activities where user_id = :'owner_id'), 0::bigint);
+select t.is('second sees 0 of the owner''s analysis', (select count(*) from public.analysis where user_id = :'owner_id'), 0::bigint);
+select t.is('second sees only own activities (1 of 4 in the table)', (select count(*) from public.activities), 1::bigint);
+select t.is('second sees only own analysis (1 of 4 in the table)', (select count(*) from public.analysis), 1::bigint);
+select t.is('second sees own activity, by name', (select string_agg(name, ',') from public.activities), 'Second swim');
+select t.is('second reading the owner''s exact activity id still gets nothing', (select count(*) from public.activities where id = 'o-a1'), 0::bigint);
+select t.is('second reading the owner''s exact analysis week still gets only its own row',
+  (select string_agg(headline, ',') from public.analysis where week_start = '2026-11-02'), 'Second week 45');
+select t.denied('second cannot insert an activity even under its own user_id',
+  $q$insert into public.activities (user_id, id, source, source_id, activity_date) values ('00000000-0000-4000-8000-000000000002','x-new','garmin','g-9','2026-11-02')$q$);
+select t.denied('second cannot insert an analysis row even under its own user_id',
+  $q$insert into public.analysis (user_id, week_start) values ('00000000-0000-4000-8000-000000000002','2026-11-09')$q$);
 select t.is('second sees only own rows in session_checkins', (select count(*) from public.session_checkins), 1::bigint);
 select t.is('second sees only own rows in phase_blocks (same id "legacy" as the owner, separate rows)', (select count(*) from public.phase_blocks), 1::bigint);
 select t.is('second reading by the owner''s exact id still gets nothing', (select count(*) from public.races where id = 'o-r1'), 0::bigint);
@@ -66,6 +78,8 @@ select t.is('nothing was stored under evil ids', (select count(*) from public.ra
 
 -- The reverse direction too: the owner cannot see or alter second's rows.
 :as_owner;
+select t.is('owner sees 0 of second''s activities', (select count(*) from public.activities where user_id = :'second_id'), 0::bigint);
+select t.is('owner sees 0 of second''s analysis', (select count(*) from public.analysis where user_id = :'second_id'), 0::bigint);
 select t.is('owner sees 0 of second''s races', (select count(*) from public.races where user_id = :'second_id'), 0::bigint);
 select t.is('owner updates second''s plan_sessions row -> 0 rows', t.rows($q$update public.plan_sessions set title='x' where id = 'x-p1'$q$), 0::bigint);
 select t.is('owner deletes second''s race -> 0 rows', t.rows($q$delete from public.races where id = 'x-r1'$q$), 0::bigint);
@@ -73,23 +87,23 @@ select t.is('owner deletes second''s race -> 0 rows', t.rows($q$delete from publ
 -- anon: stopped by privilege on every table and every operation, with or without claims.
 :as_anon;
 select t.denied('anon cannot select from ' || tbl, 'select * from public.' || tbl)
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 select t.denied('anon cannot insert into ' || tbl, 'insert into public.' || tbl || ' default values')
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 select t.denied('anon cannot update ' || tbl, 'update public.' || tbl || ' set user_id = user_id')
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 select t.denied('anon cannot delete from ' || tbl, 'delete from public.' || tbl)
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 select t.denied('anon cannot truncate ' || tbl, 'truncate public.' || tbl)
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 select t.denied('anon cannot select from ' || tbl || ' even carrying the owner''s sub claim',
   'set request.jwt.claims to ''{"sub":"00000000-0000-4000-8000-000000000001"}''; select * from public.' || tbl)
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 
 -- TRUNCATE is not covered by RLS, so it must be a missing privilege: no signed-in user has it.
 :as_owner;
 select t.denied('allow-listed owner cannot truncate ' || tbl, 'truncate public.' || tbl)
-from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import']) tbl;
+from unnest(array['allowed_users','session_checkins','races','plan_sessions','phase_blocks','sheet_import','activities','analysis']) tbl;
 :as_super;
 select t.is('the fixtures were all still there after the truncate attempts',
   (select count(*) from public.session_checkins) + (select count(*) from public.races), 7::bigint);

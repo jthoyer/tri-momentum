@@ -47,5 +47,37 @@ select t.throws('a second sheet_import insert for the owner conflicts (23505)',
   $q$insert into public.sheet_import (counts) values ('{"sessions":5}')$q$, '23505', 'duplicate key');
 select t.is('sheet_import marker unchanged', (select counts->>'sessions' from public.sheet_import), '2');
 
+-- activities and analysis (TM-014): select only. The scheduled run writes them with management access,
+-- never the app, so no app role may insert, update, delete or truncate them, even own rows, even allow-listed.
+select t.denied('owner cannot insert into activities (own user_id)',
+  $q$insert into public.activities (user_id, id, source, source_id, activity_date) values ('00000000-0000-4000-8000-000000000001','new-a','garmin','g-5','2026-11-02')$q$);
+select t.denied('owner cannot insert into activities (default user_id)',
+  $q$insert into public.activities (id, source, source_id, activity_date) values ('new-b','garmin','g-6','2026-11-02')$q$);
+select t.denied('owner cannot update activities.name', $q$update public.activities set name = 'x' where id = 'o-a1'$q$);
+select t.denied('owner cannot update activities.user_id', $q$update public.activities set user_id = user_id where id = 'o-a1'$q$);
+select t.denied('owner cannot delete from activities by id', $q$delete from public.activities where id = 'o-a1'$q$);
+select t.denied('owner cannot delete from activities (unfiltered)', $q$delete from public.activities$q$);
+select t.denied('owner cannot truncate activities', $q$truncate public.activities$q$);
+select t.denied('owner cannot insert into analysis (own user_id, valid Monday)',
+  $q$insert into public.analysis (user_id, week_start) values ('00000000-0000-4000-8000-000000000001','2026-11-23')$q$);
+select t.denied('owner cannot update analysis.headline', $q$update public.analysis set headline = 'x' where week_start = '2026-11-02'$q$);
+select t.denied('owner cannot update analysis.findings', $q$update public.analysis set findings = '[]'$q$);
+select t.denied('owner cannot delete from analysis by week', $q$delete from public.analysis where week_start = '2026-11-02'$q$);
+select t.denied('owner cannot delete from analysis (unfiltered)', $q$delete from public.analysis$q$);
+select t.denied('owner cannot truncate analysis', $q$truncate public.analysis$q$);
+select t.denied('owner cannot read the activities identity sequence', $q$select last_value from public.activities_seq_seq$q$);
+select t.denied('owner cannot advance the activities identity sequence', $q$select nextval('public.activities_seq_seq')$q$);
+:as_second;
+select t.denied('second (allow-listed) cannot insert into activities', $q$insert into public.activities (user_id, id, source, source_id, activity_date) values ('00000000-0000-4000-8000-000000000002','new-c','garmin','g-7','2026-11-02')$q$);
+select t.denied('second (allow-listed) cannot insert into analysis', $q$insert into public.analysis (user_id, week_start) values ('00000000-0000-4000-8000-000000000002','2026-11-23')$q$);
+:as_stranger;
+select t.denied('stranger cannot insert into activities', $q$insert into public.activities (user_id, id, source, source_id, activity_date) values ('00000000-0000-4000-8000-000000000003','new-d','garmin','g-8','2026-11-02')$q$);
+select t.denied('stranger cannot update analysis', $q$update public.analysis set headline = 'x'$q$);
+:as_super;
+select t.is('activities and analysis rows are untouched after the refused writes',
+  (select count(*) from public.activities) * 10 + (select count(*) from public.analysis), 44::bigint);
+select t.is('...and the owner''s first activity is unchanged', (select name from public.activities where id = 'o-a1'), 'Owner easy run');
+:as_owner;
+
 -- allowed_users: select only.
 select t.denied('owner cannot update allowed_users', $q$update public.allowed_users set note = 'x'$q$);

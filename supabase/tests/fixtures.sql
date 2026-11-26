@@ -5,7 +5,7 @@ reset role;
 reset request.jwt.claims;
 
 truncate public.sheet_import, public.phase_blocks, public.plan_sessions,
-         public.races, public.session_checkins;
+         public.races, public.session_checkins, public.activities, public.analysis;
 truncate public.allowed_users;
 
 insert into public.allowed_users (user_id, note) values
@@ -34,6 +34,19 @@ insert into public.phase_blocks (user_id, id, from_date, phase) values
   (:'owner_id',    'legacy', '2026-01-01', 'base'),
   (:'second_id',   'legacy', '2026-01-01', 'build1'),
   (:'stranger_id', 'z-ph1', '2026-11-01', 'base');
+
+-- activities and analysis are written by the management path (superuser here), never by the app.
+insert into public.activities (user_id, id, source, source_id, activity_date, sport, name) values
+  (:'owner_id',    'o-a1', 'garmin', 'g-1', '2026-11-02', 'run',  'Owner easy run'),
+  (:'owner_id',    'o-a2', 'strava', 'g-1', '2026-11-03', 'bike', 'Owner ride'),
+  (:'second_id',   'x-a1', 'garmin', 'g-1', '2026-11-02', 'swim', 'Second swim'),
+  (:'stranger_id', 'z-a1', 'garmin', 'g-1', '2026-11-02', 'run',  'Stranger run');
+
+insert into public.analysis (user_id, week_start, headline) values
+  (:'owner_id',    '2026-11-02', 'Owner week 45'),
+  (:'owner_id',    '2026-11-09', 'Owner week 46'),
+  (:'second_id',   '2026-11-02', 'Second week 45'),
+  (:'stranger_id', '2026-11-02', 'Stranger week 45');
 
 insert into public.sheet_import (user_id, counts) values
   (:'owner_id',    '{"sessions":2}'),

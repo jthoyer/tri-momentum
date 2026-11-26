@@ -13,6 +13,11 @@ select t.is('owner reads own races', (select count(*) from public.races), 1::big
 select t.is('owner reads own plan_sessions', (select count(*) from public.plan_sessions), 2::bigint);
 select t.is('owner reads own phase_blocks', (select count(*) from public.phase_blocks), 2::bigint);
 select t.is('owner reads own sheet_import', (select count(*) from public.sheet_import), 1::bigint);
+select t.is('owner reads own activities (2 of the 4 rows in the table)', (select count(*) from public.activities), 2::bigint);
+select t.is('owner reads own analysis (2 of the 4 rows in the table)', (select count(*) from public.analysis), 2::bigint);
+select t.is('owner reads the activities columns, not just the count',
+  (select string_agg(name || '/' || sport, ',' order by seq) from public.activities), 'Owner easy run/run,Owner ride/bike');
+select t.is('owner reads analysis in week order', (select string_agg(headline, ',' order by week_start) from public.analysis), 'Owner week 45,Owner week 46');
 
 -- Insert with no user_id: the default fills in auth.uid().
 select t.is('insert into session_checkins without user_id -> 1 row',
@@ -109,3 +114,20 @@ select t.ok('seq is strictly increasing across separate inserts',
   (select bool_and(seq > lag_seq) from (select seq, lag(seq) over (order by created_at, seq) as lag_seq from public.races) s where lag_seq is not null));
 select t.throws('the app cannot supply seq itself (GENERATED ALWAYS)',
   $q$insert into public.races (id, name, race_date, seq) values ('s-1','x','2027-01-01', 1)$q$, '428C9', 'non-DEFAULT value');
+
+-- The management path (TM-014's scheduled run): the superuser is not restricted by RLS, so it
+-- can insert activities and analysis rows under an explicit user_id, and the owner then reads them.
+:as_super;
+select t.is('superuser inserts an activity for the owner -> 1 row',
+  t.rows($q$insert into public.activities (user_id, id, source, source_id, activity_date, sport, moving_minutes, avg_hr, load, check_status)
+            values ('00000000-0000-4000-8000-000000000001','m-a1','garmin','g-77','2026-11-04','swim', 52.5, 141, 63.2, 'ok')$q$), 1::bigint);
+select t.is('superuser inserts an analysis row for the owner -> 1 row',
+  t.rows($q$insert into public.analysis (user_id, week_start, headline, findings, sources)
+            values ('00000000-0000-4000-8000-000000000001','2026-11-16','Owner week 47','[{"k":"v"}]','garmin')$q$), 1::bigint);
+:as_owner;
+select t.is('owner then reads the activity the management path wrote',
+  (select moving_minutes::text || '/' || avg_hr || '/' || check_status from public.activities where id = 'm-a1'), '52.5/141/ok');
+select t.is('owner then reads the analysis row the management path wrote',
+  (select headline || '/' || (findings -> 0 ->> 'k') from public.analysis where week_start = '2026-11-16'), 'Owner week 47/v');
+select t.is('owner now sees 3 activities and 3 analysis rows',
+  (select count(*) from public.activities) * 10 + (select count(*) from public.analysis), 33::bigint);

@@ -12,6 +12,8 @@ select t.is('stranger sees 0 races', (select count(*) from public.races), 0::big
 select t.is('stranger sees 0 plan_sessions', (select count(*) from public.plan_sessions), 0::bigint);
 select t.is('stranger sees 0 phase_blocks', (select count(*) from public.phase_blocks), 0::bigint);
 select t.is('stranger sees 0 sheet_import', (select count(*) from public.sheet_import), 0::bigint);
+select t.is('stranger sees 0 activities (they have 1 under their own user_id)', (select count(*) from public.activities), 0::bigint);
+select t.is('stranger sees 0 analysis (they have 1 under their own user_id)', (select count(*) from public.analysis), 0::bigint);
 
 select t.rls_rejected('stranger cannot insert into session_checkins',
   $q$insert into public.session_checkins (id, session_date) values ('s-1','2026-10-01')$q$);
@@ -72,6 +74,8 @@ select t.is('control: once allow-listed, stranger sees their own races', (select
 select t.is('control: once allow-listed, stranger sees their own plan_sessions', (select count(*) from public.plan_sessions), 1::bigint);
 select t.is('control: once allow-listed, stranger sees their own phase_blocks', (select count(*) from public.phase_blocks), 1::bigint);
 select t.is('control: once allow-listed, stranger sees their own sheet_import', (select count(*) from public.sheet_import), 1::bigint);
+select t.is('control: once allow-listed, stranger sees their own activities', (select count(*) from public.activities), 1::bigint);
+select t.is('control: once allow-listed, stranger sees their own analysis', (select count(*) from public.analysis), 1::bigint);
 select t.is('control: once allow-listed, stranger can insert', t.rows($q$insert into public.races (id, name, race_date) values ('s-3','x','2027-01-01')$q$), 1::bigint);
 
 -- Removal takes effect immediately: remove the OWNER from the list and they lose everything.
@@ -83,6 +87,8 @@ select t.is('removed from the list: owner sees 0 races', (select count(*) from p
 select t.is('removed from the list: owner sees 0 plan_sessions', (select count(*) from public.plan_sessions), 0::bigint);
 select t.is('removed from the list: owner sees 0 phase_blocks', (select count(*) from public.phase_blocks), 0::bigint);
 select t.is('removed from the list: owner sees 0 sheet_import', (select count(*) from public.sheet_import), 0::bigint);
+select t.is('removed from the list: owner sees 0 activities', (select count(*) from public.activities), 0::bigint);
+select t.is('removed from the list: owner sees 0 analysis', (select count(*) from public.analysis), 0::bigint);
 select t.rls_rejected('removed from the list: owner cannot insert',
   $q$insert into public.session_checkins (id, session_date) values ('late-1','2026-10-01')$q$);
 select t.is('removed from the list: owner update touches 0 rows', t.rows($q$update public.plan_sessions set title = 'x'$q$), 0::bigint);

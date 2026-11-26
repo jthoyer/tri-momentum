@@ -1,4 +1,4 @@
--- Read-only check for the owner: run this in the Supabase SQL editor AFTER applying the six migrations.
+-- Read-only check for the owner: run this in the Supabase SQL editor AFTER applying the eight migrations.
 -- It changes nothing (selects only). supabase/README.md says when to run it and what to expect.
 --
 -- Part 1: every table in public, with row-level security on or off.
@@ -12,7 +12,7 @@ join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind in ('r', 'p')
 order by c.relname;
 
--- Part 2: what each API role may do on each of the six tables, per privilege.
+-- Part 2: what each API role may do on each of the eight tables, per privilege.
 -- Expect: the anon column is false everywhere; the authenticated column is true only where the grant
 -- matrix in supabase/README.md says so. Note TRUNCATE, REFERENCES and TRIGGER: row-level security does
 -- not cover them, so they must be false for both roles.
@@ -20,13 +20,14 @@ select t.table_name,
        p.privilege,
        has_table_privilege('anon', 'public.' || t.table_name, p.privilege) as anon,
        has_table_privilege('authenticated', 'public.' || t.table_name, p.privilege) as authenticated
-from (values ('allowed_users'), ('session_checkins'), ('races'), ('plan_sessions'), ('phase_blocks'), ('sheet_import')) as t(table_name)
+from (values ('allowed_users'), ('session_checkins'), ('races'), ('plan_sessions'), ('phase_blocks'), ('sheet_import'), ('activities'), ('analysis')) as t(table_name)
 cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) as p(privilege)
 order by t.table_name, array_position(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'], p.privilege);
 
 -- Part 3: column-level UPDATE, which is how the plan date is kept fixed. Expect exactly these:
 --   plan_sessions: disc, title, intensity, duration, is_key, notes, phase   (NOT plan_date, id, user_id)
 --   phase_blocks:  from_date, phase                                          (NOT id, user_id)
+-- (activities and analysis have no column-level UPDATE: the app reads them and never writes them.)
 select c.table_name, c.column_name
 from information_schema.columns c
 where c.table_schema = 'public'

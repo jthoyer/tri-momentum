@@ -4,7 +4,7 @@
 #   supabase/tests/run.sh
 #
 # What it does, in order:
-#   1. Lints the migrations (six files, right names and order, nothing destructive).
+#   1. Lints the migrations (eight files, right names and order, nothing destructive).
 #   2. Creates a temporary cluster in a temp directory (unix socket only, no network).
 #   3. Recreates what the migrations expect from Supabase: the anon / authenticated /
 #      service_role roles, a stub auth schema with auth.users and auth.uid(), and Supabase's
@@ -46,7 +46,7 @@ command -v perl >/dev/null || { echo "error: perl not found on PATH" >&2; exit 2
 # ---------------------------------------------------------------- 1. lint the migrations
 echo "== migrations lint ($MIGRATIONS_DIR)"
 mapfile -t FILES < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name '*.sql' | LC_ALL=C sort)
-EXPECTED=(allowed_users session_checkins races plan_sessions phase_blocks sheet_import)
+EXPECTED=(allowed_users session_checkins races plan_sessions phase_blocks sheet_import activities analysis)
 if [ "${#FILES[@]}" -ne "${#EXPECTED[@]}" ]; then
   fail "expected ${#EXPECTED[@]} migration files, found ${#FILES[@]}"
 fi
@@ -114,10 +114,14 @@ done
 # Run it here too: it must execute without error, and what it prints must say what the owner is told to expect.
 echo "== running supabase/checks/verify.sql (read-only)"
 if psql_run -F '|' -f "$HERE/../checks/verify.sql" >"$TMP/verify.txt" 2>&1; then
-  [ "$(grep -Ec '^[a-z_]+\|t\|' "$TMP/verify.txt")" -ge 6 ] || fail "verify.sql: fewer than six tables report row-level security on"
+  [ "$(grep -Ec '^[a-z_]+\|t\|' "$TMP/verify.txt")" -eq 8 ] || fail "verify.sql: eight tables should report row-level security on"
   ! grep -Eq '^[a-z_]+\|f\|' "$TMP/verify.txt" || fail "verify.sql: a table reports row-level security off"
   ! grep -Eq '^[a-z_]+\|[A-Z]+\|t\|' "$TMP/verify.txt" || fail "verify.sql: anon holds a privilege on a table"
   ! grep -Eq '^(function|view)\|' "$TMP/verify.txt" || fail "verify.sql: a function or view exists in public"
+  for tbl in activities analysis; do
+    [ "$(grep -Ec "^${tbl}\|[A-Z]+\|f\|t\$" "$TMP/verify.txt")" = 1 ] && grep -q "^${tbl}|SELECT|f|t\$" "$TMP/verify.txt" \
+      || fail "verify.sql: $tbl should show authenticated SELECT only (and nothing for anon)"
+  done
   grep -q '^plan_sessions|disc$' "$TMP/verify.txt" && ! grep -q '^plan_sessions|plan_date$' "$TMP/verify.txt" \
     || fail "verify.sql: plan_sessions column-level UPDATE is not disc..phase without plan_date"
 else

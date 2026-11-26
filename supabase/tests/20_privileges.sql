@@ -27,7 +27,7 @@ where n.nspname = 'public' and c.relkind in ('r','p');
 -- 3. The grant matrix (spec 5.3). Table-level privileges per table; UPDATE is column-level only.
 create temp table tables_under_test (tbl text primary key);
 insert into tables_under_test values
-  ('allowed_users'), ('session_checkins'), ('races'), ('plan_sessions'), ('phase_blocks'), ('sheet_import');
+  ('allowed_users'), ('session_checkins'), ('races'), ('plan_sessions'), ('phase_blocks'), ('sheet_import'), ('activities'), ('analysis');
 
 create temp table want_table_priv (tbl text, priv text);
 insert into want_table_priv values
@@ -36,7 +36,8 @@ insert into want_table_priv values
   ('races','SELECT'), ('races','INSERT'), ('races','DELETE'),
   ('plan_sessions','SELECT'), ('plan_sessions','INSERT'), ('plan_sessions','DELETE'),
   ('phase_blocks','SELECT'), ('phase_blocks','INSERT'), ('phase_blocks','DELETE'),
-  ('sheet_import','SELECT'), ('sheet_import','INSERT');
+  ('sheet_import','SELECT'), ('sheet_import','INSERT'),
+  ('activities','SELECT'), ('analysis','SELECT');
 
 create temp table want_update_cols (tbl text, col text);
 insert into want_update_cols values
@@ -116,7 +117,8 @@ insert into want_policy values
   ('races','SELECT'), ('races','INSERT'), ('races','DELETE'),
   ('plan_sessions','SELECT'), ('plan_sessions','INSERT'), ('plan_sessions','UPDATE'), ('plan_sessions','DELETE'),
   ('phase_blocks','SELECT'), ('phase_blocks','INSERT'), ('phase_blocks','UPDATE'), ('phase_blocks','DELETE'),
-  ('sheet_import','SELECT'), ('sheet_import','INSERT');
+  ('sheet_import','SELECT'), ('sheet_import','INSERT'),
+  ('activities','SELECT'), ('analysis','SELECT');
 
 select t.is('policies in public are exactly one per granted command',
   (select count(*) from (
