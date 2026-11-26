@@ -1,0 +1,58 @@
+# Supabase pauses free projects after 7 days without activity. This sends one
+# request to the project's public API every three days so it never goes quiet.
+# Adapted from the BalanceTRI-app keep-alive workflow.
+#
+# Nothing project-specific is committed here. Set two repository variables
+# (Settings > Secrets and variables > Actions > Variables):
+#   SUPABASE_URL  the project URL, https://<20 lowercase letters or digits>.supabase.co
+#   SUPABASE_KEY  the project's PUBLISHABLE key (a public value). A repository secret of
+#                 the same name is also accepted.
+# The job reads no table: it only calls the API gateway (/rest/v1/) and the auth health
+# endpoint (/auth/v1/health). Any answer counts as traffic, so it fails only when a
+# variable is missing or malformed, on a network error, or on a 5xx response.
+#
+# Known limit: GitHub disables scheduled workflows after 60 days without repository
+# activity. If that happens the project can pause; re-enable the workflow in the Actions
+# tab (or push any commit). This file does not try to prevent that.
+name: keep-alive
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the Supabase API
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "SUPABASE_URL is not set as a repository variable." >&2
+            exit 1
+          fi
+          if [ -z "$SUPABASE_KEY" ]; then
+            echo "SUPABASE_KEY is not set as a repository variable or secret." >&2
+            exit 1
+          fi
+          if ! printf '%s' "$SUPABASE_URL" | grep -Eq '^https://[a-z0-9]{20}\.supabase\.co$'; then
+            echo "SUPABASE_URL is not a project URL (expected https://<project-ref>.supabase.co, no trailing slash)." >&2
+            exit 1
+          fi
+          for path in /rest/v1/ /auth/v1/health; do
+            status=$(curl --silent --show-error --retry 3 --retry-delay 10 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H "apikey: $SUPABASE_KEY" \
+              "$SUPABASE_URL$path") || status=000
+            echo "$path -> $status"
+            if [ "$status" -ge 500 ] || [ "$status" -eq 000 ]; then
+              echo "Project did not answer. It may be paused: restore it from the dashboard." >&2
+              exit 1
+            fi
+          done
