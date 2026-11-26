@@ -246,6 +246,20 @@ section.doc:last-of-type{border-bottom:none}
 .pv-splash-today-sep{margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.22)}
 .pv-splash-today-name.pv-is-logged{font-weight:500; color:rgba(255,255,255,.82)}
 .pv-splash-today-logged{margin-top:4px; font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.82)}
+.pv-cal-account{width:100%; max-width:340px; box-sizing:border-box; margin:0 auto; padding:12px 14px; border-radius:10px; background:var(--s3); text-align:left}
+.pv-cal-account-line{font-family:'Outfit',sans-serif; font-size:13.5px; font-weight:500; line-height:1.5; color:var(--ink2); overflow-wrap:anywhere}
+.pv-cal-account-btn{display:block; min-width:44px; min-height:44px; margin-top:2px; padding:0 4px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; color:var(--blue); text-align:left}
+.pv-import-field{margin-top:14px}
+.pv-import-lbl{display:block; font-family:'Outfit',sans-serif; font-size:13.5px; font-weight:600; margin-bottom:12px; color:#0E1020}
+.pv-import-input{display:block; box-sizing:border-box; width:100%; min-height:52px; padding:0 14px; border:1px solid rgba(14,16,32,.14); border-radius:10px; background:#fff; font-family:'Outfit',sans-serif; font-size:15px; color:#0E1020}
+.pv-import-error{margin:10px 0 0; padding:10px 12px; border-radius:10px; background:#FAECE7; color:#C81E1E; font-family:'Outfit',sans-serif; font-size:13.5px; font-weight:500; line-height:1.4}
+.pv-import{width:100%; max-width:340px; box-sizing:border-box; margin:0 auto; padding:20px 18px; border-radius:16px; background:#fff; border:1px solid rgba(14,16,32,.14); box-shadow:0 1px 2px rgba(14,16,32,.04),0 10px 24px -10px rgba(14,16,32,.16); text-align:left}
+.pv-import-h{font-family:'Outfit',sans-serif; font-size:19px; font-weight:600; letter-spacing:-.2px; line-height:1.25; color:#0E1020}
+.pv-import-msg{margin-top:8px; font-family:'Outfit',sans-serif; font-size:15px; line-height:1.5; color:#4B5278}
+.pv-import-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:10px 0; border-top:1px solid rgba(14,16,32,.08); font-family:'Outfit',sans-serif; font-size:15px; color:#0E1020}
+.pv-import-row span:last-child{font-size:14px; color:#4B5278}
+.pv-import-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+.pv-import-actions .pv-btn{width:auto; flex:1 1 auto}
 .pv-splash-prev{margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,.22)}
 .pv-splash-prev-nav{margin-top:2px; display:flex; align-items:center; justify-content:center; gap:10px}
 .pv-splash-prev-nav-btn{flex:none; width:44px; height:44px; padding:0; border-radius:50%; background:rgba(255,255,255,.14); border:none; font-family:'Outfit',sans-serif; font-size:19px; font-weight:600; line-height:44px; color:#fff; text-align:center}
@@ -647,6 +661,72 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
         <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">First thing shown on load, base nav visible beneath it throughout. Dismissed only by tapping a nav tab — no auto-advance timer, no separate "get started" control. Headline is the page-title spec (23px / 600 / &minus;0.3px, line-height 1.25) in white, directly under the logo — no separate uppercase sub head above it any more (dropped in favour of the headline speaking for itself). No drop shadow on the logo — flat against the fill. Below the headline, with double the original gap (56px, up from 28px, so it reads as a distinct block rather than crowding the headline), a translucent countdown card names the nearest upcoming <i>committed</i> race from the Races tab ("Locked in," not "Considering") and how far out it is — hidden entirely, not shown empty, when there's no upcoming locked race. <b>Below it, a second card in the identical treatment shows what's on today</b> from the training plan: one tappable row per planned session (each row its own button — with two sessions planned, one card-level tap would have to guess which was just finished), or the words "Rest day" when the week has a plan but today isn't in it. <b>A session that has already been logged is shown, but as a static row marked "Logged" rather than a tappable one</b> — a <span class="mono">&lt;div&gt;</span>, not a disabled button, so there is nothing to hunt for that would re-enable it; still-to-log rows come first. Offering it as an equal tap target is not a cosmetic repeat: it writes a duplicate entry that Adherence then reports as an unplanned <span class="mono">extra</span>. Unlike the Check-in landing, an all-logged day still renders the card — this surface is informational as well as an action prompt. When nothing at all is planned for the current week the card is <b>removed from the DOM</b>, not merely hidden as the countdown is — an athlete who has never entered a plan should find no trace of the feature. Both cards are <span class="mono">width:100%</span> capped at <span class="mono">max-width</span>, not shrink-to-fit, so they align rather than stacking at two different widths. <b>A fourth, independent section, "Earlier this week," appends below Today's own state</b> — list, Rest day, or nothing — separated by the same top-border divider Today already uses between its own rows. It is a <b>day-at-a-time carousel</b>, not a flat list: a day can hold more than one still-<i>open</i> session, so a flat list would bury that. It opens on the most recent missed day (the day before today needs no paging to see) and the right arrow pages backwards in time from there; the arrow at either end dims rather than disappearing once there's nowhere further to go, and the nav row itself is skipped when there's only one missed day. A row of dots tracks position when there's more than one. Tapping a session taps into the identical check-in flow a Today row uses but dated from that session's own day rather than assumed to be today. Deliberately independent of Today's own state — a rest day today says nothing about whether Monday's session ever got logged — and, like the logged Today row, a day drops off the carousel the moment its last open session gets logged, on this device or another.</p>
         <div class="flag"><span class="dot"></span>Label text on all three cards is <span class="mono">rgba(255,255,255,.82)</span>, not the original <span class="mono">.7</span>/<span class="mono">.75</span> — measured against the card's <i>composited</i> background those read 3.97:1 and 4.35:1, under the 4.5:1 AA bar; .82 clears at 4.93:1. The Today card's buttons also override the global <span class="mono">--blue</span> focus ring to white — a blue ring on a blue background is no ring at all.</div>
         <div class="flag"><span class="dot"></span>Fill is the canonical <span class="mono">--blue</span> token (#0022FF) — same colour as the favicon artwork itself, so the logo sits flush with no edge. Still not the base nav's hardcoded #002DFF (see below); that discrepancy is separate and unrelated.</div>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">Account line</span><span class="spec mono">last block of the Calendar · --s3 card · one 44px text button</span></div>
+        <div class="comp-stage" style="display:flex; flex-direction:column; gap:16px">
+          <div class="pv-cal-account">
+            <p class="pv-cal-account-line">Synced &middot; sam@example.test</p>
+            <span class="pv-cal-account-btn" style="display:flex; align-items:center">Sign out</span>
+          </div>
+          <div class="pv-cal-account">
+            <p class="pv-cal-account-line">Synced &middot; sam@example.test This device holds data your account does not have yet.</p>
+            <span class="pv-cal-account-btn" style="display:flex; align-items:center">Sign out</span>
+            <span class="pv-cal-account-btn" style="display:flex; align-items:center">Review data on this device</span>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">The sync and sign-in line. It is the <b>last block of the Calendar</b>, in Week and Month alike, so the week paints first; it is not a tab and has no node at all when the app is unconfigured. Modes: signed out (&ldquo;Not signed in. Check-ins wait on this device. Edits made while signed out stay on this device until you sign in, and may then be replaced by your account&rsquo;s data.&rdquo; with <b>Sign in with Google</b>), signed in or synced (<b>Sign out</b>), not permitted (&ldquo;This Google account isn&rsquo;t set up for TRI Momentum.&rdquo;), import pending (<b>Import from Sheet</b>). The second specimen shows the extra <b>Review data on this device</b> button, shown while a second device's own data waits for the owner's Add or Discard. Updated in place when the mode changes, announced once through the live region, and every auth-derived string is written as text, never HTML. Contrast measured on the rendered page: line text <span class="mono">--ink2</span> on <span class="mono">--s3</span> 6.76:1, button <span class="mono">--blue</span> on <span class="mono">--s3</span> 7.02:1; button 59&times;44px. No new colour token.</p>
+      </div>
+      <div class="comp-tile" style="grid-column:1 / -1">
+        <div class="comp-hd"><span class="name">Import dialog</span><span class="spec mono">native modal &lt;dialog&gt; · --s1 card · 60% --ink scrim · address field</span></div>
+        <div class="comp-stage" style="background:rgba(14,16,32,.6); display:flex; flex-direction:column; gap:24px">
+          <div class="pv-import">
+            <p class="pv-import-h">Bring your data across</p>
+            <div class="pv-import-field">
+              <span class="pv-import-lbl">Google Sheet address (optional)</span>
+              <span class="pv-import-input" style="display:flex; align-items:center; color:#4B5278">Paste the Apps Script address here</span>
+              <p class="pv-import-msg" style="font-size:14px; margin-top:12px">Leave this empty to bring across only what is on this device. The address comes from Apps Script (Deploy, Manage deployments). It is used for this import only and is never saved.</p>
+              <p class="pv-import-error" role="presentation">That address is not an Apps Script web-app address. Nothing was read.</p>
+            </div>
+            <div class="pv-import-actions">
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Cancel</span>
+              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center">Read</span>
+            </div>
+          </div>
+          <div class="pv-import">
+            <p class="pv-import-h">Bring your data across</p>
+            <p class="pv-import-msg">Found this. Nothing has been written yet.</p>
+            <div style="margin-top:14px">
+              <div class="pv-import-row"><span>Sessions</span><span>214 found &middot; 12 already in your account &middot; 202 new &middot; 2 skipped (bad date)</span></div>
+              <div class="pv-import-row"><span>Races</span><span>6 found &middot; 6 new</span></div>
+              <div class="pv-import-row"><span>Planned sessions</span><span>80 found &middot; 80 new</span></div>
+              <div class="pv-import-row"><span>Phase blocks</span><span>9 found &middot; 9 new</span></div>
+            </div>
+            <p class="pv-import-msg" style="font-size:14px; margin-top:12px">Compare these counts with each tab of your Sheet (its rows, not counting the header row) before you confirm.</p>
+            <div class="pv-import-actions">
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Cancel</span>
+              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center">Import</span>
+            </div>
+          </div>
+          <div class="pv-import">
+            <p class="pv-import-h">Data only on this device</p>
+            <p class="pv-import-msg">Found this on this device. Nothing has been written yet.</p>
+            <div style="margin-top:14px">
+              <div class="pv-import-row"><span>Sessions</span><span>3 on this device &middot; 3 new</span></div>
+              <div class="pv-import-row"><span>Phase blocks</span><span>3 on this device &middot; 0 added</span></div>
+              <div class="pv-import-row"><span>2 Nov 2026</span><span>Base</span></div>
+              <div class="pv-import-row"><span>7 Dec 2026</span><span>Build 1</span></div>
+              <div class="pv-import-row"><span>1 Mar 2027</span><span>Peak</span></div>
+            </div>
+            <p class="pv-import-msg" style="font-size:14px; margin-top:12px">Your account already has a phase plan, so these are not added.</p>
+            <div class="pv-import-actions">
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Not now</span>
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Discard</span>
+              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center">Add to my account</span>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--page-ink3); line-height:1.6">Opened from the Calendar's account line. Three states: <b>address step</b> (a labelled free-text field, <span class="mono">type="text"</span> with autocomplete and spellcheck off, never <span class="mono">type="url"</span>, an optional help line, and an inline <span class="mono">role="alert"</span> error that names the problem but never echoes the address), <b>preview</b> (a count per kind: found, already in your account, new, skipped with reasons, differs; nothing is written until Import), and <b>device mode</b> for a later device holding data the account lacks (heading &ldquo;Data only on this device&rdquo;, no address field; Cancel reads &ldquo;Not now&rdquo;, Discard: &ldquo;Discard shows your account&rsquo;s data on this device now. Rows held only on this device are removed from it.&rdquo;; the device specimen lists phase blocks by date and phase, and Add never adds them when the account already has a phase plan: &ldquo;Your account already has a phase plan, so these are not added.&rdquo;). A real modal: the page behind it is inert, Esc closes it (except while it writes), and focus returns to the account button, or to the Calendar heading when the import finishes. Contrast measured on the rendered dialog at 320px: label and typed text 18.86:1, help text 7.56:1, error 4.98:1, Import button 8.48:1. The field border is the shared <span class="mono">--bd2</span> at 1.35:1, a pre-existing token propagated here and not fixed (see Accessibility). No new colour token.</p>
       </div>
       <div class="comp-tile" style="grid-column:1 / -1">
         <div class="comp-hd"><span class="name">Primary CTA</span><span class="spec mono">14px pad · --blue · Outfit 17/600</span></div>
@@ -1109,9 +1189,13 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
         <tr><td class="tbl-key">--phase-base</td><td>--phase-base-l</td><td>5.46:1</td></tr>
         <tr><td class="tbl-key">--phase-peak</td><td>--phase-peak-l</td><td>6.03:1</td></tr>
         <tr><td class="tbl-key">--ink</td><td>race card --bd2 banner</td><td>18.9:1</td></tr>
+        <tr><td class="tbl-key">--ink2</td><td>--s3 (account line text)</td><td>6.76:1</td></tr>
+        <tr><td class="tbl-key">--blue</td><td>--s3 (account line button)</td><td>7.02:1</td></tr>
+        <tr><td class="tbl-key">--dash-bad</td><td>--skipped-l (import error, as rendered)</td><td>4.98:1</td></tr>
       </tbody>
     </table>
     </div>
+    <div class="flag"><span class="dot"></span><b>Open, pre-existing and propagated:</b> the text-field border (<span class="mono">--bd2</span> on white) measures <b>1.35:1</b>, under the 3:1 bar for a UI-component boundary. The import dialog's address field reuses the shared text-input style, so it inherits this; it was not introduced there and is deliberately not fixed here, because darkening it recolours every form in the app at once.</div>
     <p style="font-size:12px; color:var(--page-ink3); line-height:1.6; margin-top:10px">Checked in the same pass as each fix above, so a real regression doesn't hide behind "we already looked at colour once."</p>
   </section>
 

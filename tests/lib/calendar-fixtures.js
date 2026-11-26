@@ -72,4 +72,42 @@ const F3 = {
   races: [],
 };
 
-module.exports = { KEYS, F1, F2, F3, planItem, logEntry };
+// ───────────── the same fixtures, as the Supabase backend holds them ─────────────
+// The Sheet-era tests served these through `?list=1`-style routes. Now the
+// server is the stateful Supabase mock (tests/lib/supabase-mock.js), so a
+// fixture has two forms: the SERVER rows, and the CANONICAL client copy the app
+// itself writes to its cache after a read (rowToSession / rowToRace /
+// rowToPlanItem / rowToPhaseBlock, same key order). A scenario that must
+// start from "the cache already equals the server" — the H1 "unchanged read"
+// checks — seeds the canonical copy, exactly what a real device holds.
+function sessionRow(e, i) {
+  return {
+    id: e.id || 'fx' + String(i).padStart(3, '0'), session_date: e.date, disc: e.disc, duration: e.duration, intensity: e.intensity,
+    rpe: e.rpe, a1: e.a1, a2: e.a2, a3: e.a3 || null, b2: e.b2, b3: e.b3, note: e.note, phase: e.phase, logged_at: null,
+  };
+}
+function planRow(p) {
+  return { id: p.id, plan_date: p.date, disc: p.disc, title: p.title, intensity: p.intensity, duration: p.duration, is_key: !!p.key, notes: p.notes, phase: p.phase };
+}
+function raceRow(r) { return { id: r.id, name: r.name, race_date: r.date, url: r.url, notes: r.notes, status: r.status }; }
+function phaseRow(b) { return { id: b.id, from_date: b.from, phase: b.phase }; }
+function serverRows(fx) {
+  return {
+    session_checkins: (fx.log || []).map(sessionRow),
+    plan_sessions: (fx.plan || []).map(planRow),
+    races: (fx.races || []).map(raceRow),
+    phase_blocks: (fx.phases || []).map(phaseRow),
+  };
+}
+function canonical(fx) {
+  const rows = serverRows(fx);
+  const out = Object.assign({}, fx);
+  if (fx.log) out.log = rows.session_checkins.map((r) => ({
+    id: r.id, date: r.session_date, disc: r.disc, intensity: r.intensity, duration: r.duration, a1: r.a1, a2: r.a2, a3: r.a3,
+    rpe: r.rpe, b2: r.b2, b3: r.b3, note: r.note, phase: r.phase, loggedAt: null,
+  }));
+  if (fx.races) out.races = rows.races.map((r) => ({ id: r.id, name: r.name, date: r.race_date, url: r.url, notes: r.notes, status: r.status }));
+  return out;
+}
+
+module.exports = { KEYS, F1, F2, F3, planItem, logEntry, serverRows, canonical, planRow, raceRow, phaseRow, sessionRow };
