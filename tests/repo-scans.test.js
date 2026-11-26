@@ -44,12 +44,24 @@ const JWT = /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g;
 function jwtRole(tok) {
   try { return JSON.parse(Buffer.from(tok.split('.')[1], 'base64url').toString()).role || 'none'; } catch (e) { return 'undecodable'; }
 }
+// Other secret-shaped strings (B6). Each is a fixed prefix plus a token-length body, so a
+// short word that merely starts with the prefix does not match. Built from parts.
+const OTHER_SECRETS = [
+  ['GitHub token', new RegExp('\\bgh[pousr]' + '_[A-Za-z0-9]{36,}')],
+  ['GitHub fine-grained token', new RegExp('github' + '_pat_[A-Za-z0-9_]{22,}')],
+  ['Google API key', new RegExp('AI' + 'za[0-9A-Za-z_-]{35}')],
+  ['AWS access key id', new RegExp('\\b(?:AK|AS)' + 'IA[0-9A-Z]{16}\\b')],
+  ['Slack token', new RegExp('\\bxox[baprs]' + '-[0-9A-Za-z-]{10,}')],
+  ['Stripe live key', new RegExp('\\b[sr]k' + '_live_[0-9A-Za-z]{16,}')],
+  ['private key block', new RegExp('-----BEGIN (?:[A-Z]+ )?PRIVATE' + ' KEY-----')],
+];
 function scanSecrets(files, skipPrefixIn) {
   const bad = [];
   for (const { path: p, text } of files) {
     if (text.includes(SECRET) && !(skipPrefixIn || []).includes(p)) bad.push(p + ': secret key prefix');
     if (PAT.test(text)) bad.push(p + ': personal access token');
     if (text.includes(GOOGLE_SECRET)) bad.push(p + ': Google OAuth client secret');
+    for (const [label, re] of OTHER_SECRETS) if (re.test(text)) bad.push(p + ': ' + label);
     for (const m of text.match(JWT) || []) {
       const role = jwtRole(m);
       if (role === 'service_role' || role === 'undecodable') bad.push(p + ': JWT with role ' + role);
@@ -95,6 +107,15 @@ describe('AC-S1 — no secret key, personal access token, Google client secret o
     'Google client secret': GOOGLE_SECRET + 'abcdefghijkl',
     'service-role JWT': jwt('service_role'),
     'undecodable JWT': 'eyJ!!.eyJxxxx.sig'.replace('!!', 'abc') + '',
+    'GitHub personal token': 'gh' + 'p_' + 'a1B2c3D4'.repeat(5),
+    'GitHub OAuth token': 'gh' + 'o_' + 'a1B2c3D4'.repeat(5),
+    'GitHub server token': 'gh' + 's_' + 'a1B2c3D4'.repeat(5),
+    'GitHub fine-grained token': 'github' + '_pat_' + '11ABCDEFG0' + 'a1B2c3D4'.repeat(4),
+    'Google API key': 'AI' + 'za' + 'Sy' + 'a1B2c3D4'.repeat(4) + 'xyz'.slice(0, 1),
+    'AWS access key id': 'AK' + 'IA' + 'ABCDEFGHIJKLMNOP',
+    'Slack token': 'xo' + 'xb-' + '1234567890-abcdefghij',
+    'Stripe live key': 'sk' + '_live_' + 'a1B2c3D4e5F6g7H8',
+    'private key block': '-----BEGIN RSA PRIVATE' + ' KEY-----',
   };
   for (const [name, value] of Object.entries(PLANTS)) {
     for (const [where, p] of [['a markdown doc', 'docs/planted.md'], ['a test fixture', 'tests/lib/planted-fixture.js'], ['a workflow file', '.github/workflows/planted.yml']]) {
@@ -105,6 +126,15 @@ describe('AC-S1 — no secret key, personal access token, Google client secret o
   }
   test('does not over-flag: an anon-role JWT and a short sbp_ string pass', () => {
     assert.deepStrictEqual(scanSecrets([{ path: 'docs/x.md', text: jwt('anon') + ' ' + 'sb' + 'p_short' }]), []);
+  });
+  test('does not over-flag: prefixes with short bodies, and ordinary words, pass', () => {
+    const text = ['gh' + 'p_short', 'github' + '_pat_x', 'AI' + 'za' + 'short', 'ghost_writer', 'skip_live_mode', 'AKIA' + 'lowercase', 'tests plant ghp-style tokens'].join('\n');
+    assert.deepStrictEqual(scanSecrets([{ path: 'docs/x.md', text }]), []);
+  });
+  test('mutation shown: with the GitHub-token pattern removed, a planted token passes (so the pattern is what catches it)', () => {
+    const one = [{ path: 'docs/p.md', text: 'gh' + 'p_' + 'a'.repeat(36) }];
+    assert.deepStrictEqual(scanSecrets(one).filter((x) => !/GitHub token/.test(x)), []);
+    assert.strictEqual(scanSecrets(one).length, 1);
   });
   test('mutation shown: with the secret-prefix check removed, the planted secret key passes (so the check is what catches it)', () => {
     const only = (list) => list.filter((x) => !/secret key prefix/.test(x));
