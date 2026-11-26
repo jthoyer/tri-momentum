@@ -1,5 +1,5 @@
 'use strict';
-// Regression coverage for the phasePlan sync (CLAUDE.md decisions 48 and 49),
+// Regression coverage for the phasePlan sync (CLAUDE.md decisions 48 and 51),
 // ported from the Google Sheet to Supabase mocks. Added after a fresh incognito
 // window showed "UNSET" for every week — the Races calendar's per-week phase
 // never left the device it was set on.
@@ -25,6 +25,7 @@ const { test, before, after, describe } = require('node:test');
 const assert = require('node:assert');
 const { scenario, launchBrowser } = require('./lib/scenario');
 const { Backend } = require('./lib/supabase-mock');
+const { exposeHandle } = require('./lib/handle');
 
 const LOCAL_PLAN = [
   { id: 'local1', from: '2020-01-01', phase: 'base' },
@@ -62,6 +63,10 @@ after(async () => { await browser.close(); });
 
 const posts = (b) => b.requests.filter((r) => r.table === 'phase_blocks' && r.method === 'POST');
 
+const DISCARD_SENTENCE = "Discard shows your account's data on this device now. Rows held only on this device are removed from it.";
+const ACCOUNT_WINS = 'Your account already has a phase plan, so these are not added.';
+const phaseLines = (page) => page.$$eval('#import-phases li', (n) => n.map((x) => x.textContent));
+const periodisation = (page) => page.evaluate(() => window.__t.state.periodisation);
 const DEVICE_FLAG = 'triMomentumDeviceImported_sb_v1';
 async function dialogOpen(page) { return page.$eval('#import-dialog', (d) => d.open); }
 async function waitDevicePreview(page) {
@@ -72,7 +77,7 @@ async function waitDevicePreview(page) {
 // read is held until the owner has chosen Add or Discard for what only that
 // device holds. "An empty read never replaces a non-empty local plan" stays.
 describe('phase plan sync — a device holding a plan the account lacks asks before anything is read (AC-I7)', () => {
-  test('empty account: the dialog opens with only the device source; nothing is pushed, the plan and the flag are untouched, no read replaces anything', async () => {
+  test('first device (empty account): the dialog opens with only the device source; nothing is pushed, the plan and the flag are untouched, no read replaces anything', async () => {
     const b = new Backend({ imported: true });
     const s = await scenario(browser, { backend: b, signedIn: true, localStorage: { triMomentumPhasePlan_v1: LOCAL_PLAN } });
     try {
@@ -81,6 +86,9 @@ describe('phase plan sync — a device holding a plan the account lacks asks bef
       assert.strictEqual(await s.page.$eval('#import-url', (n) => n.closest('#import-source').hidden), true, 'no Sheet field in the device dialog');
       assert.match(await s.page.textContent('#import-counts'), /Phase blocksThis device 2 · Already in your account 0 · New 2/);
       assert.strictEqual(posts(b).length, 0, 'nothing is written before the owner chooses');
+      assert.deepStrictEqual(await phaseLines(s.page), ['Wed 1 Jan: Base', 'Tue 1 Sep: Peak'], "the device's phase blocks are listed by date and phase");
+      assert.strictEqual(await s.page.$eval('#import-phases-note', (n) => n.hidden), true, 'no "account wins" line when the account has no plan');
+      assert.ok((await s.page.textContent('#import-note')).includes(DISCARD_SENTENCE), 'the Discard sentence, exactly, in device mode');
       assert.deepStrictEqual(await s.lsJson('triMomentumPhasePlan_v1'), LOCAL_PLAN);
       assert.strictEqual(await s.ls(DEVICE_FLAG), null, 'not decided yet');
       assert.strictEqual(await s.page.$eval('#cal-account-review-btn', (n) => n.offsetParent !== null), true, 'a way back to the dialog exists');
@@ -88,7 +96,7 @@ describe('phase plan sync — a device holding a plan the account lacks asks bef
     } finally { await s.close(); }
   });
 
-  test('Add: the plan is written once, the flag is set to the user id, the plan is kept, and Check-in shows no phase picker', async () => {
+  test('first device, Add: the plan is written once (the account had none), the flag is set to the user id, the plan is kept, and Check-in shows no phase picker', async () => {
     const b = new Backend({ imported: true });
     const s = await scenario(browser, { backend: b, signedIn: true, localStorage: { triMomentumPhasePlan_v1: LOCAL_PLAN } });
     try {
@@ -119,8 +127,14 @@ describe('phase plan sync — a device holding a plan the account lacks asks bef
       assert.strictEqual(posts(b).length, 0);
       assert.strictEqual(await s.ls(DEVICE_FLAG), b.userId);
       assert.deepStrictEqual(await s.lsJson('triMomentumPhasePlan_v1'), LOCAL_PLAN, 'the empty read did not replace a non-empty plan');
-      assert.strictEqual(await s.page.$('#cal-account-review-btn'), null, 'the review button is gone once decided');
+      assert.strictEqual(await s.page.$('#cal-account-review-btn') === null, true, 'the review button is gone once decided');
       assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'calendar-h');
+      // Lost in the Supabase port, restored: the surviving plan reached state.periodisation (no picker gates a check-in) and nothing threw.
+      await startUnplannedCheckIn(s.page);
+      assert.strictEqual(await pickerHidden(s.page), true, 'no phase picker: the plan really resolved');
+      assert.strictEqual(await flowShowing(s.page), true);
+      assert.deepStrictEqual(s.errors, [], 'no page errors');
+      assert.deepStrictEqual(await s.unhandled(), []);
     } finally { await s.close(); }
   });
 
@@ -140,16 +154,41 @@ describe('phase plan sync — a device holding a plan the account lacks asks bef
     } finally { await s.close(); }
   });
 
-  test('account holds a different plan, Add: the device\'s blocks join the account\'s, then the cache becomes the account\'s rows', async () => {
+  test('account already has a phase plan, Add: the device\'s blocks are listed and NOT added; the account\'s plan wins and today\'s phase is the account\'s', async () => {
     const b = new Backend({ imported: true }).seed('phase_blocks', SERVER_PLAN);
-    const s = await scenario(browser, { backend: b, signedIn: true, localStorage: { triMomentumPhasePlan_v1: LOCAL_PLAN } });
+    const s = await scenario(browser, { backend: b, signedIn: true, transform: exposeHandle, localStorage: { triMomentumPhasePlan_v1: LOCAL_PLAN } });
+    // What a device that only ever had the account's plan shows for today: the reference.
+    const ref = await scenario(browser, { backend: new Backend({ imported: true }).seed('phase_blocks', SERVER_PLAN), signedIn: true, transform: exposeHandle });
+    try {
+      await ref.open(); await ref.settle(600);
+      const accountPhase = await periodisation(ref.page);
+      assert.strictEqual(accountPhase, 'build1', 'fixture: the account resolves to build1 today');
+      await s.open(); await s.settle(600); await waitDevicePreview(s.page);
+      assert.strictEqual(await periodisation(s.page), 'peak', 'fixture: the stale device plan resolves differently while held');
+      assert.deepStrictEqual(await phaseLines(s.page), ['Wed 1 Jan: Base', 'Tue 1 Sep: Peak']);
+      assert.strictEqual(await s.page.textContent('#import-phases-note'), ACCOUNT_WINS);
+      assert.strictEqual(await s.page.$eval('#import-phases-note', (n) => n.hidden), false);
+      assert.match(await s.page.textContent('#import-counts'), /Phase blocksThis device 2 · Already in your account 0 · New 0 · Not added 2/);
+      await s.page.click('#import-go');
+      await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 8000 });
+      await s.page.click('#import-go'); await s.settle(600);
+      assert.strictEqual(posts(b).length, 0, 'no phase block is written');
+      assert.deepStrictEqual(b.rows('phase_blocks').map((r) => r.id).sort(), ['srv1', 'srv2']);
+      assert.deepStrictEqual((await s.lsJson('triMomentumPhasePlan_v1')).map((p) => p.id).sort(), ['srv1', 'srv2']);
+      assert.strictEqual(await periodisation(s.page), accountPhase, "after Add, today's phase is the account's, not the stale device plan's");
+    } finally { await s.close(); await ref.close(); }
+  });
+
+  test('account already has a phase plan and the device has OTHER new rows: Add writes those rows and still no phase block', async () => {
+    const b = new Backend({ imported: true }).seed('phase_blocks', SERVER_PLAN);
+    const race = { id: 'r-local', name: 'Local race', date: '2026-12-05', url: '', notes: '', status: 'locked' };
+    const s = await scenario(browser, { backend: b, signedIn: true, localStorage: { triMomentumPhasePlan_v1: LOCAL_PLAN, triMomentumRaces_v1: [race] } });
     try {
       await s.open(); await s.settle(600); await waitDevicePreview(s.page);
       await s.page.click('#import-go');
       await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 8000 });
-      await s.page.click('#import-go'); await s.settle(600);
-      assert.deepStrictEqual(b.rows('phase_blocks').map((r) => r.id).sort(), ['local1', 'local2', 'srv1', 'srv2']);
-      assert.deepStrictEqual((await s.lsJson('triMomentumPhasePlan_v1')).map((p) => p.id).sort(), ['local1', 'local2', 'srv1', 'srv2']);
+      assert.deepStrictEqual(b.rows('races').map((r) => r.id), ['r-local']);
+      assert.strictEqual(posts(b).length, 0);
     } finally { await s.close(); }
   });
 

@@ -164,6 +164,7 @@ textarea::placeholder{color:var(--ink3)}
 .import-counts{list-style:none;margin:14px 0 0;padding:0}
 .import-counts li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-top:1px solid var(--bd);font-size:15px;line-height:1.4;color:var(--ink)}
 .import-counts .n{text-align:right;color:var(--ink2);font-size:14px}
+.import-phases li{padding:6px 0;font-size:14px;color:var(--ink2)}
 .import-note{margin:12px 0 0;font-size:14px;line-height:1.5;color:var(--ink2)}
 .import-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
 .import-field{margin-top:14px}
@@ -703,6 +704,11 @@ fieldset.plan-field{border:0;min-width:0}
       <p class="plan-form-error" id="import-url-err" role="alert" hidden></p>
     </div>
     <ul class="import-counts" id="import-counts" aria-label="What was found" hidden></ul>
+    <div class="import-phasebox" id="import-phasebox" hidden>
+      <p class="import-note" id="import-phases-h">Phase blocks on this device</p>
+      <ul class="import-counts import-phases" id="import-phases" aria-labelledby="import-phases-h"></ul>
+      <p class="import-note" id="import-phases-note" hidden></p>
+    </div>
     <p class="import-note" id="import-note" hidden></p>
     <div class="import-actions">
       <button type="button" class="btn btn-ghost" id="import-cancel">Cancel</button>
@@ -1245,7 +1251,7 @@ if(window.caches && caches.keys){
 
   // ── (b) auth state, mode, account line ────────────────────────
   var ACCOUNT_COPY = {
-    'signed-out':     {line: 'Not signed in. Check-ins wait on this device; other edits stay here.', btn: 'Sign in with Google', act: 'signin'},
+    'signed-out':     {line: 'Edits made while signed out stay on this device until you sign in, and may then be replaced by your account\'s data.', btn: 'Sign in with Google', act: 'signin'},
     'checking':       {line: 'Signed in', btn: 'Sign out', act: 'signout', email: true},
     'not-permitted':  {line: 'This Google account isn’t set up for TRI Momentum.', btn: 'Sign out', act: 'signout'},
     'import-pending': {line: 'Bring your history across from the Google Sheet.', btn: 'Import from Sheet', act: 'import'},
@@ -1923,7 +1929,7 @@ if(window.caches && caches.keys){
       date: String(d == null ? '' : d), disc: raw.disc || '', intensity: raw.intensity || '',
       duration: toIntOrNull(raw.duration), rpe: toIntOrNull(raw.rpe),
       a1: raw.a1 || null, a2: raw.a2 || null, a3: raw.a3 || null, b2: raw.b2 || null, b3: raw.b3 || null,
-      note: raw.note || '', phase: raw.phase || null,
+      note: raw.note == null ? '' : String(raw.note), phase: raw.phase || null,
       loggedAt: typeof raw.loggedAt === 'number' && isFinite(raw.loggedAt) ? raw.loggedAt : null
     };
   }
@@ -2000,10 +2006,16 @@ if(window.caches && caches.keys){
       var w = IMPORT_WRITERS[kind], byId = {}, order = [], differs = 0;
       function key(r){ var m = w.map(r); if(kind === 'sessions'){ delete m.logged_at; } return JSON.stringify(m); }
       if(sheet){ sheet[kind].rows.forEach(function(r){ if(!byId.hasOwnProperty(r.id)){ byId[r.id] = r; order.push(r); } }); }
-      device[kind].rows.forEach(function(r){
-        if(byId.hasOwnProperty(r.id)){ if(key(byId[r.id]) !== key(r)){ differs++; } return; }
-        byId[r.id] = r; order.push(r);
-      });
+      // The account's phase plan wins: when it already holds any phase block, the
+      // device's blocks are never added (a stale plan from a second device would
+      // otherwise change what phase today resolves to, and check-ins stamp it).
+      var phasesBlocked = kind === 'phases' && Object.keys(server.phases).length > 0;
+      if(!phasesBlocked){
+        device[kind].rows.forEach(function(r){
+          if(byId.hasOwnProperty(r.id)){ if(key(byId[r.id]) !== key(r)){ differs++; } return; }
+          byId[r.id] = r; order.push(r);
+        });
+      }
       if(kind === 'sessions'){
         order = order.map(function(r, i){ return [r, i]; }).sort(function(a, b){
           return a[0].date < b[0].date ? -1 : a[0].date > b[0].date ? 1 : a[1] - b[1];
@@ -2017,6 +2029,13 @@ if(window.caches && caches.keys){
       var sheetN = sheet ? sheet[kind].rows.length + countOf(sheet[kind].skipped) : 0;
       var deviceN = device[kind].rows.length + countOf(device[kind].skipped);
       out[kind] = {rows: add, all: order.length, sheetFound: sheetN, deviceFound: deviceN, inAccount: order.length - add.length, differs: differs, skipped: skipped};
+      if(kind === 'phases'){
+        out[kind].blocked = phasesBlocked;
+        // Device blocks the account does not hold and will not be given: still
+        // something the owner should see before this device's cache is replaced.
+        out[kind].heldBack = phasesBlocked ? device.phases.rows.filter(function(r){ return !server.phases.hasOwnProperty(r.id); }).length : 0;
+        out[kind].deviceBlocks = device.phases.rows.slice().sort(function(a, b){ return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
+      }
     });
     return out;
   }
@@ -2048,7 +2067,7 @@ if(window.caches && caches.keys){
     ]).then(function(r){ return mergeCandidates(r[1], r[0], serverIds); });
   }
   function importHasNew(planned){
-    return IMPORT_KINDS.some(function(k){ return planned[k].rows.length > 0; });
+    return IMPORT_KINDS.some(function(k){ return planned[k].rows.length > 0; }) || planned.phases.heldBack > 0;
   }
   // Reads the Sheet (when asked), this device and the account, builds the
   // preview. The phases endpoint is optional: a deployed script without a
@@ -2157,23 +2176,37 @@ if(window.caches && caches.keys){
   // by id. Nothing to add: the flag is set silently. Something to add: the
   // import dialog opens with only the "this device" source, and no cache on
   // the device is replaced until the owner chooses Add or Discard. Discard
-  // deletes nothing itself: the cache is replaced by the next read.
+  // adds nothing; the account's rows then replace the cache, so rows held only
+  // on this device are removed from it (DISCARD_COPY). The account's phase plan
+  // wins: device phase blocks are never added once the account has any.
   // ═══════════════════════════════════════════════════════════════
+  var DISCARD_COPY = 'Discard shows your account\'s data on this device now. Rows held only on this device are removed from it.';
+  var ACCOUNT_PHASE_NOTE = 'Your account already has a phase plan, so these are not added.';
   var DEVICE_KEY = 'triMomentumDeviceImported_sb_v1';   // value = the auth user id
   function authUserId(){ return (authSession && authSession.user && authSession.user.id) || ''; }
   // Without storage there is no cache to protect, and nowhere to remember a choice.
+  // `decidedFor` is the same choice kept in memory: a storage write that fails
+  // (quota) must not hold reads for the life of the device. It lasts the page
+  // load; a later load asks again, which is the safe direction.
+  var decidedFor = '';
   function deviceDecided(){
     if(!storageOk){ return true; }
-    try{ var u = authUserId(); return !!u && window.localStorage.getItem(DEVICE_KEY) === u; } catch(e){ return true; }
+    var u = authUserId();
+    if(u && decidedFor === u){ return true; }
+    try{ return !!u && window.localStorage.getItem(DEVICE_KEY) === u; } catch(e){ return true; }
   }
   function markDeviceDecided(){
     if(!storageOk){ return; }
-    try{ window.localStorage.setItem(DEVICE_KEY, authUserId()); } catch(e){ console.warn('TRI Momentum: could not record the device import choice.', e); }
+    decidedFor = authUserId();
+    try{ window.localStorage.setItem(DEVICE_KEY, decidedFor); } catch(e){ console.warn('TRI Momentum: could not record the device import choice.', e); }
     setDeviceHeld(false);
   }
   var deviceHeld = false;          // synced, undecided, and this device has rows the account lacks
   var deviceDialogShown = false;   // opened once this page load; a Cancel is not asked again until a reload
   var deviceCheckFlight = null;
+  function activeWorkOpen(){
+    return calCheckInInProgress() || !!raceFormOpen || !!planFormOpenFor || !!planCopyOpen || (calMode === 'month' && !!calEditWeek);
+  }
   function setDeviceHeld(v){
     if(deviceHeld === v){ return; }
     deviceHeld = v;
@@ -2193,7 +2226,11 @@ if(window.caches && caches.keys){
         if(ep !== syncModeEpoch || !isSynced()){ return false; }
         if(!importHasNew(planned)){ markDeviceDecided(); return true; }
         setDeviceHeld(true);
-        if(!deviceDialogShown){ deviceDialogShown = true; openImportDialog('device'); }
+        // Never over active work: the same holds as the repaint below. Reads stay
+        // held and the account line's "Review data on this device" button is the
+        // way in. The one automatic opening per page load is spent either way, so
+        // the dialog does not jump out later, when the athlete leaves the work.
+        if(!deviceDialogShown){ deviceDialogShown = true; if(!activeWorkOpen()){ openImportDialog('device'); } }
         return false;
       });
     }).catch(function(err){
@@ -2237,7 +2274,8 @@ if(window.caches && caches.keys){
     return {
       dlg: document.getElementById('import-dialog'), h: document.getElementById('import-h'),
       msg: document.getElementById('import-msg'), counts: document.getElementById('import-counts'),
-      note: document.getElementById('import-note'), cancel: document.getElementById('import-cancel'),
+      note: document.getElementById('import-note'), phasebox: document.getElementById('import-phasebox'),
+      phases: document.getElementById('import-phases'), phasesNote: document.getElementById('import-phases-note'), cancel: document.getElementById('import-cancel'),
       go: document.getElementById('import-go'), discard: document.getElementById('import-discard'),
       source: document.getElementById('import-source'), url: document.getElementById('import-url'),
       err: document.getElementById('import-url-err')
@@ -2256,6 +2294,11 @@ if(window.caches && caches.keys){
     e.counts.hidden = !(opts.rows && opts.rows.length);
     e.note.hidden = !opts.note;
     if(opts.note){ e.note.textContent = opts.note; }
+    clear(e.phases);
+    (opts.phaseLines || []).forEach(function(t){ e.phases.appendChild(el('li', null, t)); });
+    e.phasebox.hidden = !(opts.phaseLines && opts.phaseLines.length);
+    e.phasesNote.hidden = !opts.phaseNote;
+    if(opts.phaseNote){ e.phasesNote.textContent = opts.phaseNote; }
     e.source.hidden = !opts.field;
     e.go.hidden = !opts.go;
     if(opts.go){ e.go.textContent = opts.go; }
@@ -2331,21 +2374,26 @@ if(window.caches && caches.keys){
         parts.push('This device ' + k.deviceFound);
         parts.push('Already in your account ' + k.inAccount);
         parts.push('New ' + k.rows.length);
+        if(kind === 'phases' && k.heldBack){ parts.push('Not added ' + k.heldBack); }
         if(k.differs){ parts.push('Differs ' + k.differs); }
         var skipN = countOf(k.skipped);
         if(skipN){ parts.push('Skipped ' + skipN + ' (' + skipReasons(k.skipped) + ')'); }
         return [ep.label.charAt(0).toUpperCase() + ep.label.slice(1), parts.join(' · ')];
       });
+      var ph = res.planned.phases;
+      var phaseLines = ph.deviceBlocks.map(function(b){ return formatWeekdayDate(b.from) + ': ' + (PERIOD_LABEL[b.phase] || b.phase); });
+      var phaseNote = ph.blocked ? ACCOUNT_PHASE_NOTE : '';
       var msg = (res.sheet ? 'Found this in your Sheet and on this device.' : 'Found this on this device.') + ' Nothing has been written yet.';
       if(res.sheet && res.noPhases){ msg += ' No phase plan in the Sheet; using this device’s.'; }
       if(importState.mode === 'device'){
         importView({
           msg: msg, rows: rows, step: 'preview', go: 'Add to my account', discard: true, cancel: 'Not now', focus: 'go',
-          note: 'Your account does not have these yet. Discard leaves them out of your account and deletes nothing here: this device shows your account’s data instead the next time it is read.'
+          phaseLines: phaseLines, phaseNote: phaseNote, note: 'Your account does not have these yet. ' + DISCARD_COPY
         });
       } else {
         importView({
           msg: msg, rows: rows, step: 'preview', go: 'Import', cancel: 'Cancel', focus: 'go',
+          phaseLines: phaseLines, phaseNote: phaseNote,
           note: res.sheet ? 'Compare the Sheet counts with each tab of your Sheet (its rows, not counting the header row) before you confirm.' : 'Check the counts before you confirm.'
         });
       }

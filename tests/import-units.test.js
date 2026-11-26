@@ -86,4 +86,28 @@ describe('AC-I3 — one normaliser, ids per source, content-derived', () => {
     const b = await f.sessionImportId(f.normalizeSession(Object.assign({}, CACHE, { loggedAt: 1 })), {});
     assert.strictEqual(a, b);
   });
+
+  // A Sheet cell that holds a number comes back as a number; the device holds
+  // the text the athlete typed. Both must derive the same id.
+  test('numeric note parity: Sheet note:5 and device note:"5" get the same id; so do 0 and "0"', async () => {
+    for (const [sheetNote, deviceNote] of [[5, '5'], [0, '0']]) {
+      const a = await f.sessionImportId(f.normalizeSession(Object.assign({}, SHEET_ROW, { note: sheetNote })), {});
+      const b = await f.sessionImportId(f.normalizeSession(Object.assign({}, CACHE, { note: deviceNote })), {});
+      assert.strictEqual(a, b, 'note ' + JSON.stringify(sheetNote) + ' vs ' + JSON.stringify(deviceNote));
+      assert.strictEqual(f.normalizeSession({ when: '2026-10-01', note: sheetNote }).note, deviceNote);
+    }
+  });
+  test('an absent note is the empty string in both shapes, and 0 is not an absent note', () => {
+    for (const n of [null, undefined, '']) {
+      assert.strictEqual(f.normalizeSession({ when: '2026-10-01', note: n }).note, '');
+      assert.strictEqual(f.normalizeSession({ date: '2026-10-01', note: n }).note, '');
+    }
+    assert.notStrictEqual(f.normalizeSession({ when: '2026-10-01', note: 0 }).note, '');
+  });
+  // Ids of ordinary sessions did not move. These two literals were computed with
+  // the normaliser as it was before the note coercion (git show 0011f1f:index.html).
+  test('ids for ordinary fixtures are byte-identical to what the previous normaliser produced', async () => {
+    assert.strictEqual(await f.sessionImportId(f.normalizeSession(SHEET_ROW), {}), 'sheet-bc7eb60e4cb2fac9236d5ab5d2934f3b-0');
+    assert.strictEqual(await f.sessionImportId(f.normalizeSession(Object.assign({}, CACHE, { note: '' })), {}), 'sheet-254197f9c5870adb99967d5eb6485fdc-0');
+  });
 });

@@ -393,7 +393,7 @@ describe('AC-S4/S5/S6/S7 — the address is asked for, validated, held in memory
       await runImport(s);
       assert.match(await msg(s), /^Import stopped at plan\./);
       assert.strictEqual(b.rows('sheet_import').length, 0);
-      assert.ok((await s.accountText()).startsWith('Not signed in'));
+      assert.ok((await s.accountText()).startsWith('Edits made while signed out'));
       await clean(s);
     } finally { await s.close(); }
   });
@@ -424,6 +424,21 @@ describe('AC-S4/S5/S6/S7 — the address is asked for, validated, held in memory
       assert.strictEqual(s.backend.rows('races').length, 1);
       assert.strictEqual(s.backend.rows('races')[0].name, 'Sam Lee Tri', 'the Sheet version is kept');
       assert.match(await msg(s), /1 differed from the Sheet’s copy and was left out\./);
+    } finally { await s.close(); }
+  });
+});
+
+describe('AC-I2 — "differs" is shown in the preview, before anything is written', () => {
+  test('a same-id, different-content row on the device shows "Differs 1" in its kind\'s row; kinds with no difference show no Differs; nothing is written at that point', async () => {
+    const dev = { triMomentumRaces_v1: [{ id: 'r1', name: 'Edited On Device', date: '2031-03-01', url: '', notes: '', status: 'considering' }] };
+    const s = await scenario(browser, { backend: new Backend(), signedIn: true, sheet: { sessions: [S1], races: [SHEET.races[0]], plan: [], phases: [] }, localStorage: dev });
+    try {
+      await openDialog(s);
+      const rows = await s.page.$$eval('#import-counts li', (ns) => ns.map((n) => n.textContent));
+      const races = rows.find((r) => r.startsWith('Races'));
+      assert.match(races, /Sheet 1 · This device 1 · Already in your account 0 · New 1 · Differs 1/, races);
+      for (const r of rows.filter((x) => !x.startsWith('Races'))) assert.ok(!/Differs/.test(r), 'no Differs on: ' + r);
+      assert.strictEqual(rowsWritten(s.backend), 0, 'the preview wrote nothing');
     } finally { await s.close(); }
   });
 });

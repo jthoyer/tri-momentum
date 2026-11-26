@@ -76,6 +76,21 @@ describe('AC15 — synced reads', () => {
     } finally { await s.close(); }
   });
 
+  // AC-A6 at its stated size: more than two full pages, every row kept, in seq order.
+  test('2,345 rows: three pages, all 2,345 held in seq order, none truncated or repeated', async () => {
+    const b = new Backend({ imported: true });
+    b.seed('session_checkins', Array.from({ length: 2345 }, (_, i) => sess('p' + i, '2026-01-01')));
+    const s = await scenario(browser, synced(b));
+    try {
+      await s.open(); await s.settle(900);
+      const log = await s.lsJson('triMomentumLog_v1');
+      assert.strictEqual(log.length, 2345);
+      assert.deepStrictEqual(log.map((r) => r.id), Array.from({ length: 2345 }, (_, i) => 'p' + i), 'seq order, no gaps, no repeats');
+      assert.deepStrictEqual(reads(b, 'session_checkins').map((r) => r.query.get('offset') + '/' + r.query.get('limit')), ['0/1000', '1000/1000', '2000/1000']);
+      await clean(s);
+    } finally { await s.close(); }
+  });
+
   test('a server that caps pages below ours (500) still yields every row', async () => {
     const b = new Backend({ imported: true, maxRows: 500 });
     b.seed('session_checkins', Array.from({ length: 1201 }, (_, i) => sess('s' + i, '2026-01-01')));
@@ -362,7 +377,7 @@ describe('AC17 — failure fallback', () => {
       assert.strictEqual(await s.accountText(), 'Synced · sam@example.test');
       b.tokenExpired = true;
       await s.page.click('#tab-races'); await s.settle(600);
-      assert.ok((await s.accountText()).startsWith('Not signed in'), await s.accountText());
+      assert.ok((await s.accountText()).startsWith('Edits made while signed out'), await s.accountText());
       assert.strictEqual(await s.page.evaluate(() => window.__t.mode), 'signed-out');
       assert.ok(s.warns().some((w) => /rejected the session \(401\)/.test(w)));
       // and from then on it is local-only: no further REST calls

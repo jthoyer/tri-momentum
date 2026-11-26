@@ -152,3 +152,93 @@ describe('AC-C3 — a1, a2, a3, rpe, b2, b3 are never pre-filled, through every 
     } finally { await s.close(); }
   });
 });
+
+// ── A4: a failed storage write must not hold reads for good ────────────
+// The choice is also kept in memory for the page load. Only the flag's own key
+// throws (a full quota in practice); every other write still works.
+describe('the device choice survives a failed localStorage write (in-memory decided flag)', () => {
+  const SERVER_ROW = { id: 'srv-q1', session_date: '2026-10-09', disc: 'run', intensity: 'easy', duration: 30, rpe: 3, a1: null, a2: null, a3: null, b2: null, b3: null, note: '', phase: 'base' };
+  async function throwOnFlag(s) {
+    await s.page.context().addInitScript((flag) => {
+      const orig = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) { if (k === flag) { throw new DOMException('quota', 'QuotaExceededError'); } return orig.call(this, k, v); };
+    }, FLAG);
+  }
+  const cacheIds = async (s) => (await s.lsJson('triMomentumLog_v1')).map((r) => r.id || r.date).sort();
+
+  for (const choice of ['Discard', 'Add']) {
+    test(choice + ': the flag cannot be stored, yet the button goes away and the next read brings the account\'s rows', async () => {
+      const b = new Backend({ imported: true }).seed('session_checkins', [SERVER_ROW]);
+      const s = await scenario(browser, { backend: b, signedIn: true, localStorage: { triMomentumLog_v1: [entry('2026-10-01')] } });
+      try {
+        await throwOnFlag(s);
+        await s.open(); await s.settle(600); await waitPreview(s.page);
+        await s.page.click(choice === 'Add' ? '#import-go' : '#import-discard');
+        if (choice === 'Add') {
+          await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 8000 });
+          await s.page.click('#import-go');
+        }
+        await s.settle(600);
+        assert.strictEqual(await s.ls(FLAG), null, 'fixture: the write really failed');
+        assert.strictEqual(await s.page.$('#cal-account-review-btn') === null, true, 'no longer held');
+        await s.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await s.settle(800);
+        assert.ok((await cacheIds(s)).includes('srv-q1'), 'a read ran and brought the account row into the cache: ' + (await cacheIds(s)));
+        assert.strictEqual(await s.page.$eval('#import-dialog', (n) => n.open), false, 'the dialog did not come back');
+      } finally { await s.close(); }
+    });
+  }
+});
+
+// ── A6: the dialog never opens over active work ─────────────────────────
+// A delayed check (the first one failed, a later visibilitychange succeeds) must
+// not put a modal over a check-in in progress or an open Plan form. Reads stay
+// held and the account line's "Review data on this device" is the way in.
+describe('the device dialog does not open itself over active work', () => {
+  const PHASE = [{ id: 'aw-ph', from: '2020-01-01', phase: 'base' }];
+  const SERVER = { id: 'srv-aw1', session_date: '2026-10-09', disc: 'run', intensity: 'easy', duration: 30, rpe: 3, a1: null, a2: null, a3: null, b2: null, b3: null, note: '', phase: 'base' };
+  async function delayed(extraSetup, doWork) {
+    const b = new Backend({ imported: true }).seed('session_checkins', [SERVER]);
+    const rule = b.inject((i) => i.table === 'races' && i.method === 'GET', { status: 500, body: { message: 'down' } });
+    const s = await scenario(browser, { backend: b, signedIn: true, localStorage: { triMomentumLog_v1: [entry('2026-10-01')], triMomentumPhasePlan_v1: PHASE } });
+    try {
+      await s.open(); await s.settle(600);
+      assert.strictEqual(await s.page.$eval('#import-dialog', (n) => n.open), false, 'fixture: the first check failed, no dialog yet');
+      await doWork(s);
+      b.rules.splice(b.rules.indexOf(rule), 1);
+      await s.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await s.settle(900);
+      assert.strictEqual(await s.page.$eval('#import-dialog', (n) => n.open), false, 'the dialog stayed closed over the work');
+      assert.ok(!(await s.lsJson('triMomentumLog_v1')).some((r) => r.id === 'srv-aw1'), 'reads are still held: the account row is not in the cache');
+      await extraSetup(s);
+      assert.strictEqual(await s.page.$('#cal-account-review-btn') !== null, true, 'the account line offers "Review data on this device"');
+      assert.strictEqual((await s.page.textContent('#cal-account-review-btn')).trim(), 'Review data on this device');
+      await s.page.click('#cal-account-review-btn');
+      await waitPreview(s.page);
+      assert.strictEqual(await s.page.$eval('#import-dialog', (n) => n.open), true, 'tapping the button opens the dialog');
+      assert.deepStrictEqual(s.errors, []);
+    } finally { await s.close(); }
+  }
+
+  test('over a check-in in progress: closed, answers kept, button present, tap opens it', async () => {
+    await delayed(async (s) => {
+      await s.page.click('#tab-flow'); await s.page.waitForTimeout(250);   // back to the Calendar (resume bar)
+      assert.strictEqual(await s.page.$('.cal-resume-go') !== null, true, 'the check-in is still there to resume');
+    }, async (s) => {
+      await s.page.click('#tab-flow'); await s.page.waitForTimeout(200);
+      await s.page.click('.cal-unplanned'); await s.page.waitForTimeout(250);
+      await s.page.locator('.flow-body input[type=radio]').first().check({ force: true });
+      await s.page.waitForTimeout(100);
+    });
+  });
+
+  test('over an open Plan form: closed, button present after Cancel, tap opens it', async () => {
+    await delayed(async (s) => {
+      assert.strictEqual(await s.page.$('.plan-form') !== null, true, 'the Plan form was not closed under the athlete');
+      await s.page.click('.plan-form-actions .btn-ghost'); await s.page.waitForTimeout(150);
+      await s.page.click('text=← Back to calendar'); await s.page.waitForTimeout(250);
+    }, async (s) => {
+      await s.page.click('#tab-flow'); await s.page.waitForTimeout(200);
+      await s.page.click('.cal-quiet-link'); await s.page.waitForTimeout(300);
+      assert.strictEqual(await s.page.$('.plan-form') !== null, true, 'fixture: the Plan form is open');
+    });
+  });
+});

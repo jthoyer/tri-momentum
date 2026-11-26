@@ -76,7 +76,7 @@ describe('AC11 — a blank key is unconfigured mode', () => {
 // AC12 — one account line per state
 // ---------------------------------------------------------------------------
 const STATES = {
-  'signed-out': { line: 'Not signed in. Check-ins wait on this device; other edits stay here.', btn: 'Sign in with Google', make: () => ({ backend: new Backend(), signedIn: false }) },
+  'signed-out': { line: "Edits made while signed out stay on this device until you sign in, and may then be replaced by your account's data.", btn: 'Sign in with Google', make: () => ({ backend: new Backend(), signedIn: false }) },
   checking: {
     line: 'Signed in · ' + OWNER_EMAIL, btn: 'Sign out',
     make: () => { const b = new Backend(); b.inject((i) => i.table === 'allowed_users', { status: 503, body: { message: 'upstream' } }); return { backend: b, signedIn: true }; },
@@ -152,7 +152,7 @@ describe('AC12 — the account line, per state, at 320px', () => {
       await s.page.focus('#cal-account-btn');
       await s.page.evaluate(() => { window.__node = document.getElementById('cal-account-btn'); window.__root = document.querySelector('.cal-title'); });
       await s.page.keyboard.press('Enter'); await s.page.waitForTimeout(500);   // Sign out: synced -> signed-out
-      assert.ok((await s.accountText()).startsWith('Not signed in'));
+      assert.ok((await s.accountText()).startsWith('Edits made while signed out'));
       assert.strictEqual(await s.page.evaluate(() => document.getElementById('cal-account-btn') === window.__node && document.activeElement === window.__node), true, 'same button, still focused');
       assert.strictEqual(await s.page.evaluate(() => document.querySelector('.cal-title') === window.__root), true, 'the Calendar was not rebuilt');
     } finally { await s.close(); }
@@ -241,7 +241,7 @@ describe('AC13 — sign-in (PKCE, canonical redirect) and sign-out', () => {
         await s.page.goto(s.server.origin + tail); await s.settle(500);
         const url = new URL(s.page.url());
         assert.strictEqual(url.search + url.hash === '' || url.search + url.hash === '?', true, 'left in the URL: ' + url.search + url.hash);
-        assert.ok((await s.accountText()).startsWith('Not signed in'), 'still signed out');
+        assert.ok((await s.accountText()).startsWith('Edits made while signed out'), 'still signed out');
         assert.strictEqual(await s.ls(STORAGE_KEY), null, 'no session was stored from a fragment token');
         assert.deepStrictEqual(s.errors, []);
       } finally { await s.close(); }
@@ -259,14 +259,14 @@ describe('AC13 — sign-in (PKCE, canonical redirect) and sign-out', () => {
       const before = backend.requests.length;
       await s.page.click('#cal-account-btn'); await s.page.waitForTimeout(500);
       assert.strictEqual(await s.ls(STORAGE_KEY), null, 'the Supabase session is gone from storage');
-      assert.ok((await s.accountText()).startsWith('Not signed in'));
+      assert.ok((await s.accountText()).startsWith('Edits made while signed out'));
       assert.strictEqual(await s.ls('triMomentumRaces_v1'), racesBefore, 'the cache is kept (Q1)');
       // Tour the tabs signed out: nothing more goes to the data tables.
       for (const tab of ['#tab-races', '#tab-dash']) { await s.page.click(tab); await s.page.waitForTimeout(150); }
       assert.deepStrictEqual(backend.requests.slice(before).filter((r) => r.rest), [], 'no REST call after sign-out');
       // Persistence across a reload (deliberately inherited storage): still signed out.
       await s.page.reload(); await s.settle(400);
-      assert.ok((await s.accountText()).startsWith('Not signed in'));
+      assert.ok((await s.accountText()).startsWith('Edits made while signed out'));
       await clean(s);
     } finally { await s.close(); }
   });
