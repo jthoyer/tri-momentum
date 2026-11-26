@@ -137,6 +137,12 @@ class Backend {
     return row;
   }
   rows(table, userId) { return this.tables[table].filter((r) => r.user_id === (userId || this.userId)); }
+  // Replaces this user's rows in a table: "another device changed the data".
+  replace(table, rows, userId) {
+    const uid = userId || this.userId;
+    this.tables[table] = this.tables[table].filter((r) => r.user_id !== uid);
+    return this.seed(table, rows, uid);
+  }
 
   // ---- failure injection ----------------------------------------------
   // match: (info) => bool, info = {method, table, query, body, path}

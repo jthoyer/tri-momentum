@@ -2,9 +2,15 @@
 // The Calendar start screen (CLAUDE.md decision 50, docs/specs/calendar-start-screen.md
 // section 8, criteria A1-A25), driven through the real UI.
 //
-// Runs against the shipped index.html over http, with only the Apps Script URL
-// blanked so a live Sheet fetch can't overwrite a seeded scenario. No test hook
-// lives in the shipped file: everything below reads the DOM or localStorage.
+// Runs against the shipped index.html over http, local-only by default (the
+// Supabase key and the Sheet address both blank, so nothing can overwrite a
+// seeded scenario). The background-refresh scenarios (A25, H1, M1-new, M2, L-a)
+// are about what happens when a READ lands, so they run with `sb: true`: signed
+// in to a synced Supabase mock (tests/lib/supabase-mock.js) seeded from the same
+// fixture. They were Sheet-route scenarios before the storage moved; each keeps
+// its name and its assertions, only the way the data arrives and changes is new.
+// No test hook lives in the shipped file: everything below reads the DOM or
+// localStorage.
 //
 // ISOLATION. Every scenario gets its own browser context — fresh cookies, a
 // fresh localStorage, a fresh page — and a pinned clock (Australia/Sydney, so
@@ -17,18 +23,17 @@
 const { test, before, after, describe } = require('node:test');
 const assert = require('node:assert');
 const { chromium } = require('playwright');
-const { serveApp, chromiumPath, loadFunctions, extractFunction } = require('./lib/app');
-const { KEYS, F1, F2, F3, planItem, logEntry } = require('./lib/calendar-fixtures');
+const { serveApp, guardNetwork, chromiumPath, loadFunctions, extractFunction } = require('./lib/app');
+const { KEYS, F1, F2, F3, planItem, logEntry, serverRows, canonical, planRow, phaseRow, sessionRow } = require('./lib/calendar-fixtures');
+const { Backend } = require('./lib/supabase-mock');
+const { KEY } = require('./lib/scenario');
 
 const norm = (t) => String(t).replace(/\s+/g, ' ').trim();
 
 let server, browser;
-// Mutable on purpose: serveApp reads it per request, so a scenario can change
-// what a Sheet read returns part-way through (A25). Cleared before each one.
-const routes = {};
 
 before(async () => {
-  server = await serveApp({ routes });
+  server = await serveApp();
   browser = await chromium.launch({ executablePath: chromiumPath() });
 });
 after(async () => {
@@ -39,15 +44,35 @@ after(async () => {
 // One scenario = one fresh context. `fx` is a fixture ({now, plan, log, phases,
 // races}); any key it omits is simply not seeded. A scenario passes only if its
 // page raised no errors (A24).
+//
+// opts.sb: the scenario runs signed in to a synced Supabase mock (its own
+// server and its own mock, so nothing is shared) seeded from the fixture; the
+// cache is seeded with the CANONICAL copy of the fixture, i.e. what a device
+// that has already synced holds, so a read of unchanged data is unchanged.
+// `fn(page, ctx, sb)` gets {backend, guard} to change what the server holds
+// part-way through. The scenario ends by asserting nothing unmocked was reached.
 function scenario(name, fx, opts, fn) {
   if (typeof opts === 'function') { fn = opts; opts = {}; }
   test(name, async () => {
-    for (const k of Object.keys(routes)) delete routes[k];
-    Object.assign(routes, opts.routes || {});
+    let sb = null, srv = server;
+    const seedFx = opts.sb ? canonical(fx) : fx;
+    if (opts.sb) {
+      const backend = new Backend({ imported: true });
+      const rows = serverRows(fx);
+      Object.keys(rows).forEach((t) => backend.seed(t, rows[t]));
+      srv = await serveApp({ key: KEY });
+      sb = { backend };
+    }
     const ctx = await browser.newContext({
       viewport: { width: opts.width || 390, height: 900 },
       timezoneId: 'Australia/Sydney',
+      serviceWorkers: 'block',
     });
+    if (sb) {
+      sb.guard = await guardNetwork(ctx);
+      await sb.backend.install(ctx);
+      await sb.backend.seedSignedIn(ctx);
+    }
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
@@ -60,14 +85,21 @@ function scenario(name, fx, opts, fn) {
           if (raw && raw[k] !== undefined) { localStorage.setItem(keys[k], raw[k]); }
           else if (data[k]) { localStorage.setItem(keys[k], JSON.stringify(data[k])); }
         }
-      }, [KEYS, fx, opts.raw || null]);
-      await page.goto(server.origin);
+      }, [KEYS, seedFx, opts.raw || null]);
+      await page.goto(srv.origin);
       await page.waitForSelector('#calendar-h');
+      if (sb) {
+        // Signed in: wait for the device to reach `synced` (its first reads are
+        // then in), the account line being the app's own statement of the mode.
+        await page.waitForFunction(() => { const n = document.getElementById('cal-account-line'); return !!n && /^Synced/.test(n.textContent); });
+      }
       await page.waitForTimeout(250);
-      await fn(page, ctx);
+      await fn(page, ctx, sb);
       assert.deepStrictEqual(errors, [], 'page errors (A24): ' + errors.join(' | '));
+      if (sb) { assert.deepStrictEqual(sb.guard.blocked, [], 'nothing unmocked was reached'); }
     } finally {
       await ctx.close();
+      if (srv !== server) { await srv.close(); }
     }
   });
 }
@@ -862,38 +894,35 @@ describe('320px', { concurrency: false }, () => {
 });
 
 // ───────────────────────────── A25 ─────────────────────────────
+// What "another device changed it" means now: the Supabase mock's rows change,
+// and the next refresh (a visibilitychange, a view opening) reads them.
+const setPlan = (sb, plan) => sb.backend.replace('plan_sessions', plan.map(planRow));
+const setPhases = (sb, phases) => sb.backend.replace('phase_blocks', phases.map(phaseRow));
+const setLog = (sb, log) => sb.backend.replace('session_checkins', log.map(sessionRow));
 describe('background refresh', { concurrency: false }, () => {
-  const sheetPlan = (extra) => JSON.stringify({ ok: true, plan: F1.plan.concat(extra || []) });
   const fire = (page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
 
-  scenario('A25 a changed ?plan=1 response redraws the Calendar', F1, { routes: { 'plan=1': sheetPlan() } }, async (page) => {
+  scenario('A25 a changed ?plan=1 response redraws the Calendar', F1, { sb: true }, async (page, ctx, sb) => {
     await selectDay(page, '2026-11-26');
     assert.deepStrictEqual((await cards(page)).map((c) => c.title), []);
-    routes['plan=1'] = sheetPlan([planItem('new1', '2026-11-26', 'swim', 'Added elsewhere', 30, 'easy')]);
+    setPlan(sb, F1.plan.concat([planItem('new1', '2026-11-26', 'swim', 'Added elsewhere', 30, 'easy')]));
     await fire(page);
     await page.waitForTimeout(400);
     assert.deepStrictEqual((await cards(page)).map((c) => c.title), ['Swim — Added elsewhere'], 'the selected day survived the redraw and now shows the new session');
     assert.strictEqual(await pressedDate(page), '2026-11-26', 'the athlete\'s place is kept');
   });
-  scenario('A25 a session logged on another device stops being offered', F1, {
-    routes: { 'list=1': JSON.stringify({ ok: true, sessions: [] }) },
-  }, async (page) => {
-    // Seeded log is replaced by the (empty) Sheet one at boot, so Mon swim is Missed.
+  scenario('A25 a session logged on another device stops being offered', Object.assign({}, F1, { log: [] }), { sb: true }, async (page, ctx, sb) => {
+    // The server holds no log, so the Mon swim and strength are both open.
     await selectDay(page, '2026-11-23');
     assert.strictEqual((await cards(page)).filter((c) => c.cta).length, 2);
-    routes['list=1'] = JSON.stringify({
-      ok: true,
-      sessions: [{ when: '2026-11-23', disc: 'strength', duration: 30, intensity: 'easy', rpe: 6, a1: 'intent', a2: 'planned', a3: '', b2: 'solid', b3: 'nothing', note: '', phase: 'build1' }],
-    });
+    setLog(sb, [logEntry('2026-11-23', 'strength', 30, 'planned')]);
     await fire(page);
     await page.waitForTimeout(400);
     const strength = (await cards(page)).find((c) => c.title === 'Strength — Gym A');
     assert.deepStrictEqual([strength.logged, strength.cta, strength.word], [true, false, 'As planned'],
       'the matcher now sees the entry, so no duplicate-writing CTA is offered');
   });
-  scenario('A25 while a Month phase select is open the redraw waits, and lands when it closes', F1, {
-    routes: { 'phases=1': JSON.stringify({ ok: true, phases: F1.phases }) },
-  }, async (page) => {
+  scenario('A25 while a Month phase select is open the redraw waits, and lands when it closes', F1, { sb: true }, async (page, ctx, sb) => {
     await page.click('#cal-tab-month');
     await page.click('[aria-label="Edit the phase for the week of Mon 9 Nov"]');
     await page.waitForSelector('.race-cal-phase-select');
@@ -902,7 +931,7 @@ describe('background refresh', { concurrency: false }, () => {
     // (the open edit week is module state, so a rebuild draws a select again).
     await page.$eval('.race-cal-phase-select', (n) => { n.setAttribute('data-held', '1'); });
     // Another device re-plans: weeks of 9, 16 and 23 Nov become Taper.
-    routes['phases=1'] = JSON.stringify({ ok: true, phases: F1.phases.concat([{ id: 'other', from: '2026-11-09', phase: 'taper' }]) });
+    setPhases(sb, F1.phases.concat([{ id: 'other', from: '2026-11-09', phase: 'taper' }]));
     await fire(page);
     await page.waitForTimeout(400);
     assert.ok(await page.$('.race-cal-phase-select[data-held="1"]'), 'the select the athlete is using was not rebuilt');
@@ -912,17 +941,15 @@ describe('background refresh', { concurrency: false }, () => {
     const labels = await page.$$eval('.race-cal-phase-edit', (ns) => ns.map((n) => n.textContent.trim()));
     assert.ok(labels.some((l) => l.startsWith('Taper')), 'the held redraw landed on close: ' + JSON.stringify(labels));
   });
-  scenario('A25 with no select open the same refresh redraws immediately', F1, {
-    routes: { 'phases=1': JSON.stringify({ ok: true, phases: F1.phases }) },
-  }, async (page) => {
+  scenario('A25 with no select open the same refresh redraws immediately', F1, { sb: true }, async (page, ctx, sb) => {
     await page.click('#cal-tab-month');
-    routes['phases=1'] = JSON.stringify({ ok: true, phases: F1.phases.concat([{ id: 'other', from: '2026-11-09', phase: 'taper' }]) });
+    setPhases(sb, F1.phases.concat([{ id: 'other', from: '2026-11-09', phase: 'taper' }]));
     await fire(page);
     await page.waitForTimeout(400);
     const labels = await page.$$eval('.race-cal-phase-edit', (ns) => ns.map((n) => n.textContent.trim()));
     assert.ok(labels.some((l) => l.startsWith('Taper')), JSON.stringify(labels));
   });
-  scenario('A25 a held Resume / Discard choice survives a redraw', F1, { routes: { 'plan=1': sheetPlan() } }, async (page) => {
+  scenario('A25 a held Resume / Discard choice survives a redraw', F1, { sb: true }, async (page) => {
     await page.click('.cal-card:has(.cal-card-title:text("Bike — Turbo")) .cal-card-cta');
     await page.click('#tab-flow');
     await selectDay(page, '2026-11-23');
@@ -934,24 +961,10 @@ describe('background refresh', { concurrency: false }, () => {
 });
 
 // ───────────────────── background refresh: focus and identity ─────────────────────
-// The Calendar must not rebuild when a Sheet read succeeds with data that has
-// not changed — a rebuild destroys the node a keyboard user is on. The older
-// tests in this file mocked only the route under test; every other read got
-// the app's own HTML back and failed quietly, which is why a redraw-on-every-
-// success defect passed them. These mock ALL FOUR reads to succeed.
-function sheetRoutes(fx, over) {
-  const sessions = (fx.log || []).map((e) => ({
-    when: e.date, disc: e.disc, duration: e.duration, intensity: e.intensity, rpe: e.rpe,
-    a1: e.a1, a2: e.a2, a3: e.a3 || '', b2: e.b2, b3: e.b3, note: e.note, phase: e.phase,
-  }));
-  const base = {
-    'list=1': { ok: true, sessions },
-    'plan=1': { ok: true, plan: fx.plan || [] },
-    'races=1': { ok: true, races: fx.races || [] },
-    'phases=1': { ok: true, phases: fx.phases || [] },
-  };
-  return Object.fromEntries(Object.entries({ ...base, ...(over || {}) }).map(([k, v]) => [k, JSON.stringify(v)]));
-}
+// The Calendar must not rebuild when a read succeeds with data that has not
+// changed — a rebuild destroys the node a keyboard user is on. These run with
+// ALL FOUR tables served and equal to the cache (`sb: true` seeds both from one
+// fixture), so an "ok" that is not a "changed" is what is being tested.
 const FOCUS_TARGETS = [
   ['a day chip', '.cal-chip[data-date="2026-11-25"]'],
   ['a card Edit button', '.cal-card-edit'],
@@ -965,7 +978,7 @@ describe('background refresh keeps the node and the focus', { concurrency: false
     return a && (a.getAttribute('data-keep') || 'other:' + (a.getAttribute('aria-label') || a.id || a.className));
   });
   for (const [name, sel] of FOCUS_TARGETS) {
-    scenario('H1 unchanged reads (all four mocked): ' + name + ' is not rebuilt and keeps focus', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    scenario('H1 unchanged reads (all four mocked): ' + name + ' is not rebuilt and keeps focus', F1, { sb: true }, async (page) => {
       await page.waitForTimeout(300);
       await page.$eval(sel, (n) => n.setAttribute('data-keep', 'same-node'));
       await page.focus(sel);
@@ -973,11 +986,11 @@ describe('background refresh keeps the node and the focus', { concurrency: false
       assert.ok(await page.$(sel + '[data-keep="same-node"]'), 'the very same node is still in the page (no rebuild)');
       assert.strictEqual(await activeKey(page), 'same-node', 'focus did not move');
     });
-    scenario('H1 changed data: ' + name + ' redraws and focus is restored to its twin', F1, { routes: sheetRoutes(F1) }, async (page) => {
+    scenario('H1 changed data: ' + name + ' redraws and focus is restored to its twin', F1, { sb: true }, async (page, ctx, sb) => {
       await page.waitForTimeout(300);
       await page.$eval(sel, (n) => n.setAttribute('data-keep', 'old-node'));
       await page.focus(sel);
-      routes['plan=1'] = JSON.stringify({ ok: true, plan: F1.plan.concat([planItem('chg1', '2026-11-26', 'swim', 'Changed elsewhere', 30, 'easy')]) });
+      setPlan(sb, F1.plan.concat([planItem('chg1', '2026-11-26', 'swim', 'Changed elsewhere', 30, 'easy')]));
       await fire(page);
       await page.waitForTimeout(500);
       assert.ok((await page.$(sel + '[data-keep="old-node"]')) === null, 'the view was rebuilt');
@@ -986,7 +999,7 @@ describe('background refresh keeps the node and the focus', { concurrency: false
       assert.ok(sameSpot, 'focus was restored to the rebuilt control');
     });
   }
-  scenario('H1 unchanged reads in Month: nothing rebuilt either', F1, { routes: sheetRoutes(F1) }, async (page) => {
+  scenario('H1 unchanged reads in Month: nothing rebuilt either', F1, { sb: true }, async (page) => {
     await page.click('#cal-tab-month');
     await page.$eval('.race-cal-week-row', (n) => n.setAttribute('data-keep', 'same-node'));
     await page.focus('.race-cal-week-row');
@@ -1067,7 +1080,7 @@ describe('resuming after midnight (visibilitychange)', { concurrency: false }, (
   const fire = (page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   const lastLogged = (page) => page.evaluate((k) => { const a = JSON.parse(localStorage.getItem(k)); return a[a.length - 1]; }, KEYS.log);
 
-  scenario('M1-new flow visible and untouched across midnight: the date shown is the date saved', F1, { routes: sheetRoutes(F1) }, async (page) => {
+  scenario('M1-new flow visible and untouched across midnight: the date shown is the date saved', F1, { sb: true }, async (page) => {
     await page.click('.cal-unplanned');                       // flow on its date page, seeded with Tue 24
     assert.strictEqual(await page.inputValue('#o-date'), '2026-11-24');
     await page.clock.setFixedTime(new Date(NEXT_DAY));
@@ -1089,7 +1102,7 @@ describe('resuming after midnight (visibilitychange)', { concurrency: false }, (
     await page.waitForSelector('#view-dashboard:not([hidden])');
     assert.strictEqual((await lastLogged(page)).date, '2026-11-24', 'saved under the date the athlete saw');
   });
-  scenario('M1-new Calendar showing across midnight: no phantom resume bar', F1, { routes: sheetRoutes(F1) }, async (page) => {
+  scenario('M1-new Calendar showing across midnight: no phantom resume bar', F1, { sb: true }, async (page) => {
     await page.click('.cal-unplanned');                       // pristine, dated today
     await page.click('#tab-flow');
     assert.ok((await page.$('.cal-resume')) === null);
@@ -1099,7 +1112,7 @@ describe('resuming after midnight (visibilitychange)', { concurrency: false }, (
     assert.ok((await page.$('.cal-resume')) === null, 'an untouched seed from yesterday is not a check-in in progress');
     assert.strictEqual(await pressedDate(page), '2026-11-25');
   });
-  scenario('M2 Calendar rolls to the new day on resume with every read UNCHANGED, and keeps focus', F1, { routes: sheetRoutes(F1) }, async (page) => {
+  scenario('M2 Calendar rolls to the new day on resume with every read UNCHANGED, and keeps focus', F1, { sb: true }, async (page) => {
     await page.waitForTimeout(300);
     await page.focus('.cal-chip[data-date="2026-11-27"]');
     await page.clock.setFixedTime(new Date('2026-11-25T09:00:00+11:00'));
@@ -1114,7 +1127,7 @@ describe('resuming after midnight (visibilitychange)', { concurrency: false }, (
     await selectDay(page, '2026-11-25');
     assert.strictEqual((await cards(page))[0].word, 'To log', "today's open session reads To log");
   });
-  scenario('M2 Races countdown rolls on resume with every read UNCHANGED', F1, { routes: sheetRoutes(F1) }, async (page) => {
+  scenario('M2 Races countdown rolls on resume with every read UNCHANGED', F1, { sb: true }, async (page) => {
     await page.click('#tab-races');
     const read = () => page.$$eval('.race-card-countdown', (ns) => ns.map((n) => n.textContent.trim()));
     const before = await read();
@@ -1132,12 +1145,12 @@ describe('focus restore does not build selectors from plan text', { concurrency:
   const NASTY = 'He said "go"\\';                      // ends in a backslash and holds a quote
   const twin = (id) => planItem(id, '2026-11-26', 'swim', NASTY, 30, 'easy');
   const fx = { ...F1, plan: F1.plan.concat([twin('tw1'), twin('tw2')]) };
-  scenario('L-a two same-title same-day cards: focus returns to the right one; no throw', fx, { routes: sheetRoutes(fx) }, async (page) => {
+  scenario('L-a two same-title same-day cards: focus returns to the right one; no throw', fx, { sb: true }, async (page, ctx, sb) => {
     await page.waitForTimeout(300);
     await selectDay(page, '2026-11-26');
     assert.strictEqual((await cards(page)).length, 2);
     await page.focus('[data-focus="edit:tw2"]');
-    routes['plan=1'] = JSON.stringify({ ok: true, plan: fx.plan.concat([planItem('tw3', '2026-11-27', 'run', 'Another', 20, 'easy')]) });
+    setPlan(sb, fx.plan.concat([planItem('tw3', '2026-11-27', 'run', 'Another', 20, 'easy')]));
     await fire(page);
     await page.waitForTimeout(500);
     assert.strictEqual(await page.evaluate(() => document.activeElement.getAttribute('data-focus')), 'edit:tw2', 'the second twin, not the first');
