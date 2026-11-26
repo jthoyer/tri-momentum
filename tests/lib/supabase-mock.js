@@ -25,7 +25,7 @@
 //
 // What it does not do: real SQL, real RLS, real GoTrue. See CLAUDE.md.
 
-const PROJECT = 'ghfvmsyxfovwaeeuzlzn';
+const PROJECT = 'testprojectref000000';   // 20 characters, synthetic
 const ORIGIN = 'https://' + PROJECT + '.supabase.co';
 const STORAGE_KEY = 'sb-' + PROJECT + '-auth-token';
 const OWNER_ID = '00000000-0000-4000-8000-0000000000a1';

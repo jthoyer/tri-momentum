@@ -47,8 +47,16 @@ describe('configuration (AC11)', () => {
   const src = inlineScript();
   const key = (/var SUPABASE_PUBLISHABLE_KEY = '([^']*)';/.exec(src) || [])[1];
 
-  test('the project URL is the Supabase project, as a constant', () => {
-    assert.match(src, /var SUPABASE_URL = 'https:\/\/ghfvmsyxfovwaeeuzlzn\.supabase\.co';/);
+  test('the project URL is its own marked constant, blank or a 20-character project address (AC-S2)', () => {
+    const url = (/var SUPABASE_URL = '([^']*)';/.exec(src) || [])[1];
+    assert.notStrictEqual(url, undefined, 'SUPABASE_URL not found');
+    assert.ok(url === '' || /^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(url), 'unexpected SUPABASE_URL shape');
+    const at = src.indexOf('var SUPABASE_URL');
+    assert.match(src.slice(Math.max(0, at - 600), at), /Filled in by the owner/);
+  });
+
+  test('a blank URL or a blank key leaves the app local-only (no client is created)', () => {
+    assert.match(extractFunction('createBackendClient'), /if\(!SUPABASE_PUBLISHABLE_KEY \|\| !SUPABASE_URL\)\{ return null; \}/);
   });
 
   test('the publishable key is its own marked constant', () => {
@@ -61,7 +69,7 @@ describe('configuration (AC11)', () => {
   });
 
   test('the committed key is not a secret key and not a privileged JWT', () => {
-    assert.ok(!key.startsWith('sb_secret_'), 'a secret key is committed');
+    assert.ok(!key.startsWith('sb_' + 'secret_'), 'a secret key is committed');
     if (key.split('.').length === 3) {
       let role;
       try { role = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role; } catch (e) { role = 'unparseable'; }
@@ -73,7 +81,7 @@ describe('configuration (AC11)', () => {
 
   test('index.html contains neither string that names a privileged key', () => {
     assert.ok(!/service_role/.test(html));
-    assert.ok(!/sb_secret_/.test(html));
+    assert.ok(!html.includes('sb_' + 'secret_'));
   });
 });
 
@@ -88,7 +96,10 @@ describe('the Sheet is retired from the app (AC21) and nothing else slipped in (
     const code = inlineScript().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const calls = code.match(/\bfetch\(/g) || [];
     assert.strictEqual(calls.length, 1, 'exactly one fetch( call in the app: the import');
-    assert.match(inlineScript(), /fetch\(TRAINING_LOG_WRITE_URL \+ ep\.query/);
+    assert.match(inlineScript(), /fetch\(base \+ ep\.query, init\)/);
+    assert.match(inlineScript(), /credentials: 'omit'/, 'the Sheet GET sends no cookies');
+    const call = extractFunction('importFetch');
+    assert.ok(!/Authorization|apikey|headers/i.test(call), 'the Sheet GET sends no Authorization or apikey header');
   });
 
   test('no innerHTML (or insertAdjacentHTML / outerHTML) is assigned anywhere', () => {

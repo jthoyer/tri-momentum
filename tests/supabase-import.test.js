@@ -10,7 +10,7 @@
 const { test, before, after, describe } = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
-const { scenario, launchBrowser } = require('./lib/scenario');
+const { scenario, launchBrowser, SHEET_URL } = require('./lib/scenario');
 const { Backend, OWNER_EMAIL } = require('./lib/supabase-mock');
 const { ratioOf } = require('./lib/contrast');
 
@@ -52,13 +52,18 @@ async function clean(s) {
   assert.deepStrictEqual(s.guard.blocked, [], 'requests nobody mocked');
 }
 const pending = (extra) => Object.assign({ backend: new Backend(), signedIn: true, sheet: SHEET }, extra || {});
-async function openDialog(s) {
+// The Sheet address is not in the page: the dialog asks for it (AC-S4). `addr`
+// false = import from this device only.
+async function openDialog(s, addr) {
   if (!s.opened) { await s.open(); s.opened = true; await s.settle(500); }
   await s.page.click('#cal-account-btn');
-  await s.page.waitForSelector('#import-dialog[open] #import-go:not([hidden])');
+  await s.page.waitForSelector('#import-dialog[open] #import-url');
+  if (addr !== false) await s.page.fill('#import-url', addr || SHEET_URL);
+  await s.page.click('#import-go');
+  await s.page.waitForSelector('#import-dialog[open] #import-go:not([hidden]):text-is("Import")');
 }
-async function runImport(s) {
-  await openDialog(s);
+async function runImport(s, addr) {
+  await openDialog(s, addr);
   await s.page.click('#import-go');
   await s.page.waitForFunction(() => /^Imported|Import stopped/.test(document.getElementById('import-msg').textContent), null, { timeout: 15000 });
 }
@@ -90,11 +95,11 @@ describe('AC20 — preview, confirmation, order, report', () => {
     try {
       await openDialog(s);
       const text = await s.page.textContent('#import-counts');
-      assert.match(text, /Sessions5 found · 2 skipped \(bad date\)/);
-      assert.match(text, /Races4 found · 2 skipped \(1 missing id, name or date, 1 bad date\)/);
-      assert.match(text, /Planned sessions4 found · 1 skipped \(bad date\)/);
-      assert.match(text, /Phase blocks3 found · 1 skipped \(missing id, from or phase\)/);
-      assert.match(await s.page.textContent('#import-note'), /Compare these counts with each tab of your Sheet/);
+      assert.match(text, /SessionsSheet 5 · This device 0 · Already in your account 0 · New 3 · Skipped 2 \(bad date\)/);
+      assert.match(text, /RacesSheet 4 · This device 0 · Already in your account 0 · New 2 · Skipped 2 \(1 missing id, name or date, 1 bad date\)/);
+      assert.match(text, /Planned sessionsSheet 4 · This device 0 · Already in your account 0 · New 3 · Skipped 1 \(bad date\)/);
+      assert.match(text, /Phase blocksSheet 3 · This device 0 · Already in your account 0 · New 2 · Skipped 1 \(missing id, from or phase\)/);
+      assert.match(await s.page.textContent('#import-note'), /Compare the Sheet counts with each tab of your Sheet/);
       assert.strictEqual(rowsWritten(s.backend), 0, 'nothing written before confirming');
       assert.strictEqual(s.backend.requests.filter((r) => r.method !== 'GET').length, 0);
       assert.deepStrictEqual(s.sheet.requests.map((r) => r.method + r.search).sort(), ['GET?list=1', 'GET?phases=1', 'GET?plan=1', 'GET?races=1']);
@@ -120,15 +125,15 @@ describe('AC20 — preview, confirmation, order, report', () => {
       const posts = b.requests.filter((r) => r.method === 'POST' && r.rest).map((r) => r.table);
       assert.deepStrictEqual(posts, ['session_checkins', 'races', 'plan_sessions', 'phase_blocks', 'sheet_import'], 'sessions first, the marker last');
       assert.strictEqual(b.rows('sheet_import').length, 1);
-      assert.deepStrictEqual(b.rows('sheet_import')[0].counts.sessions, { found: 5, inserted: 3, present: 0, skipped: 2 });
+      assert.deepStrictEqual(b.rows('sheet_import')[0].counts.sessions, { found: 5, inserted: 3, present: 0, skipped: 2, differs: 0 });
       // every write was insert-if-absent
       b.requests.filter((r) => r.method === 'POST' && r.rest).forEach((r) => assert.match(r.headers['prefer'], /resolution=ignore-duplicates/));
       // session ids: derived from content, two identical rows stay two rows
       const ids = b.rows('session_checkins').map((r) => r.id);
-      assert.deepStrictEqual(ids, [idFor(S1, 0), idFor(S2, 0), idFor(S1, 1)]);
+      assert.deepStrictEqual(ids, [idFor(S1, 0), idFor(S1, 1), idFor(S2, 0)], 'ascending date order, original order within a date (AC-I4)');
       assert.strictEqual(ids[0], 'sheet-70e2ba827b53795cae8ce22f144c44eb-0');
       // mapping of the awkward rows
-      const s2 = b.rows('session_checkins')[1];
+      const s2 = b.rows('session_checkins')[2];
       assert.strictEqual(s2.duration, null); assert.strictEqual(s2.rpe, 7); assert.strictEqual(s2.phase, null); assert.strictEqual(s2.session_date, '2026-10-02');
       assert.strictEqual(b.rows('plan_sessions').find((r) => r.id === 'p2').duration, 60, '"60 min" coerced by the app\'s own parse rule');
       assert.strictEqual(b.rows('plan_sessions').find((r) => r.id === 'p2').is_key, true);
@@ -164,7 +169,9 @@ describe('AC20 — preview, confirmation, order, report', () => {
       b.tables.sheet_import = [];
       await s.page.reload(); await s.settle(500);
       await s.page.click('#cal-account-btn');
-      await s.page.waitForSelector('#import-dialog[open] #import-go:not([hidden])');
+      await s.page.waitForSelector('#import-dialog[open] #import-url');
+      await s.page.fill('#import-url', SHEET_URL); await s.page.click('#import-go');
+      await s.page.waitForSelector('#import-go:text-is("Import")');
       await s.page.click('#import-go');
       await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 15000 });
       assert.strictEqual(rowsWritten(b), first.n, 'identical row counts');
@@ -222,7 +229,7 @@ describe('AC20 — preview, confirmation, order, report', () => {
     const s = await scenario(browser, pending({ backend: b, sheet: reordered }));
     try {
       await runImport(s);
-      assert.deepStrictEqual(b.rows('session_checkins').map((r) => r.id), [idFor(S2, 0), idFor(S1, 0), idFor(S1, 1)]);
+      assert.deepStrictEqual(b.rows('session_checkins').map((r) => r.id), [idFor(S1, 0), idFor(S1, 1), idFor(S2, 0)]);
       assert.match(idFor(S1, 0), /^sheet-[0-9a-f]{32}-0$/);
     } finally { await s.close(); }
   });
@@ -236,7 +243,7 @@ describe('AC20 — a malformed envelope aborts with nothing written', () => {
     'HTML instead of JSON': { body: '<html>Sign in to Google</html>' },
     'HTTP 500': { status: 500, body: { ok: true, __K__: [] } },
   };
-  for (const [query, key, endpointName] of [['?list=1', 'sessions', 'sessions'], ['?plan=1', 'plan', 'plan'], ['?phases=1', 'phases', 'phases']]) {
+  for (const [query, key, endpointName] of [['?list=1', 'sessions', 'sessions'], ['?races=1', 'races', 'races'], ['?plan=1', 'plan', 'plan']]) {
     for (const [label, spec] of Object.entries(BAD)) {
       test(query + ' — ' + label, async () => {
         const s = await scenario(browser, pending());
@@ -245,6 +252,7 @@ describe('AC20 — a malformed envelope aborts with nothing written', () => {
           s.sheet.overrides[query] = { status: spec.status, body };
           await s.open(); await s.settle(400);
           await s.page.click('#cal-account-btn');
+          await s.page.fill('#import-url', SHEET_URL); await s.page.click('#import-go');
           await s.page.waitForFunction(() => /Nothing was written/.test(document.getElementById('import-msg').textContent), null, { timeout: 10000 });
           const m = await msg(s);
           assert.ok(m.includes(query), 'the message names the endpoint (' + query + '): ' + m);
@@ -258,15 +266,164 @@ describe('AC20 — a malformed envelope aborts with nothing written', () => {
     }
   }
 
-  test('no Sheet address in the build: a clear message, nothing written, no request anywhere', async () => {
-    const s = await scenario(browser, { backend: new Backend(), signedIn: true });   // sheet: none → TRAINING_LOG_WRITE_URL is ''
+  test('a failing ?phases=1 does not block the import: it continues with the device\'s phases and says so (AC-I5)', async () => {
+    for (const spec of [{ status: 500, body: { ok: true, phases: [] } }, { body: '<html>nope</html>' }, { body: { ok: true } }, { body: { ok: true, phases: 'x' } }]) {
+      const s = await scenario(browser, pending({ localStorage: { triMomentumPhasePlan_v1: [{ id: 'dev1', from: '2030-01-07', phase: 'base' }] } }));
+      try {
+        s.sheet.overrides['?phases=1'] = spec;
+        await openDialog(s);
+        assert.match(await msg(s), /No phase plan in the Sheet; using this device’s\./);
+        assert.match(await s.page.textContent('#import-counts'), /Phase blocksSheet 0 · This device 1 · Already in your account 0 · New 1/);
+        await s.page.click('#import-go');
+        await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 15000 });
+        assert.deepStrictEqual(s.backend.rows('phase_blocks').map((r) => r.id), ['dev1']);
+        assert.strictEqual(s.backend.rows('sheet_import').length, 1);
+        await clean(s);
+      } finally { await s.close(); }
+    }
+  });
+});
+
+describe('AC-S4/S5/S6/S7 — the address is asked for, validated, held in memory only, fetched with GET and nothing else', () => {
+  test('there is no Sheet address anywhere in the shipped page', async () => {
+    const s = await scenario(browser, pending());
     try {
-      await s.open(); await s.settle(400);
+      await s.open(); await s.settle(300);
+      const html = await s.page.evaluate(() => document.documentElement.outerHTML);
+      assert.ok(!new RegExp('script\\.google\\.com/macros/s/[A-Za-z0-9_-]{6,}|AKfy' + 'cb').test(html));
+      assert.ok(!new RegExp('script\\.google\\.com/macros/s/[A-Za-z0-9_-]{6,}|AKfy' + 'cb').test(require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8')));
+    } finally { await s.close(); }
+  });
+
+  test('the field is labelled, off autocomplete/spellcheck, the Sheet is optional, and a refused address shows an inline role=alert error and reads nothing', async () => {
+    const s = await scenario(browser, pending());
+    try {
+      await s.open(); s.opened = true; await s.settle(400);
       await s.page.click('#cal-account-btn');
-      await s.page.waitForFunction(() => /Nothing was written/.test(document.getElementById('import-msg').textContent));
-      assert.match(await msg(s), /No Sheet address/);
-      assert.strictEqual(s.backend.requests.filter((r) => r.method !== 'GET').length, 0);
+      await s.page.waitForSelector('#import-dialog[open] #import-url');
+      const f = await s.page.$eval('#import-url', (n) => ({ label: document.querySelector('label[for=import-url]').textContent, ac: n.autocomplete, sp: n.spellcheck, type: n.type, focus: document.activeElement === n }));
+      assert.strictEqual(f.label, 'Google Sheet address (optional)'); assert.strictEqual(f.ac, 'off'); assert.strictEqual(f.sp, false); assert.strictEqual(f.type, 'text'); assert.strictEqual(f.focus, true);
+      for (const bad of ['http://script.google.com/macros/s/TEST-DEPLOYMENT-ABCDEF/exec', 'https://evil.example/macros/s/TEST-DEPLOYMENT-ABCDEF/exec', 'not a url']) {
+        await s.page.fill('#import-url', bad);
+        await s.page.click('#import-go');
+        const err = await s.page.$eval('#import-url-err', (n) => ({ hidden: n.hidden, role: n.getAttribute('role'), text: n.textContent }));
+        assert.strictEqual(err.hidden, false); assert.strictEqual(err.role, 'alert'); assert.ok(err.text.length > 10);
+        assert.ok(!err.text.includes(bad), 'the error never repeats the address');
+        assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'import-url', 'focus returns to the field');
+      }
+      assert.deepStrictEqual(s.sheet.requests, [], 'a refused address is never fetched');
+      assert.strictEqual(rowsWritten(s.backend), 0);
       await clean(s);
+    } finally { await s.close(); }
+  });
+
+  test('device only: with the field empty nothing is sent to the Sheet, and this device\'s caches go in (sessions id\'d by content)', async () => {
+    const dev = { triMomentumLog_v1: [{ date: '2026-10-05', disc: 'swim', intensity: 'easy', duration: 60, rpe: 5, a1: 'intent', a2: 'planned', a3: null, b2: 'good', b3: 'none', note: '', phase: 'base', loggedAt: null }],
+      triMomentumRaces_v1: [{ id: 'dr1', name: 'Dev Race', date: '2031-06-01', url: '', notes: '', status: 'locked' }] };
+    const s = await scenario(browser, { backend: new Backend(), signedIn: true, localStorage: dev });
+    try {
+      await openDialog(s, false);
+      assert.match(await msg(s), /^Found this on this device\./);
+      assert.ok(!/Sheet \d/.test(await s.page.textContent('#import-counts')), 'no Sheet column when no Sheet was read');
+      await s.page.click('#import-go');
+      await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 15000 });
+      assert.strictEqual(s.backend.rows('session_checkins').length, 1); assert.match(s.backend.rows('session_checkins')[0].id, /^sheet-[0-9a-f]{32}-0$/);
+      assert.strictEqual(s.backend.rows('races').length, 1);
+      assert.strictEqual(s.backend.rows('sheet_import').length, 1);
+      assert.strictEqual(s.sheet, null);
+      assert.strictEqual(await s.ls('triMomentumDeviceImported_sb_v1'), s.backend.userId, 'the device-import flag is stored (AC-I6)');
+      await clean(s);
+    } finally { await s.close(); }
+  });
+
+  test('the address never reaches storage, the URL, history, the DOM, the console or a live-region announcement — after success, failure, Esc and a reload (AC-S6)', async () => {
+    const needle = 'TEST-DEPLOYMENT-ABCDEF';
+    async function leaks(s) {
+      return s.page.evaluate((n) => {
+        const out = [];
+        const dump = (st) => Object.keys(st).forEach((k) => { if ((k + st.getItem(k)).includes(n)) out.push('storage:' + k); });
+        dump(window.localStorage); dump(window.sessionStorage);
+        if (location.href.includes(n)) out.push('href');
+        if (JSON.stringify(history.state || null).includes(n)) out.push('history.state');
+        if (document.documentElement.outerHTML.includes(n)) out.push('DOM');
+        if (window.__live.some((m) => m.includes(n))) out.push('live');
+        return out;
+      }, needle).then(async (a) => a.concat(s.consoleMsgs.some((m) => m.text.includes(needle)) ? ['console'] : []).concat(await s.page.evaluate(async (n) => (indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name).filter((x) => String(x).includes(n)) : []), needle)));
+    }
+    // (a) success
+    let s = await scenario(browser, pending());
+    try { await runImport(s); assert.deepStrictEqual(await leaks(s), [], 'after a successful import'); await s.page.click('#import-go'); await s.page.waitForTimeout(100); assert.deepStrictEqual(await leaks(s), [], 'after Done'); assert.strictEqual(await s.page.$eval('#import-url', (n) => n.value), ''); await clean(s); } finally { await s.close(); }
+    // (b) failed read; (c) Esc; (d) reload
+    s = await scenario(browser, pending());
+    try {
+      s.sheet.overrides['?list=1'] = { status: 500, body: {} };
+      await s.open(); s.opened = true; await s.settle(300);
+      await s.page.click('#cal-account-btn'); await s.page.fill('#import-url', SHEET_URL); await s.page.click('#import-go');
+      await s.page.waitForFunction(() => /Nothing was written/.test(document.getElementById('import-msg').textContent));
+      assert.ok(!(await msg(s)).includes(needle)); assert.match(await msg(s), /\?list=1/);
+      assert.deepStrictEqual(await leaks(s), [], 'after a failed read');
+      await s.page.keyboard.press('Escape');
+      await s.page.waitForFunction(() => !document.getElementById('import-dialog').open);
+      await s.page.waitForTimeout(100);   // the 'close' event handler runs after the dialog is closed
+      assert.strictEqual(await s.page.$eval('#import-url', (n) => n.value), '', 'cleared when the dialog closes');
+      assert.deepStrictEqual(await leaks(s), [], 'after Esc');
+      await s.page.reload(); await s.settle(300);
+      assert.deepStrictEqual(await leaks(s), [], 'after a reload');
+    } finally { await s.close(); }
+  });
+
+  test('the Sheet is fetched with GET, credentials omitted, no Authorization / apikey / cookie, and the Supabase token goes to no other host (AC-S7)', async () => {
+    const s = await scenario(browser, pending());
+    try {
+      await runImport(s);
+      assert.ok(s.sheet.requests.length >= 4);
+      for (const r of s.sheet.requests) {
+        assert.strictEqual(r.method, 'GET');
+        for (const h of ['authorization', 'apikey', 'cookie']) assert.strictEqual(r.headers[h], undefined, h + ' must not be sent to the Sheet');
+      }
+      assert.deepStrictEqual(s.guard.blocked, []);
+    } finally { await s.close(); }
+  });
+
+  test('a 401 from the account mid-import: nothing is lost, the app drops to signed-out, no marker (AC-I8)', async () => {
+    const b = new Backend();
+    b.inject((i) => i.table === 'plan_sessions' && i.method === 'POST', { status: 401, body: { code: 'PGRST301', message: 'JWT expired' } });
+    const s = await scenario(browser, pending({ backend: b }));
+    try {
+      await runImport(s);
+      assert.match(await msg(s), /^Import stopped at plan\./);
+      assert.strictEqual(b.rows('sheet_import').length, 0);
+      assert.ok((await s.accountText()).startsWith('Not signed in'));
+      await clean(s);
+    } finally { await s.close(); }
+  });
+
+  test('a Sheet timeout and a non-JSON answer both stop with a message naming the query and write nothing (AC-I8)', async () => {
+    const s = await scenario(browser, pending({ timeoutMs: 5000 }));
+    try {
+      s.sheet.overrides['?races=1'] = { body: 'not json' };
+      await s.open(); await s.settle(300);
+      await s.page.click('#cal-account-btn'); await s.page.fill('#import-url', SHEET_URL); await s.page.click('#import-go');
+      await s.page.waitForFunction(() => /Nothing was written/.test(document.getElementById('import-msg').textContent));
+      assert.match(await msg(s), /\?races=1 answer was not JSON/);
+      assert.strictEqual(rowsWritten(s.backend), 0);
+    } finally { await s.close(); }
+  });
+
+  test('the same session from the Sheet and from this device is one session: no duplicate; a same-id different-content device row is counted under Differs and not written (AC-I3/I4)', async () => {
+    const dev = {
+      triMomentumLog_v1: [{ date: '2026-10-01', disc: 'swim', intensity: 'easy', duration: 45, rpe: 4, a1: 'intent', a2: 'planned', a3: null, b2: 'good', b3: 'none', note: 'steady', phase: 'base', loggedAt: 1790000000000 }],
+      triMomentumRaces_v1: [{ id: 'r1', name: 'Edited On Device', date: '2031-03-01', url: '', notes: '', status: 'considering' }],
+    };
+    const sheet = { sessions: [S1], races: [SHEET.races[0]], plan: [], phases: [] };
+    const s = await scenario(browser, { backend: new Backend(), signedIn: true, sheet, localStorage: dev });
+    try {
+      await runImport(s);
+      assert.strictEqual(s.backend.rows('session_checkins').length, 1, 'one id for one session');
+      assert.strictEqual(s.backend.rows('session_checkins')[0].id, idFor(S1, 0));
+      assert.strictEqual(s.backend.rows('races').length, 1);
+      assert.strictEqual(s.backend.rows('races')[0].name, 'Sam Lee Tri', 'the Sheet version is kept');
+      assert.match(await msg(s), /1 differed from the Sheet’s copy and was left out\./);
     } finally { await s.close(); }
   });
 });
@@ -279,7 +436,7 @@ describe('AC12 — the import dialog is operable and readable', () => {
     try {
       await openDialog(s);
       const dlg = await s.page.$eval('#import-dialog', (d) => ({ name: d.getAttribute('aria-labelledby'), label: document.getElementById(d.getAttribute('aria-labelledby')).textContent, modal: d.matches(':modal') }));
-      assert.strictEqual(dlg.modal, true, 'a modal dialog'); assert.strictEqual(dlg.label, 'Import from your Google Sheet');
+      assert.strictEqual(dlg.modal, true, 'a modal dialog'); assert.strictEqual(dlg.label, 'Bring your data across');
       // Tab around: a modal dialog makes everything behind it inert, so focus is
       // either on one of the dialog's own controls or has left the page for the
       // browser's chrome (activeElement = body). It never lands on the Calendar,
@@ -317,6 +474,42 @@ describe('AC12 — the import dialog is operable and readable', () => {
       await s.page.waitForTimeout(100);
       assert.strictEqual(await s.page.$eval('#import-dialog', (d) => d.open), false);
       await clean(s);
+    } finally { await s.close(); }
+  });
+});
+
+describe('AC-S4 — the address step is operable and readable (320px)', () => {
+  test('label tied to the field, field and buttons ≥44px, keyboard order field → Cancel → Read, Enter reads, error text has role=alert and ≥4.5:1 contrast, no overflow', async (t) => {
+    const s = await scenario(browser, pending({ viewport: { width: 320, height: 640 } }));
+    try {
+      await s.open(); s.opened = true; await s.settle(400);
+      await s.page.click('#cal-account-btn');
+      await s.page.waitForSelector('#import-dialog[open] #import-url');
+      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'import-url', 'focus starts on the field');
+      assert.strictEqual(await s.page.$eval('#import-url', (n) => n.labels.length + ':' + n.labels[0].textContent), '1:Google Sheet address (optional)');
+      assert.match(await s.page.$eval('#import-url', (n) => n.getAttribute('aria-describedby')), /import-url-help/);
+      for (const sel of ['#import-url', '#import-cancel', '#import-go']) {
+        const box = await (await s.page.$(sel)).boundingBox();
+        assert.ok(box.height >= 44 && box.width >= 44, sel + ' is ' + box.width + 'x' + box.height);
+      }
+      await s.page.keyboard.press('Tab');
+      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'import-cancel');
+      await s.page.keyboard.press('Tab');
+      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'import-go');
+      assert.strictEqual(await s.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+      await s.page.fill('#import-url', 'http://nope.example/');
+      await s.page.press('#import-url', 'Enter');
+      await s.page.waitForSelector('#import-url-err:not([hidden])');
+      const c = await s.page.evaluate(() => {
+        const g = (sel) => getComputedStyle(document.querySelector(sel));
+        return { bg: g('#import-dialog').backgroundColor, lbl: g('label[for=import-url]').color, help: g('#import-url-help').color, inFg: g('#import-url').color, inBg: g('#import-url').backgroundColor, errFg: g('#import-url-err').color, errBg: g('#import-url-err').backgroundColor, bd: g('#import-url').borderTopColor };
+      });
+      const r = { label: ratioOf(c.lbl, c.bg), help: ratioOf(c.help, c.bg), input: ratioOf(c.inFg, c.inBg), error: ratioOf(c.errFg, c.errBg), fieldBorder: ratioOf(c.bd, c.bg) };
+      t.diagnostic(Object.entries(r).map(([k, v]) => k + ' ' + v.toFixed(2)).join(' · '));
+      for (const k of ['label', 'help', 'input', 'error']) assert.ok(r[k] >= 4.5, k + ' contrast ' + r[k]);
+      t.diagnostic('field border vs dialog (non-text, informational): ' + r.fieldBorder.toFixed(2));
+      await s.page.screenshot({ path: '/tmp/import-source-320.png' });
+      assert.deepStrictEqual(s.sheet.requests, []);
     } finally { await s.close(); }
   });
 });

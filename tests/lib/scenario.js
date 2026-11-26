@@ -14,7 +14,8 @@ const { serveApp, guardNetwork, chromiumPath } = require('./app');
 const { chromium } = require('playwright');
 const { Backend } = require('./supabase-mock');
 
-const SHEET_URL = 'https://script.google.com/macros/s/TEST-DEPLOYMENT/exec';
+// Synthetic and visibly fake; the import dialog is asked for it, it is not in the page.
+const SHEET_URL = 'https://script.google.com/macros/s/TEST-DEPLOYMENT-ABCDEF/exec';
 const KEY = 'sb_publishable_test_key_not_real';
 
 async function launchBrowser() {
@@ -29,11 +30,11 @@ class SheetMock {
     this.overrides = {};   // query -> {status, body (string or object), raw}
   }
   async install(ctx) {
-    await ctx.route(/^https:\/\/script\.google\.com\/macros\/s\/TEST-DEPLOYMENT\/exec/, async (route) => {
+    await ctx.route(/^https:\/\/script\.google\.com\/macros\/s\/TEST-DEPLOYMENT-ABCDEF\/exec/, async (route) => {
       const req = route.request();
       const url = new URL(req.url());
       const headers = { 'access-control-allow-origin': '*', 'content-type': 'application/json' };
-      this.requests.push({ method: req.method(), search: url.search });
+      this.requests.push({ method: req.method(), search: url.search, headers: req.headers() });
       if (req.method() !== 'GET') return route.fulfill({ status: 405, headers, body: '{}' });
       const ov = this.overrides[url.search];
       if (ov) {
@@ -52,7 +53,6 @@ async function scenario(browser, opts) {
   const sheet = opts.sheet ? new SheetMock(opts.sheet) : null;
   const server = await serveApp({
     key: opts.key === undefined ? (backend ? KEY : '') : opts.key,
-    sheetUrl: sheet ? SHEET_URL : '',
     timeoutMs: opts.timeoutMs,
     transform: opts.transform,
   });
@@ -81,6 +81,10 @@ async function scenario(browser, opts) {
   });
   if (opts.init) await ctx.addInitScript(opts.init.fn, opts.init.arg);
   if (backend && opts.signedIn) await backend.seedSignedIn(ctx);
+  // This device has already made its first-sign-in choice (AC-I7): seeds the flag.
+  if (opts.deviceDecided) {
+    await ctx.addInitScript((id) => { if (!window.sessionStorage.getItem('__dd_seeded')) { window.sessionStorage.setItem('__dd_seeded', '1'); window.localStorage.setItem('triMomentumDeviceImported_sb_v1', id); } }, backend.userId);
+  }
   if (opts.localStorage) {
     await ctx.addInitScript((kv) => {
       if (window.sessionStorage.getItem('__ls_seeded')) return;

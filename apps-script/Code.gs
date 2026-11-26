@@ -1,7 +1,7 @@
 /**
  * TRI Momentum Google Sheet script: read-only backup, import source, Strava sync.
  *
- * STATUS (2026-11, CLAUDE.md decision 49): the live app no longer reads or
+ * STATUS (2026-11, CLAUDE.md decision 51): the live app no longer reads or
  * writes this script. Supabase is the source of truth. What this script is
  * for now:
  *   - The Sheet is a READ-ONLY BACKUP of everything up to the cutover.
@@ -14,7 +14,7 @@
  *   - After the import, ARCHIVE the web-app deployment (Deploy -> Manage
  *     deployments -> Archive; supabase/README.md has the step). doPost below
  *     has no authentication: while it is deployed, anyone who has the /exec
- *     URL (it is public, in index.html) can write to the Sheet. Archiving does
+ *     URL (it is not in the repository's current files, but it is in git history) can write to the Sheet. Archiving does
  *     not stop the Strava trigger, which is not a deployment. It does end the
  *     Strava authorisation redirect, which is pinned to the /exec URL, so
  *     re-authorising later means deploying again.
@@ -22,8 +22,7 @@
  *     needed.
  * Everything below describes the script as it was built and still behaves.
  *
- * Deploy this bound to the Sheet at:
- *   https://docs.google.com/spreadsheets/d/15I6fMqoJjlakSrmbqgPkgz44eZ955LOUUrlvUh3IRy0/edit
+ * Deploy this bound to the owner's Google Sheet (open it from Google Drive).
  *
  * Setup (one-time, ~2 minutes):
  *   1. Open that Sheet.
@@ -272,9 +271,8 @@ function spikeProbe_(cals, scriptTz) {
   return { found: false };
 }
 
-// Read path — the Sheet is the cross-device source of truth the app loads
-// from on every visit (see index.html's refreshLogFromSheet, which now reads
-// Supabase; this read path is the import source). Returns every
+// Read path — this is the source of index.html's one-off "Import from Sheet"
+// (the app's own reads go to Supabase now; CLAUDE.md decision 51). Returns every
 // logged session as JSON, in the same field names doPost accepts, so a
 // round trip through the Sheet is lossless. Column order here must match
 // SHEET_HEADERS positionally (A-M; Week No (A) is derived, not part of the

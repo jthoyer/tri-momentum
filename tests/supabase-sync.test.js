@@ -28,7 +28,8 @@ async function clean(s) {
   assert.deepStrictEqual(await s.unhandled(), [], 'unhandled rejections');
   assert.deepStrictEqual(s.guard.blocked, [], 'requests nobody mocked');
 }
-const synced = (b, o) => Object.assign({ backend: b, signedIn: true, transform: exposeHandle }, o || {});
+// deviceDecided: these suites are about the sync itself; the first-sign-in choice (AC-I7) has its own tests in phase-plan-sync / device-import.
+const synced = (b, o) => Object.assign({ backend: b, signedIn: true, deviceDecided: true, transform: exposeHandle }, o || {});
 const writes = (b, table) => b.requests.filter((r) => r.table === table && r.method !== 'GET');
 const reads = (b, table) => b.requests.filter((r) => r.table === table && r.method === 'GET');
 

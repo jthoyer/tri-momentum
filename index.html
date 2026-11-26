@@ -165,7 +165,9 @@ textarea::placeholder{color:var(--ink3)}
 .import-counts li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-top:1px solid var(--bd);font-size:15px;line-height:1.4;color:var(--ink)}
 .import-counts .n{text-align:right;color:var(--ink2);font-size:14px}
 .import-note{margin:12px 0 0;font-size:14px;line-height:1.5;color:var(--ink2)}
-.import-actions{display:flex;gap:10px;margin-top:18px}
+.import-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.import-field{margin-top:14px}
+.import-field .plan-form-error{margin-top:10px}
 .import-actions .btn[hidden]{display:none}
 
 /* Planned-session cards at the top of the check-in flow's first page. A
@@ -305,7 +307,7 @@ textarea::placeholder{color:var(--ink3)}
 .race-add-toggle:hover{background:#1246ad}
 .race-form-wrap[hidden]{display:none}
 .race-form{margin-top:1.1rem;padding:1rem 1.05rem 1.1rem;background:var(--s1);border:0.5px solid var(--bd2);border-radius:var(--rlg);display:flex;flex-direction:column;gap:14px}
-.race-field .field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:12px}
+.race-field .field-lbl,.import-field .field-lbl{display:block;font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:12px}
 .race-field .sub{font-weight:400;font-size:12.5px;color:var(--ink2)}
 .race-field textarea{min-height:48px}
 .race-form-actions{display:flex;gap:10px;margin-top:2px}
@@ -692,12 +694,19 @@ fieldset.plan-field{border:0;min-width:0}
 
   <!-- ══════════ IMPORT FROM THE SHEET — a modal <dialog>: focus is trapped, Esc closes it ══════════ -->
   <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-h">
-    <h2 class="import-h" id="import-h">Import from your Google Sheet</h2>
+    <h2 class="import-h" id="import-h">Bring your data across</h2>
     <p class="import-msg" id="import-msg" role="status" aria-live="polite"></p>
-    <ul class="import-counts" id="import-counts" aria-label="What the Sheet holds" hidden></ul>
-    <p class="import-note" id="import-note" hidden>Compare these counts with each tab of your Sheet (its rows, not counting the header row) before you confirm.</p>
+    <div class="import-field" id="import-source" hidden>
+      <label class="field-lbl" for="import-url">Google Sheet address (optional)</label>
+      <input class="text-input" id="import-url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="import-url-help import-url-err">
+      <p class="import-note" id="import-url-help">Leave this empty to bring across only what is on this device. The address comes from Apps Script (Deploy, Manage deployments). It is used for this import only and is never saved.</p>
+      <p class="plan-form-error" id="import-url-err" role="alert" hidden></p>
+    </div>
+    <ul class="import-counts" id="import-counts" aria-label="What was found" hidden></ul>
+    <p class="import-note" id="import-note" hidden></p>
     <div class="import-actions">
       <button type="button" class="btn btn-ghost" id="import-cancel">Cancel</button>
+      <button type="button" class="btn btn-ghost" id="import-discard" hidden>Discard</button>
       <button type="button" class="btn btn-primary" id="import-go" hidden>Import</button>
     </div>
   </dialog>
@@ -1167,7 +1176,12 @@ if(window.caches && caches.keys){
   // replaces the cache from a server read, and sends nothing to the data
   // tables. (Session check-ins are held in an outbox until `synced`.)
   // ═══════════════════════════════════════════════════════════════
-  var SUPABASE_URL = 'https://ghfvmsyxfovwaeeuzlzn.supabase.co';
+  // The project URL ("https://<20 lowercase letters and digits>.supabase.co").
+  // Filled in by the owner together with the publishable key below
+  // (supabase/README.md). Blank = the app runs local-only. It is deliberately
+  // blank in the repository: the project this app first pointed at was deleted,
+  // and a real address belongs in the owner's own commit.
+  var SUPABASE_URL = '';
   // The project's PUBLISHABLE key ("sb_publishable_…"). Public by design: it
   // only identifies the project, and what a signed-in user may do is decided by
   // row-level security in the database, not by this key. Filled in by the
@@ -1179,9 +1193,9 @@ if(window.caches && caches.keys){
   // location.href, so a preview URL or a trailing "index.html" can't make the
   // redirect fall outside the one URL the Supabase dashboard allows.
   var SITE_URL = 'https://jthoyer.github.io/tri-momentum/';
-  // The old Google Apps Script web app. READ ONLY, and only by the one-off
-  // import. (Historic name: it used to be the write endpoint too.)
-  var TRAINING_LOG_WRITE_URL = 'https://script.google.com/macros/s/AKfycbxqgAW5vtM3OonTIFQk_634WJLlk2f5YujJ5D65Nw76l8shoj4R1pf2zgrmHmKzY7_e_g/exec';
+  // There is no Apps Script address in this file, on purpose. The one-off
+  // import asks the owner for it when they run it, holds it in memory for the
+  // life of the open dialog and never stores it (see IMPORT below).
   var SB_TIMEOUT_MS = 15000;     // one Supabase request; a hung one must not hold the UI or a write queue
   var SHEET_TIMEOUT_MS = 45000;  // Apps Script cold starts are slow
   var PAGE_SIZE = 1000;          // Supabase's default max-rows; reads page past it
@@ -1198,7 +1212,7 @@ if(window.caches && caches.keys){
 
   // ── (a) client creation ───────────────────────────────────────
   function createBackendClient(){
-    if(!SUPABASE_PUBLISHABLE_KEY){ return null; }
+    if(!SUPABASE_PUBLISHABLE_KEY || !SUPABASE_URL){ return null; }
     if(!window.supabase || typeof window.supabase.createClient !== 'function'){
       console.warn('TRI Momentum: the Supabase library did not load; running on this device only.');
       return null;
@@ -1249,6 +1263,7 @@ if(window.caches && caches.keys){
     if(!c){ return ''; }
     var t = c.line;
     if(c.email){ t += ' · ' + (accountEmail() || 'your account'); }
+    if(deviceHeld && syncMode === 'synced'){ t += ' This device holds data your account does not have yet.'; }
     return accountNotice ? t + ' ' + accountNotice : t;
   }
   // The account line is the LAST block of the Calendar, in Week and Month
@@ -1256,6 +1271,14 @@ if(window.caches && caches.keys){
   // is built with the Calendar, and updated IN PLACE when the mode changes, so
   // a mode change never rebuilds the Calendar or costs keyboard focus. Writes
   // only with textContent: the email and every message is data.
+  // Shown only while a device's own data waits for the owner's Add or Discard.
+  function reviewButton(){
+    if(!(deviceHeld && syncMode === 'synced')){ return null; }
+    var b = el('button', 'cal-account-btn', 'Review data on this device');
+    b.type = 'button'; b.id = 'cal-account-review-btn';
+    b.addEventListener('click', function(){ openImportDialog('device'); });
+    return b;
+  }
   function calAccountBlock(){
     var c = ACCOUNT_COPY[syncMode];
     if(!c){ return null; }   // unconfigured, or booting: no line at all
@@ -1270,6 +1293,8 @@ if(window.caches && caches.keys){
     btn.addEventListener('click', onAccountButton);
     box.appendChild(lineEl);
     box.appendChild(btn);
+    var rv = reviewButton();
+    if(rv){ box.appendChild(rv); }
     return box;
   }
   function renderAccountLine(){
@@ -1287,6 +1312,9 @@ if(window.caches && caches.keys){
     var btn = document.getElementById('cal-account-btn');
     btn.textContent = c.btn;
     btn.dataset.act = c.act;
+    var rv = document.getElementById('cal-account-review-btn');
+    if(deviceHeld && syncMode === 'synced'){ if(!rv){ box.appendChild(reviewButton()); } }
+    else if(rv){ rv.parentNode.removeChild(rv); }
   }
   function setSyncMode(next, silent){
     if(next === syncMode && modeSeen){ renderAccountLine(); return; }
@@ -1407,7 +1435,7 @@ if(window.caches && caches.keys){
     var act = document.getElementById('cal-account-btn').dataset.act;
     if(act === 'signin'){ accountSignIn(); }
     else if(act === 'signout'){ accountSignOut(); }
-    else if(act === 'import'){ openImportDialog(); }
+    else if(act === 'import'){ openImportDialog('first'); }
   }
   function initBackend(){
     sb = createBackendClient();
@@ -1617,6 +1645,12 @@ if(window.caches && caches.keys){
   function refreshKind(kind, job){
     if(refreshFlight[kind]){ return refreshFlight[kind]; }
     if(!isSynced()){ kickAccountCheck(); return Promise.resolve(false); }
+    // A device that has not yet had its first-sign-in choice (DEVICE IMPORT)
+    // never replaces its cache from a read.
+    if(!deviceDecided()){
+      ensureDeviceCheck().then(function(decided){ if(decided){ onEnteredSynced(); } });
+      return Promise.resolve(false);
+    }
     var ep = syncModeEpoch;
     var p = writeChain[kind].then(function(){
       if(ep !== syncModeEpoch || !isSynced()){ return false; }
@@ -1641,18 +1675,6 @@ if(window.caches && caches.keys){
   function submitSessionToSheet(entry){
     addToOutbox(entry);
     if(isSynced()){ flushOutbox(); }
-  }
-  // Inverse of the Sheet's session row — kept because the import reads the
-  // Sheet and must normalise it by the app's own rules.
-  function parseSheetSession(row){
-    return {
-      date: row.when || '', disc: row.disc || '', intensity: row.intensity || '',
-      duration: row.duration === '' || row.duration == null ? null : row.duration,
-      a1: row.a1 || null, a2: row.a2 || null, a3: row.a3 || null,
-      rpe: row.rpe === '' || row.rpe == null ? null : parseInt(row.rpe, 10),
-      b2: row.b2 || null, b3: row.b3 || null,
-      note: row.note || '', phase: row.phase || null, loggedAt: null
-    };
   }
   // Held check-ins first reach the server, THEN the cache is replaced. The log
   // shown is the server's rows plus any held entry the server doesn't have
@@ -1760,23 +1782,13 @@ if(window.caches && caches.keys){
   // ── Phase plan ────────────────────────────────────────────────
   // phasePlan carries an invariant races/plan never had to: once any block
   // exists there must always be at least one. That makes an EMPTY read
-  // ambiguous the first time a device syncs: "nothing planned" or "this
-  // device has real blocks the server hasn't seen". Trusting an empty read the
-  // way races/plan do would wipe a working plan on the next page load
-  // (decision 48). So an empty read never replaces a non-empty local plan; the
-  // local plan is pushed up instead, once per device. The flag is a new key,
-  // so the Sheet-era flag (triMomentumPhaseSynced_v1) has no effect here.
-  var PHASE_SYNCED_KEY = 'triMomentumPhaseSynced_sb_v1';
-  function hasPushedPhasePlan(){
-    if(!storageOk){ return true; }
-    try{ return window.localStorage.getItem(PHASE_SYNCED_KEY) === '1'; } catch(e){ return true; }
-  }
-  // Set once the push is CONFIRMED (unlike the Sheet era, where an
-  // opaque cross-origin write couldn't be read back), so a push that failed is tried again.
-  function markPhasePlanPushed(){
-    if(!storageOk){ return; }
-    try{ window.localStorage.setItem(PHASE_SYNCED_KEY, '1'); } catch(e){ console.warn('TRI Momentum: could not record the phase-plan push.', e); }
-  }
+  // ambiguous: "nothing planned" or "this device has real blocks the server
+  // hasn't seen". Trusting an empty read the way races/plan do would wipe a
+  // working plan on the next page load (decision 48), so an empty read never
+  // replaces a non-empty local plan. The old silent one-time push of the local
+  // plan is gone (decision 51): a device's first signed-in read is held until
+  // the owner has chosen Add or Discard for what only that device holds (see
+  // DEVICE IMPORT below), and every later edit writes through on its own.
   // `extra` carries whatever the action needs beyond a single item —
   // {items:[...]} for addBatch/replaceAll, {from,to} for deleteRange.
   function submitPhaseToSheet(action, item, extra){
@@ -1813,76 +1825,80 @@ if(window.caches && caches.keys){
       return readAllRows('phase_blocks', PHASE_COLS).then(function(r){
         if(r.fail){ return readFailed('phase_blocks', r.fail); }
         if(!stillValid()){ return false; }
-        if(!r.rows.length){
-          if(phasePlan.length && !hasPushedPhasePlan()){
-            return queueWrite('phase', 'push of the local plan', insertSteps('phase', phasePlan.map(phaseToRow))).then(function(ok){
-              if(ok){ markPhasePlanPushed(); }
-              return false;
-            });
-          }
-          return false;
-        }
+        if(!r.rows.length){ return false; }   // an empty read never replaces a non-empty local plan
         var next = r.rows.map(rowToPhaseBlock);
         var changed = JSON.stringify(next) !== JSON.stringify(phasePlan);
         phasePlan = next;
         persistPhasePlan();
         recomputeCurrentPhase();
-        markPhasePlanPushed();
         return changed;
       });
     });
   }
 
-  // On any change into `synced` (boot, return from sign-in, import complete):
-  // flush the outbox, run the four refreshes, repaint what is on screen.
-  function onEnteredSynced(){
-    flushOutbox().then(function(){
-      return Promise.all([refreshLogFromSheet(), refreshRacesFromSheet(), refreshPlanFromSheet(), refreshPhasePlanFromSheet()]);
-    }).then(function(results){
-      if(!isSynced()){ return; }
-      // Each refresh resolves to "the data changed", so nothing is redrawn (and
-      // no keyboard focus is dropped) when the server held what the cache did.
-      // The same hold rules as refreshVisibleViewFromSheet / redrawForNewDay:
-      // not under an open Month phase select, a half-filled race form or an
-      // open plan form.
-      if(!results.some(Boolean)){ return; }
-      repaintCalendarHeld();
-      if(!els.viewDash.hidden){ renderDashboard(); }
-      if(!els.viewTrends.hidden){ renderTrends(); }
-      if(!els.viewRaces.hidden && !raceFormOpen){ renderRaces(); }
-      if(!els.viewPlan.hidden && !planFormOpenFor && !planCopyOpen){ renderPlan(); }
-    });
-  }
-
   // ═══════════════════════════════════════════════════════════════
-  // IMPORT FROM THE SHEET — (g) a one-off, in-app copy of the old Sheet into
-  // Supabase. Offered only in import-pending mode. It reads the four public
-  // GET endpoints, validates each envelope, shows counts, and writes nothing
-  // until the athlete confirms. Rows go in insert-if-absent in Sheet order, and
-  // the sheet_import marker is written LAST, only after all four succeeded —
-  // so a run that stops partway is simply run again.
+  // IMPORT — a one-off, in-app copy of the owner's existing history into
+  // Supabase. Two sources:
+  //   this device   the four caches on this device (always offered)
+  //   the Sheet     the old Google Sheet, through its Apps Script web app
+  //                 (optional)
+  // The Apps Script address is NOT in this file. The owner types it into the
+  // dialog; it is validated (parseSheetAddress), used for GETs only, held in
+  // one module variable while the dialog reads, and never stored anywhere
+  // (not localStorage, sessionStorage, the URL, history, the DOM or a log).
+  // Nothing is written until the owner confirms the preview. Rows go in
+  // insert-if-absent, and the sheet_import marker is written LAST, only after
+  // every kind succeeded, so a run that stops partway is simply run again.
   // ═══════════════════════════════════════════════════════════════
   var IMPORT_ENDPOINTS = [
     {kind: 'sessions', query: '?list=1',   key: 'sessions', label: 'sessions'},
     {kind: 'races',    query: '?races=1',  key: 'races',    label: 'races'},
     {kind: 'plan',     query: '?plan=1',   key: 'plan',     label: 'planned sessions'},
-    {kind: 'phases',   query: '?phases=1', key: 'phases',   label: 'phase blocks'}
+    {kind: 'phases',   query: '?phases=1', key: 'phases',   label: 'phase blocks', optional: true}
   ];
+  var IMPORT_KINDS = ['sessions', 'races', 'plan', 'phases'];
+  var IMPORT_TABLE = {sessions: 'session_checkins', races: 'races', plan: 'plan_sessions', phases: 'phase_blocks'};
   function isRealDate(s){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(s)){ return false; }
     var d = new Date(s + 'T00:00:00Z');
     return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
   }
-  // A GET of one endpoint, in cors mode (the body is parsed). Any other shape
-  // than {ok:true, <key>: Array} aborts the import: that is the guard against
-  // the decision-36 incident, a stale deployment answering with placeholders.
-  function importFetch(ep){
-    if(!TRAINING_LOG_WRITE_URL){ return Promise.reject(new Error('No Sheet address is set in this build.')); }
+  // The only address the import will fetch: a Google Apps Script web app,
+  // https://script.google.com/macros/s/<id>/exec, and nothing more. It
+  // guarantees "an Apps Script endpoint with nothing else in the URL"; it
+  // cannot tell the owner's deployment from someone else's, so the counts
+  // preview is the guard against that. Returns {ok:true, url} or {ok:false,
+  // why}; the reason never repeats the address.
+  function parseSheetAddress(raw){
+    var s = String(raw == null ? '' : raw).trim();
+    var bad = function(why){ return {ok: false, why: why}; };
+    if(!s){ return bad('Enter the address, or leave the field empty to use this device only.'); }
+    var u;
+    try{ u = new URL(s); } catch(e){ return bad('That is not a web address.'); }
+    if(u.protocol !== 'https:'){ return bad('The address must start with https://.'); }
+    if(u.hostname !== 'script.google.com'){ return bad('The address must be on script.google.com.'); }
+    if(u.username || u.password || u.port){ return bad('The address must not contain a user name, password or port.'); }
+    if(!/^\/macros\/s\/[A-Za-z0-9_-]{10,}\/exec$/.test(u.pathname)){ return bad('The address must look like https://script.google.com/macros/s/…/exec.'); }
+    if(u.search || u.hash || /[?#]/.test(s)){ return bad('Leave off everything after /exec (no ? or #).'); }
+    // The URL parser quietly drops tabs and line breaks, rewrites a backslash
+    // to a slash, lower-cases the host and trailing '?' or '#'. Accept only an
+    // address that is already exactly what it parses to.
+    if(u.href !== s){ return bad('The address has characters the web-address rules would change. Copy it again from Apps Script.'); }
+    return {ok: true, url: s};
+  }
+  // A GET of one endpoint, in cors mode (the body is parsed): no cookies, no
+  // authorisation header, no referrer. Any other shape than {ok:true, <key>:
+  // Array} is an error: that is the guard against the decision-36 incident, a
+  // stale deployment answering with placeholders. Messages name the query
+  // (?list=1), never the address.
+  function importFetch(base, ep){
     var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = ctrl ? window.setTimeout(function(){ ctrl.abort(); }, SHEET_TIMEOUT_MS) : 0;
     function done(){ if(timer){ window.clearTimeout(timer); } }
     function bad(why){ return new Error('The Sheet’s ' + ep.query + ' answer ' + why + '.'); }
-    return fetch(TRAINING_LOG_WRITE_URL + ep.query, ctrl ? {signal: ctrl.signal} : undefined).then(function(res){
+    var init = {method: 'GET', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'};
+    if(ctrl){ init.signal = ctrl.signal; }
+    return fetch(base + ep.query, init).then(function(res){
       if(!res.ok){ throw bad('failed (HTTP ' + res.status + ')'); }
       return res.json().catch(function(){ throw bad('was not JSON'); });
     }).then(function(data){
@@ -1892,17 +1908,31 @@ if(window.caches && caches.keys){
     }, function(err){
       done();
       if(err && /^The Sheet/.test(err.message)){ throw err; }
-      throw new Error('The Sheet’s ' + ep.query + ' answer could not be read (' + (err && err.name === 'AbortError' ? 'timed out' : (err && err.message) || 'network error') + ').');
+      throw new Error('The Sheet’s ' + ep.query + ' answer could not be read (' + (err && err.name === 'AbortError' ? 'timed out' : 'network error') + ').');
     });
   }
   function hex(buf){
     return Array.prototype.map.call(new Uint8Array(buf), function(b){ return (b < 16 ? '0' : '') + b.toString(16); }).join('');
   }
+  // One normaliser for a session from either source: a Sheet row ({when, …},
+  // strings) or a cache entry ({date, …}, numbers, null). Both must produce
+  // the same values for the same session, or they get two ids and a duplicate.
+  function normalizeSession(raw){
+    var d = raw.when != null ? raw.when : raw.date;
+    return {
+      date: String(d == null ? '' : d), disc: raw.disc || '', intensity: raw.intensity || '',
+      duration: toIntOrNull(raw.duration), rpe: toIntOrNull(raw.rpe),
+      a1: raw.a1 || null, a2: raw.a2 || null, a3: raw.a3 || null, b2: raw.b2 || null, b3: raw.b3 || null,
+      note: raw.note || '', phase: raw.phase || null,
+      loggedAt: typeof raw.loggedAt === 'number' && isFinite(raw.loggedAt) ? raw.loggedAt : null
+    };
+  }
   // Session ids that depend on nothing but the row's own content: 'sheet-' +
   // a SHA-256 of the normalised fields in a fixed order + '-' + the 0-based
-  // occurrence of that exact tuple in Sheet order (so two genuinely identical
-  // rows stay two rows). Not on row position, time or randomness: every run,
-  // device and browser derives the same id for the same row.
+  // occurrence of that exact tuple WITHIN ITS SOURCE, in source order (so two
+  // genuinely identical rows stay two rows). Not on row position, time or
+  // randomness: every run, device and browser derives the same id for the same
+  // row. A device entry that already carries an id keeps it.
   function sessionImportId(s, digestCache){
     var canon = JSON.stringify([s.date, s.disc, s.duration, s.intensity, s.rpe, s.a1, s.a2, s.a3, s.b2, s.b3, s.note, s.phase]);
     return window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(canon)).then(function(buf){
@@ -1912,24 +1942,26 @@ if(window.caches && caches.keys){
       return 'sheet-' + d + '-' + n;
     });
   }
-  function buildImportPlan(raw){
+  // Valid rows and skip reasons for one source. `raw` has one array per kind
+  // (phases may be empty: the Sheet may have no Phases tab); `trustIds` is true
+  // for the device, whose entries may carry ids from an earlier sync.
+  function buildCandidates(raw, trustIds){
     var out = {
       sessions: {rows: [], skipped: {}}, races: {rows: [], skipped: {}},
       plan: {rows: [], skipped: {}}, phases: {rows: [], skipped: {}}
     };
     function skip(kind, why){ out[kind].skipped[why] = (out[kind].skipped[why] || 0) + 1; }
     var seen = {}, chain = Promise.resolve();
-    raw.sessions.forEach(function(row){
+    (raw.sessions || []).forEach(function(row){
       chain = chain.then(function(){
-        var s = parseSheetSession(row || {});
-        s.date = String(s.date);
+        row = row || {};
+        var s = normalizeSession(row);
         if(!isRealDate(s.date)){ skip('sessions', 'bad date'); return; }
-        s.duration = toIntOrNull(s.duration);
-        if(s.rpe != null && isNaN(s.rpe)){ s.rpe = null; }
+        if(trustIds && typeof row.id === 'string' && row.id){ s.id = row.id; out.sessions.rows.push(s); return; }
         return sessionImportId(s, seen).then(function(id){ s.id = id; out.sessions.rows.push(s); });
       });
     });
-    raw.races.forEach(function(row){
+    (raw.races || []).forEach(function(row){
       row = row || {};
       var r = {id: String(row.id || ''), name: String(row.name || ''), date: String(row.date || ''), url: row.url || '', notes: row.notes || '',
                status: row.status === 'locked' ? 'locked' : 'considering'};
@@ -1937,13 +1969,13 @@ if(window.caches && caches.keys){
       if(!isRealDate(r.date)){ skip('races', 'bad date'); return; }
       out.races.rows.push(r);
     });
-    raw.plan.forEach(function(row){
+    (raw.plan || []).forEach(function(row){
       var p = parseSheetPlanItem(row || {});
       if(!isRealDate(String(p.date))){ skip('plan', 'bad date'); return; }
       if(!p.id){ skip('plan', 'missing id'); return; }
       out.plan.rows.push(p);
     });
-    raw.phases.forEach(function(row){
+    (raw.phases || []).forEach(function(row){
       var b = parseSheetPhaseBlock(row || {});
       if(!b.id || !b.from || !b.phase){ skip('phases', 'missing id, from or phase'); return; }
       if(!isRealDate(b.from)){ skip('phases', 'bad date'); return; }
@@ -1951,28 +1983,105 @@ if(window.caches && caches.keys){
     });
     return chain.then(function(){ return out; });
   }
-  function importRead(){
-    var raw = {};
-    if(!window.crypto || !window.crypto.subtle){ return Promise.reject(new Error('Importing needs a secure (https) connection.')); }
-    return IMPORT_ENDPOINTS.reduce(function(p, ep){
-      return p.then(function(){ return importFetch(ep).then(function(rows){ raw[ep.key] = rows; }); });
-    }, Promise.resolve()).then(function(){
-        return buildImportPlan(raw);
-    });
-  }
+  function countOf(map){ var n = 0; Object.keys(map).forEach(function(k){ n += map[k]; }); return n; }
   var IMPORT_WRITERS = {
     sessions: {table: 'session_checkins', map: sessionToRow},
     races:    {table: 'races',            map: raceToRow},
     plan:     {table: 'plan_sessions',    map: planToRow},
     phases:   {table: 'phase_blocks',     map: phaseToRow}
   };
+  // The union of the sources, per kind, compared with what the account holds.
+  // Same id in both sources: the Sheet's version is kept, and a device row
+  // whose content differs is counted ("differs") and not written. Sessions go
+  // in ascending date order, original order kept within a date.
+  function mergeCandidates(sheet, device, server){
+    var out = {};
+    IMPORT_KINDS.forEach(function(kind){
+      var w = IMPORT_WRITERS[kind], byId = {}, order = [], differs = 0;
+      function key(r){ var m = w.map(r); if(kind === 'sessions'){ delete m.logged_at; } return JSON.stringify(m); }
+      if(sheet){ sheet[kind].rows.forEach(function(r){ if(!byId.hasOwnProperty(r.id)){ byId[r.id] = r; order.push(r); } }); }
+      device[kind].rows.forEach(function(r){
+        if(byId.hasOwnProperty(r.id)){ if(key(byId[r.id]) !== key(r)){ differs++; } return; }
+        byId[r.id] = r; order.push(r);
+      });
+      if(kind === 'sessions'){
+        order = order.map(function(r, i){ return [r, i]; }).sort(function(a, b){
+          return a[0].date < b[0].date ? -1 : a[0].date > b[0].date ? 1 : a[1] - b[1];
+        }).map(function(p){ return p[0]; });
+      }
+      var add = order.filter(function(r){ return !server[kind].hasOwnProperty(r.id); });
+      var skipped = {};
+      [sheet, device].forEach(function(src){
+        if(src){ Object.keys(src[kind].skipped).forEach(function(why){ skipped[why] = (skipped[why] || 0) + src[kind].skipped[why]; }); }
+      });
+      var sheetN = sheet ? sheet[kind].rows.length + countOf(sheet[kind].skipped) : 0;
+      var deviceN = device[kind].rows.length + countOf(device[kind].skipped);
+      out[kind] = {rows: add, all: order.length, sheetFound: sheetN, deviceFound: deviceN, inAccount: order.length - add.length, differs: differs, skipped: skipped};
+    });
+    return out;
+  }
+  // The ids the account already holds, per kind. Resolves {ids} or {fail: res}.
+  function readServerIds(){
+    var ids = {};
+    return IMPORT_KINDS.reduce(function(p, kind){
+      return p.then(function(prev){
+        if(prev && prev.fail){ return prev; }
+        return readAllRows(IMPORT_TABLE[kind], 'id').then(function(r){
+          if(r.fail){ return {fail: r.fail}; }
+          ids[kind] = {};
+          r.rows.forEach(function(row){ ids[kind][String(row.id)] = true; });
+          return {ids: ids};
+        });
+      });
+    }, Promise.resolve(null));
+  }
+  // What this device holds, in the same shapes the Sheet's rows have.
+  function deviceSnapshot(){
+    return {sessions: log.slice(), races: races.slice(), plan: plan.slice(), phases: phasePlan.slice()};
+  }
+  // Candidates from the device and (when `sheetRaw` is given) the Sheet,
+  // merged against the account's ids.
+  function importCompute(sheetRaw, serverIds){
+    return Promise.all([
+      buildCandidates(deviceSnapshot(), true),
+      sheetRaw ? buildCandidates(sheetRaw, false) : Promise.resolve(null)
+    ]).then(function(r){ return mergeCandidates(r[1], r[0], serverIds); });
+  }
+  function importHasNew(planned){
+    return IMPORT_KINDS.some(function(k){ return planned[k].rows.length > 0; });
+  }
+  // Reads the Sheet (when asked), this device and the account, builds the
+  // preview. The phases endpoint is optional: a deployed script without a
+  // Phases tab is the expected case, not an error.
+  function importRead(addr){
+    if(!window.crypto || !window.crypto.subtle){ return Promise.reject(new Error('Importing needs a secure (https) connection.')); }
+    var raw = null, noPhases = false;
+    var readSheet = !addr ? Promise.resolve() : (function(){
+      raw = {};
+      return IMPORT_ENDPOINTS.reduce(function(p, ep){
+        return p.then(function(){
+          return importFetch(addr, ep).then(function(rows){ raw[ep.key] = rows; }, function(err){
+            if(!ep.optional){ throw err; }
+            raw[ep.key] = []; noPhases = true;
+          });
+        });
+      }, Promise.resolve());
+    })();
+    return readSheet.then(function(){ return readServerIds(); }).then(function(r){
+      if(r && r.fail){
+        if(r.fail.status === 401){ handleUnauthorized(); }
+        throw new Error('Your account could not be read (' + errText(r.fail) + ').');
+      }
+      return importCompute(raw, r.ids).then(function(planned){ return {planned: planned, sheet: !!raw, noPhases: noPhases}; });
+    });
+  }
   // Insert-if-absent in chunks; `.select('id')` returns only the rows actually
   // inserted (a conflicting row is skipped and not returned), so
   // inserted / already-present is counted, not guessed.
   function importWriteKind(kind, rows){
     var w = IMPORT_WRITERS[kind], inserted = 0, i = 0, chunks = chunked(rows.map(w.map));
     function next(){
-      if(i >= chunks.length){ return Promise.resolve({inserted: inserted, present: rows.length - inserted}); }
+      if(i >= chunks.length){ return Promise.resolve(inserted); }
       var chunk = chunks[i++];
       return sbCall(function(sig){ return sb.from(w.table).upsert(chunk, INSERT_IF_ABSENT).select('id').abortSignal(sig); }).then(function(res){
         if(res.error){
@@ -1985,18 +2094,21 @@ if(window.caches && caches.keys){
     }
     return next();
   }
-  function importRun(planned){
-    var counts = {}, order = ['sessions', 'races', 'plan', 'phases'];
-    return order.reduce(function(p, kind){
+  // `withMarker` is true for the first import of an account (the marker row
+  // means "this account's history is in") and false for a later device, whose
+  // account already has one.
+  function importRun(planned, withMarker){
+    var counts = {};
+    return IMPORT_KINDS.reduce(function(p, kind){
       return p.then(function(){
-        return importWriteKind(kind, planned[kind].rows).then(function(c){
-          var skippedN = 0;
-          Object.keys(planned[kind].skipped).forEach(function(k){ skippedN += planned[kind].skipped[k]; });
-          counts[kind] = {found: planned[kind].rows.length + skippedN, inserted: c.inserted, present: c.present, skipped: skippedN};
+        return importWriteKind(kind, planned[kind].rows).then(function(inserted){
+          var k = planned[kind];
+          counts[kind] = {found: k.sheetFound + k.deviceFound, inserted: inserted, present: k.all - inserted, skipped: countOf(k.skipped), differs: k.differs};
         });
       });
     }, Promise.resolve()).then(function(){
-      // Last, and only now: the marker means "this account's history is in".
+      if(!withMarker){ return {error: null}; }
+      // Last, and only now.
       return sbCall(function(sig){
         return sb.from('sheet_import').upsert({counts: counts}, {onConflict: 'user_id', ignoreDuplicates: true, defaultToNull: false}).abortSignal(sig);
       });
@@ -2021,9 +2133,10 @@ if(window.caches && caches.keys){
     function n(count, one, many){ return count + ' ' + (count === 1 ? one : many); }
     var line = 'Imported ' + n(counts.sessions.inserted, 'session', 'sessions') + ' · ' + n(counts.races.inserted, 'race', 'races') + ' · ' +
       counts.plan.inserted + ' planned · ' + n(counts.phases.inserted, 'phase block', 'phase blocks') + '.';
-    var present = counts.sessions.present + counts.races.present + counts.plan.present + counts.phases.present;
+    var present = 0, differs = 0, skippedN = 0;
+    IMPORT_KINDS.forEach(function(k){ present += counts[k].present; differs += counts[k].differs; skippedN += counts[k].skipped; });
     if(present){ line += ' ' + present + ' already there.'; }
-    var skippedN = counts.sessions.skipped + counts.races.skipped + counts.plan.skipped + counts.phases.skipped;
+    if(differs){ line += ' ' + differs + ' differed from the Sheet’s copy and ' + (differs === 1 ? 'was' : 'were') + ' left out.'; }
     if(skippedN){
       var why = [];
       IMPORT_ENDPOINTS.forEach(function(ep){
@@ -2035,14 +2148,99 @@ if(window.caches && caches.keys){
     return line;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // DEVICE IMPORT (AC-I7). A device signing in to an account for the first
+  // time holds a cache the account may not have: check-ins made while signed
+  // out, a phase plan only this device ever had. Its first read must not
+  // replace that cache. So until the flag below says the owner has decided,
+  // every read is held and the device's rows are compared with the account's
+  // by id. Nothing to add: the flag is set silently. Something to add: the
+  // import dialog opens with only the "this device" source, and no cache on
+  // the device is replaced until the owner chooses Add or Discard. Discard
+  // deletes nothing itself: the cache is replaced by the next read.
+  // ═══════════════════════════════════════════════════════════════
+  var DEVICE_KEY = 'triMomentumDeviceImported_sb_v1';   // value = the auth user id
+  function authUserId(){ return (authSession && authSession.user && authSession.user.id) || ''; }
+  // Without storage there is no cache to protect, and nowhere to remember a choice.
+  function deviceDecided(){
+    if(!storageOk){ return true; }
+    try{ var u = authUserId(); return !!u && window.localStorage.getItem(DEVICE_KEY) === u; } catch(e){ return true; }
+  }
+  function markDeviceDecided(){
+    if(!storageOk){ return; }
+    try{ window.localStorage.setItem(DEVICE_KEY, authUserId()); } catch(e){ console.warn('TRI Momentum: could not record the device import choice.', e); }
+    setDeviceHeld(false);
+  }
+  var deviceHeld = false;          // synced, undecided, and this device has rows the account lacks
+  var deviceDialogShown = false;   // opened once this page load; a Cancel is not asked again until a reload
+  var deviceCheckFlight = null;
+  function setDeviceHeld(v){
+    if(deviceHeld === v){ return; }
+    deviceHeld = v;
+    renderAccountLine();
+  }
+  // Resolves true when the device is decided (a read may go ahead), false when
+  // a choice is pending or the check could not complete (try again later).
+  function ensureDeviceCheck(){
+    if(!isSynced()){ return Promise.resolve(false); }
+    if(deviceDecided()){ return Promise.resolve(true); }
+    if(deviceCheckFlight){ return deviceCheckFlight; }
+    var ep = syncModeEpoch;
+    deviceCheckFlight = flushOutbox().then(function(){ return readServerIds(); }).then(function(r){
+      if(ep !== syncModeEpoch || !isSynced()){ return false; }
+      if(r && r.fail){ readFailed('your account', r.fail); return false; }
+      return importCompute(null, r.ids).then(function(planned){
+        if(ep !== syncModeEpoch || !isSynced()){ return false; }
+        if(!importHasNew(planned)){ markDeviceDecided(); return true; }
+        setDeviceHeld(true);
+        if(!deviceDialogShown){ deviceDialogShown = true; openImportDialog('device'); }
+        return false;
+      });
+    }).catch(function(err){
+      console.warn('TRI Momentum: the device check could not finish; reads stay held.', err);
+      return false;
+    }).then(function(v){ deviceCheckFlight = null; return v; });
+    return deviceCheckFlight;
+  }
+
+  // On any change into `synced` (boot, return from sign-in, import complete):
+  // settle the device import, flush the outbox, run the four refreshes,
+  // repaint what is on screen.
+  function onEnteredSynced(){
+    ensureDeviceCheck().then(function(decided){
+      if(!decided || !isSynced()){ return; }
+      return flushOutbox().then(function(){
+        return Promise.all([refreshLogFromSheet(), refreshRacesFromSheet(), refreshPlanFromSheet(), refreshPhasePlanFromSheet()]);
+      }).then(function(results){
+        if(!isSynced()){ return; }
+        // Each refresh resolves to "the data changed", so nothing is redrawn (and
+        // no keyboard focus is dropped) when the server held what the cache did.
+        // The same hold rules as refreshVisibleViewFromSheet / redrawForNewDay:
+        // not under an open Month phase select, a half-filled race form or an
+        // open plan form.
+        if(!results.some(Boolean)){ return; }
+        repaintCalendarHeld();
+        if(!els.viewDash.hidden){ renderDashboard(); }
+        if(!els.viewTrends.hidden){ renderTrends(); }
+        if(!els.viewRaces.hidden && !raceFormOpen){ renderRaces(); }
+        if(!els.viewPlan.hidden && !planFormOpenFor && !planCopyOpen){ renderPlan(); }
+      });
+    });
+  }
+
   // ── the import dialog ─────────────────────────────────────────
-  var importState = {busy: false, planned: null, done: false, returnTo: 'button'};
+  // mode 'first': the account has no import marker yet; source field, then
+  //   preview, then write + marker.
+  // mode 'device': a later device; no source field; Add / Discard / Not now.
+  var importState = {busy: false, planned: null, done: false, returnTo: 'button', mode: 'first', step: 'source', addr: null};
   function importEls(){
     return {
       dlg: document.getElementById('import-dialog'), h: document.getElementById('import-h'),
       msg: document.getElementById('import-msg'), counts: document.getElementById('import-counts'),
       note: document.getElementById('import-note'), cancel: document.getElementById('import-cancel'),
-      go: document.getElementById('import-go')
+      go: document.getElementById('import-go'), discard: document.getElementById('import-discard'),
+      source: document.getElementById('import-source'), url: document.getElementById('import-url'),
+      err: document.getElementById('import-url-err')
     };
   }
   function importView(opts){
@@ -2057,68 +2255,137 @@ if(window.caches && caches.keys){
     });
     e.counts.hidden = !(opts.rows && opts.rows.length);
     e.note.hidden = !opts.note;
+    if(opts.note){ e.note.textContent = opts.note; }
+    e.source.hidden = !opts.field;
     e.go.hidden = !opts.go;
     if(opts.go){ e.go.textContent = opts.go; }
     e.go.disabled = false;
+    e.discard.hidden = !opts.discard;
+    e.discard.disabled = false;
     e.cancel.hidden = !opts.cancel;
     if(opts.cancel){ e.cancel.textContent = opts.cancel; }
     e.cancel.disabled = false;
     e.dlg.setAttribute('aria-busy', opts.busy ? 'true' : 'false');
     importState.busy = !!opts.busy;
+    importState.step = opts.step || importState.step;
     if(opts.focus === 'go' && opts.go){ e.go.focus(); }
     else if(opts.focus === 'cancel' && opts.cancel){ e.cancel.focus(); }
+    else if(opts.focus === 'url' && opts.field){ e.url.focus(); }
   }
-  function openImportDialog(){
-    if(syncMode !== 'import-pending' || importState.busy){ return; }
+  function importSourceView(msg, focus){
+    importView({
+      msg: msg || 'Your history can come from this device and, if you have it, your Google Sheet.',
+      field: true, go: 'Read', cancel: 'Cancel', step: 'source', focus: focus || 'url'
+    });
+  }
+  function showAddressError(text){
+    var e = importEls();
+    e.err.textContent = text;
+    e.err.hidden = !text;
+    if(text){ e.url.setAttribute('aria-invalid', 'true'); } else { e.url.removeAttribute('aria-invalid'); }
+  }
+  function openImportDialog(mode){
+    mode = mode === 'device' ? 'device' : 'first';
+    if(importState.busy){ return; }
+    if(mode === 'first' && syncMode !== 'import-pending'){ return; }
+    if(mode === 'device' && !(isSynced() && deviceHeld)){ return; }
     var e = importEls();
     if(!e.dlg || typeof e.dlg.showModal !== 'function'){
       console.warn('TRI Momentum: this browser cannot show the import dialog.');
       accountNotice = 'This browser cannot run the import.'; renderAccountLine();
       return;
     }
+    importState.mode = mode;
     importState.planned = null;
-    importView({msg: 'Reading your Google Sheet…', cancel: 'Cancel', busy: true, focus: 'cancel'});
     importState.done = false;
+    importState.addr = null;
+    e.url.value = '';
+    showAddressError('');
+    e.h.textContent = mode === 'device' ? 'Data only on this device' : 'Bring your data across';
     if(!e.dlg.open){ e.dlg.showModal(); }
-    e.cancel.focus();
-    importRead().then(function(planned){
-      importState.planned = planned;
-      var rows = IMPORT_ENDPOINTS.map(function(ep){
-        var k = planned[ep.kind], skip = skipReasons(k.skipped), skipN = 0;
-        Object.keys(k.skipped).forEach(function(w){ skipN += k.skipped[w]; });
-        return [ep.label.charAt(0).toUpperCase() + ep.label.slice(1),
-                (k.rows.length + skipN) + ' found' + (skipN ? ' · ' + skipN + ' skipped (' + skip + ')' : '')];
+    if(mode === 'device'){ importStartRead(); } else { importSourceView(); }
+  }
+  // Validates the address (when one was typed), then reads. The address sits
+  // in importState.addr for the length of the read and is dropped as soon as
+  // the read ends, whatever the outcome.
+  function importStartRead(){
+    var e = importEls(), addr = null;
+    if(importState.mode === 'first'){
+      var raw = e.url.value;
+      if(raw.trim()){
+        var v = parseSheetAddress(raw);
+        if(!v.ok){ showAddressError(v.why); e.url.focus(); return; }
+        addr = v.url;
+      }
+    }
+    showAddressError('');
+    importState.addr = addr;
+    importView({msg: addr ? 'Reading your Google Sheet, this device and your account…' : 'Reading this device and your account…', cancel: 'Cancel', busy: true, step: 'reading', focus: 'cancel'});
+    importRead(importState.addr).then(function(res){
+      importState.addr = null;
+      if(res.sheet){ e.url.value = ''; }
+      importState.planned = res.planned;
+      var rows = IMPORT_KINDS.map(function(kind){
+        var ep = IMPORT_ENDPOINTS.filter(function(x){ return x.kind === kind; })[0], k = res.planned[kind], parts = [];
+        if(res.sheet){ parts.push('Sheet ' + k.sheetFound); }
+        parts.push('This device ' + k.deviceFound);
+        parts.push('Already in your account ' + k.inAccount);
+        parts.push('New ' + k.rows.length);
+        if(k.differs){ parts.push('Differs ' + k.differs); }
+        var skipN = countOf(k.skipped);
+        if(skipN){ parts.push('Skipped ' + skipN + ' (' + skipReasons(k.skipped) + ')'); }
+        return [ep.label.charAt(0).toUpperCase() + ep.label.slice(1), parts.join(' · ')];
       });
-      importView({
-        msg: 'Found this in your Sheet. Nothing has been written yet.', rows: rows,
-        note: true, go: 'Import', cancel: 'Cancel', focus: 'go'
-      });
-      say('Sheet read. Check the counts, then choose Import.');
+      var msg = (res.sheet ? 'Found this in your Sheet and on this device.' : 'Found this on this device.') + ' Nothing has been written yet.';
+      if(res.sheet && res.noPhases){ msg += ' No phase plan in the Sheet; using this device’s.'; }
+      if(importState.mode === 'device'){
+        importView({
+          msg: msg, rows: rows, step: 'preview', go: 'Add to my account', discard: true, cancel: 'Not now', focus: 'go',
+          note: 'Your account does not have these yet. Discard leaves them out of your account and deletes nothing here: this device shows your account’s data instead the next time it is read.'
+        });
+      } else {
+        importView({
+          msg: msg, rows: rows, step: 'preview', go: 'Import', cancel: 'Cancel', focus: 'go',
+          note: res.sheet ? 'Compare the Sheet counts with each tab of your Sheet (its rows, not counting the header row) before you confirm.' : 'Check the counts before you confirm.'
+        });
+      }
+      say('Read. Check the counts, then choose ' + (importState.mode === 'device' ? 'Add or Discard.' : 'Import.'));
     }, function(err){
-      console.warn('TRI Momentum: the Sheet could not be read for import.', err);
-      importView({msg: err.message + ' Nothing was written.', go: 'Try again', cancel: 'Close', focus: 'go'});
-      say('The Sheet could not be read. Nothing was written.');
+      importState.addr = null;
+      console.warn('TRI Momentum: the import could not read its sources.', err);
+      importView({msg: err.message + ' Nothing was written.', go: 'Try again', cancel: 'Close', step: 'error', focus: 'go'});
+      say('The import could not read its sources. Nothing was written.');
     });
   }
   function importConfirm(){
-    var planned = importState.planned;
-    if(!planned || importState.busy || syncMode !== 'import-pending'){ return; }
-    importView({msg: 'Importing… this can take a moment. Please keep this page open.', busy: true});
-    importRun(planned).then(function(counts){
+    var planned = importState.planned, first = importState.mode === 'first';
+    if(!planned || importState.busy || (first ? syncMode !== 'import-pending' : !isSynced())){ return; }
+    importView({msg: 'Importing… this can take a moment. Please keep this page open.', busy: true, step: 'writing'});
+    importRun(planned, first).then(function(counts){
       var report = importReport(counts, planned);
-      importView({msg: report, go: 'Done', focus: 'go'});
+      importView({msg: report, go: 'Done', step: 'done', focus: 'go'});
       importState.done = true;
       say(report);
+      markDeviceDecided();   // this device's rows were part of the import (AC-I6)
       // Straight to synced: the marker is written, so the next boot would do
       // the same. Repaints without a reload (onEnteredSynced).
-      setSyncMode('synced', true);   // silent: the report above is the announcement
+      if(first){ setSyncMode('synced', true); } else { onEnteredSynced(); }
     }, function(err){
       console.warn('TRI Momentum: the import stopped at ' + (err.kind || 'an unknown step') + '.', err);
       var msg = 'Import stopped at ' + (err.kind || 'an unknown step') + '. Nothing is lost — run it again.';
-      importView({msg: msg, go: 'Run it again', cancel: 'Close', focus: 'go'});
+      importView({msg: msg, go: 'Run it again', cancel: 'Close', step: 'preview', focus: 'go'});
       importState.planned = planned;
       say(msg);
     });
+  }
+  // Discard (device mode): the choice is made; this device's rows stay out of
+  // the account, and the next read replaces the cache.
+  function importDiscard(){
+    if(importState.busy || importState.mode !== 'device'){ return; }
+    markDeviceDecided();
+    closeImportDialog(true);
+    say('Discarded. This device will show your account’s data.');
+    onEnteredSynced();
   }
   // Closing is refused while a write is running. Focus goes back to where the
   // dialog came from (the account button), or to the Calendar heading after a
@@ -2130,18 +2397,27 @@ if(window.caches && caches.keys){
     if(e.dlg.open){ e.dlg.close(); }
   }
   function onImportClosed(){
-    var back = document.getElementById(importState.returnTo === 'heading' ? 'calendar-h' : 'cal-account-btn');
+    var e = importEls();
+    var back = document.getElementById(importState.returnTo === 'heading' ? 'calendar-h' : (importState.mode === 'device' && document.getElementById('cal-account-review-btn') ? 'cal-account-review-btn' : 'cal-account-btn'));
+    // Nothing of the address outlives the dialog.
+    importState.addr = null;
+    e.url.value = '';
+    showAddressError('');
     importState.planned = null;
     importState.done = false;
+    importState.step = 'source';
     importState.returnTo = 'button';
     // After a tick: the browser restores focus to the control that opened the
     // dialog as part of closing it, and that must not win over the explicit target.
     if(back && !els.viewCalendar.hidden){ window.setTimeout(function(){ back.focus({preventScroll: true}); }, 0); }
   }
   function onImportGo(){
-    if(importState.done){ closeImportDialog(true); return; }
-    if(importState.planned){ importConfirm(); return; }
-    openImportDialog();   // "Try again" after a failed read
+    if(importState.step === 'done'){ closeImportDialog(true); return; }
+    if(importState.step === 'source'){ importStartRead(); return; }
+    if(importState.step === 'preview' && importState.planned){ importConfirm(); return; }
+    if(importState.step === 'error'){
+      if(importState.mode === 'device'){ importStartRead(); } else { importSourceView(); }
+    }
   }
 
 
@@ -6703,6 +6979,8 @@ if(window.caches && caches.keys){
   // with it, so its button handler is attached there.
   document.getElementById('import-cancel').addEventListener('click', function(){ closeImportDialog(false); });
   document.getElementById('import-go').addEventListener('click', onImportGo);
+  document.getElementById('import-discard').addEventListener('click', importDiscard);
+  document.getElementById('import-url').addEventListener('keydown', function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); onImportGo(); } });
   importEls().dlg.addEventListener('cancel', function(ev){ if(importState.busy){ ev.preventDefault(); } });
   importEls().dlg.addEventListener('close', onImportClosed);
   initBackend();

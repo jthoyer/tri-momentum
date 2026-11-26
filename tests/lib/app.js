@@ -66,18 +66,16 @@ function loadFunctions(names, preamble = '') {
   return new Function(preamble + '\n' + body + '\nreturn {' + exp + '};')();
 }
 
-// Serve the real index.html over http. By default BOTH outside endpoints are
-// blanked: the Sheet URL (so a live Sheet fetch can't overwrite a seeded
-// scenario) and the Supabase publishable key (blank = the app runs local-only
-// and sends nothing to *.supabase.co). A test that exercises the backend opts
-// in with `key` and, for the import, `sheetUrl`, and must then mock those
-// hosts itself — see guardNetwork() below, which aborts anything unmocked.
+// Serve the real index.html over http. By default the Supabase URL and
+// publishable key are blank (the app runs local-only and sends nothing to
+// *.supabase.co). A test that exercises the backend opts in with `key` (the
+// URL then defaults to the mock project's) and must mock those hosts itself — see guardNetwork() below, which aborts anything unmocked.
 // http rather than file:// on purpose: a file:// origin makes localStorage and
 // the service-worker check throw, which buries any real page error in noise.
 //
 // Options:
 //   key        publishable key to put in the page ('' = unconfigured, the default)
-//   sheetUrl   Apps Script URL to put in the page ('' = none, the default)
+//   url        Supabase project URL to put in the page (default: the mock's, when `key` is set)
 //   timeoutMs  replaces SB_TIMEOUT_MS (a hung-request test shouldn't take 15s)
 //   transform  (html) => html, applied last. For discrimination checks only:
 //              breaks the code on a copy served to the browser, never on disk.
@@ -95,7 +93,7 @@ function setConst(html, name, value) {
 async function serveApp(opts) {
   opts = opts || {};
   let html = readIndex();
-  html = setConst(html, 'TRAINING_LOG_WRITE_URL', opts.sheetUrl || '');
+  html = setConst(html, 'SUPABASE_URL', opts.url || (opts.key ? require('./supabase-mock').ORIGIN : ''));
   html = setConst(html, 'SUPABASE_PUBLISHABLE_KEY', opts.key || '');
   if (opts.timeoutMs) {
     if (!/var SB_TIMEOUT_MS = \d+;/.test(html)) throw new Error('SB_TIMEOUT_MS not found');
