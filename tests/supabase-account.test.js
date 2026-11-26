@@ -1,6 +1,6 @@
 'use strict';
 // AC10–AC14: the library is optional, the key decides whether anything happens
-// at all, the splash shows exactly one account line per state, sign-in is PKCE
+// at all, the Calendar shows exactly one account line per state, sign-in is PKCE
 // to the canonical URL, and every mode but "synced" stays local.
 //
 // Isolation: every test() builds its own scenario — a new http server and a new
@@ -37,7 +37,7 @@ describe('AC10 — the library is optional', () => {
       await s.open(); await s.settle();
       assert.strictEqual(await s.accountVisible(), false, 'no account line without the library');
       assert.strictEqual(SUPA(s), 0, 'no request to Supabase');
-      assert.ok((await s.page.textContent('#splash-countdown-race')).includes('Cached Race'), 'the splash painted from the cache');
+      assert.ok((await s.page.textContent('.cal-race')).includes('Cached Race'), 'the Calendar painted from the cache');
       assert.ok(s.warns().some((w) => /library did not load/.test(w)), 'says so once on the console');
       await clean(s);
     } finally { await s.close(); }
@@ -50,7 +50,7 @@ describe('AC10 — the library is optional', () => {
       assert.strictEqual(await s.accountVisible(), false);
       assert.strictEqual(SUPA(s), 0);
       assert.ok(s.warns().some((w) => /could not create the Supabase client/.test(w)));
-      assert.ok((await s.page.textContent('#splash-countdown-race')).includes('Cached Race'));
+      assert.ok((await s.page.textContent('.cal-race')).includes('Cached Race'));
       await clean(s);
     } finally { await s.close(); }
   });
@@ -62,7 +62,7 @@ describe('AC11 — a blank key is unconfigured mode', () => {
     try {
       await s.open(); await s.page.waitForTimeout(400);
       assert.strictEqual(await s.accountVisible(), false);
-      assert.ok((await s.page.textContent('#splash-countdown-race')).includes('Cached Race'));
+      assert.ok((await s.page.textContent('.cal-race')).includes('Cached Race'));
       for (const tab of ['#tab-races', '#tab-dash', '#tab-flow']) { await s.page.click(tab); await s.page.waitForTimeout(150); }
       await s.page.reload(); await s.page.waitForTimeout(300);
       assert.deepStrictEqual(s.guard.blocked, [], 'a blank key sends nothing to *.supabase.co or script.google.com');
@@ -88,36 +88,37 @@ const STATES = {
 
 describe('AC12 — the account line, per state, at 320px', () => {
   for (const [name, st] of Object.entries(STATES)) {
-    test(name + ': exactly one line, a real 44px button, a visible white focus ring, contrast ≥ 4.5:1', async (t) => {
+    test(name + ': exactly one line, a real 44px button, a visible --blue focus ring, contrast ≥ 4.5:1', async (t) => {
       const s = await scenario(browser, Object.assign({ viewport: { width: 320, height: 640 } }, st.make()));
       try {
         await s.open(); await s.settle(600);
-        assert.strictEqual(await s.page.$$eval('.splash-account-line', (n) => n.length), 1, 'exactly one account line');
+        assert.strictEqual(await s.page.$$eval('.cal-account-line', (n) => n.length), 1, 'exactly one account line');
         assert.strictEqual(await s.accountText(), st.line);
-        const btn = await s.page.$('#splash-account-btn');
+        const btn = await s.page.$('#cal-account-btn');
         assert.strictEqual(await btn.evaluate((n) => n.tagName + ':' + n.type), 'BUTTON:button', 'a real <button type=button>');
         assert.strictEqual((await btn.textContent()).trim(), st.btn);
         const box = await btn.boundingBox();
         assert.ok(box.height >= 44 && box.width >= 44, 'tap target is ' + box.width + 'x' + box.height);
 
-        // Keyboard: Tab reaches it, and it carries the splash's white ring.
+        // Keyboard: Tab reaches it (it is the last block of the Calendar, so
+        // many stops come first), and it carries the global --blue ring.
         let reached = false;
-        for (let i = 0; i < 12 && !reached; i++) {
+        for (let i = 0; i < 120 && !reached; i++) {
           await s.page.keyboard.press('Tab');
-          reached = await s.page.evaluate(() => document.activeElement && document.activeElement.id === 'splash-account-btn');
+          reached = await s.page.evaluate(() => document.activeElement && document.activeElement.id === 'cal-account-btn');
         }
         assert.ok(reached, 'Tab reaches the account button');
         const ring = await btn.evaluate((n) => { const c = getComputedStyle(n); return { w: c.outlineWidth, st: c.outlineStyle, col: c.outlineColor }; });
-        assert.strictEqual(ring.st, 'solid'); assert.strictEqual(ring.w, '3px'); assert.strictEqual(ring.col, 'rgb(255, 255, 255)');
+        assert.strictEqual(ring.st, 'solid'); assert.strictEqual(ring.w, '3px'); assert.strictEqual(ring.col, 'rgb(0, 34, 255)', 'the global --blue ring');
 
         // Contrast, against the composited background as rendered.
         const c = await s.page.evaluate(() => {
           const g = (sel) => getComputedStyle(document.querySelector(sel));
-          return { page: g('#view-splash').backgroundColor, card: g('#splash-account').backgroundColor, line: g('#splash-account-line').color, btnBg: g('#splash-account-btn').backgroundColor, btnFg: g('#splash-account-btn').color };
+          return { page: getComputedStyle(document.body).backgroundColor, card: g('#cal-account').backgroundColor, line: g('#cal-account-line').color, btnBg: g('#cal-account-btn').backgroundColor, btnFg: g('#cal-account-btn').color };
         });
         const lineRatio = ratioOf(c.line, c.page, c.card);
         const btnRatio = ratioOf(c.btnFg, c.page, c.card, c.btnBg);
-        const ringRatio = ratioOf('rgb(255,255,255)', c.page, c.card);
+        const ringRatio = ratioOf(ring.col, c.page, c.card);
         t.diagnostic(name + ': line ' + lineRatio.toFixed(2) + ':1, button text ' + btnRatio.toFixed(2) + ':1, ring ' + ringRatio.toFixed(2) + ':1');
         assert.ok(lineRatio >= 4.5, 'line text contrast ' + lineRatio);
         assert.ok(btnRatio >= 4.5, 'button text contrast ' + btnRatio);
@@ -129,15 +130,31 @@ describe('AC12 — the account line, per state, at 320px', () => {
     });
   }
 
-  test('the account line sits below the Today card (the card is inserted before it)', async () => {
+  test('the account line is the LAST block of the Calendar, in Week and in Month (spec Q1 default)', async () => {
     const today = new Date(); const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const backend = new Backend({ imported: true }).seed('plan_sessions', [{ id: 'p1', plan_date: iso(today), disc: 'swim', title: 'Squad', intensity: 'easy', duration: 45, is_key: false, notes: '', phase: 'base' }]);
     const s = await scenario(browser, { backend, signedIn: true });
     try {
       await s.open(); await s.settle(600);
-      const order = await s.page.evaluate(() => Array.from(document.getElementById('view-splash').children).map((n) => n.id || n.className));
-      assert.ok(order.indexOf('splash-today') > -1, 'a Today card is on the splash');
-      assert.ok(order.indexOf('splash-today') < order.indexOf('splash-account'), 'order: ' + order.join(' > '));
+      const last = () => s.page.evaluate(() => { const k = document.getElementById('view-calendar').children; return k[k.length - 1].id; });
+      assert.strictEqual(await last(), 'cal-account', 'Week');
+      assert.ok(await s.page.$('.cal-card'), 'a planned card is on the Calendar above it');
+      await s.page.click('#cal-tab-month'); await s.page.waitForTimeout(200);
+      assert.strictEqual(await last(), 'cal-account', 'Month');
+      assert.strictEqual(await s.page.$$eval('#cal-account', (n) => n.length), 1, 'exactly one in Month too');
+    } finally { await s.close(); }
+  });
+
+  test('a mode change updates the line IN PLACE: the same node, keyboard focus kept, no Calendar rebuild', async () => {
+    const s = await scenario(browser, { backend: new Backend({ imported: true }), signedIn: true });
+    try {
+      await s.open(); await s.settle(600);
+      await s.page.focus('#cal-account-btn');
+      await s.page.evaluate(() => { window.__node = document.getElementById('cal-account-btn'); window.__root = document.querySelector('.cal-title'); });
+      await s.page.keyboard.press('Enter'); await s.page.waitForTimeout(500);   // Sign out: synced -> signed-out
+      assert.ok((await s.accountText()).startsWith('Not signed in'));
+      assert.strictEqual(await s.page.evaluate(() => document.getElementById('cal-account-btn') === window.__node && document.activeElement === window.__node), true, 'same button, still focused');
+      assert.strictEqual(await s.page.evaluate(() => document.querySelector('.cal-title') === window.__root), true, 'the Calendar was not rebuilt');
     } finally { await s.close(); }
   });
 
@@ -147,20 +164,19 @@ describe('AC12 — the account line, per state, at 320px', () => {
     try {
       await s.open(); await s.settle(600);
       assert.ok((await s.accountText()).includes(evil), 'shown literally');
-      assert.strictEqual(await s.page.$$eval('#splash-account img', (n) => n.length), 0);
+      assert.strictEqual(await s.page.$$eval('#cal-account img', (n) => n.length), 0);
       assert.strictEqual(await s.page.evaluate(() => window.__xss), undefined);
       await clean(s);
     } finally { await s.close(); }
   });
 
-  test('state changes are announced once each, via the splash live region (the app-main one is hidden)', async () => {
+  test('state changes are announced once each, through the app\'s one live region', async () => {
     const s = await scenario(browser, { backend: new Backend({ allowed: false }), signedIn: true });
     try {
       await s.open(); await s.settle(600);
       assert.deepStrictEqual(await s.live(), ['This Google account isn’t set up for TRI Momentum.'], 'announced exactly once, history not final value');
-      // And it is the splash region, which is visible, that carries it.
-      assert.strictEqual(await s.page.$eval('#live-splash', (n) => n.textContent), 'This Google account isn’t set up for TRI Momentum.');
-      await s.page.click('#splash-account-btn'); await s.page.waitForTimeout(400);
+      assert.strictEqual(await s.page.$eval('#live', (n) => n.textContent), 'This Google account isn’t set up for TRI Momentum.');
+      await s.page.click('#cal-account-btn'); await s.page.waitForTimeout(400);
       const live = await s.live();
       assert.deepStrictEqual(live, ['This Google account isn’t set up for TRI Momentum.', 'Signed out. Check-ins wait on this device.']);
     } finally { await s.close(); }
@@ -178,7 +194,7 @@ describe('AC13 — sign-in (PKCE, canonical redirect) and sign-out', () => {
     try {
       await s.open(); await s.settle(400);
       // Keyboard, not click: Enter on the focused real button.
-      await s.page.focus('#splash-account-btn');
+      await s.page.focus('#cal-account-btn');
       await Promise.all([s.page.waitForRequest((r) => r.url().includes('/auth/v1/authorize')).catch(() => null), s.page.keyboard.press('Enter')]);
       await s.page.waitForTimeout(300);
       const auth = backend.requests.filter((r) => r.path === '/auth/v1/authorize');
@@ -199,7 +215,7 @@ describe('AC13 — sign-in (PKCE, canonical redirect) and sign-out', () => {
     const s = await scenario(browser, { backend, signedIn: false });
     try {
       await s.open(); await s.settle(400);
-      await s.page.click('#splash-account-btn'); await s.page.waitForTimeout(400);
+      await s.page.click('#cal-account-btn'); await s.page.waitForTimeout(400);
       // The browser comes back from Google with a code. (Same context, so the PKCE verifier the click stored is still there.)
       await s.page.goto(s.server.origin + '?code=auth-code-123&keep=1');
       await s.settle(500);
@@ -241,7 +257,7 @@ describe('AC13 — sign-in (PKCE, canonical redirect) and sign-out', () => {
       const racesBefore = await s.ls('triMomentumRaces_v1');
       assert.ok(racesBefore.includes('Server Race'));
       const before = backend.requests.length;
-      await s.page.click('#splash-account-btn'); await s.page.waitForTimeout(500);
+      await s.page.click('#cal-account-btn'); await s.page.waitForTimeout(500);
       assert.strictEqual(await s.ls(STORAGE_KEY), null, 'the Supabase session is gone from storage');
       assert.ok((await s.accountText()).startsWith('Not signed in'));
       assert.strictEqual(await s.ls('triMomentumRaces_v1'), racesBefore, 'the cache is kept (Q1)');

@@ -2,11 +2,12 @@
 // Drives the real check-in wizard to a saved session by answering every
 // question with its first option, through the real radio inputs. Starts from
 // whatever view is showing; ends on the dashboard the app switches to after Save.
+// Check-in opens on the Calendar (decision 50): the way in is its "Log an unplanned session".
 async function completeCheckIn(page, opts) {
   opts = opts || {};
   await page.click('#tab-flow');
   await page.waitForTimeout(200);
-  // A planned session today would put a landing screen first; take the manual way in.
+  // The Calendar is the first screen; take the manual way in.
   const unplanned = await page.$('text=Log an unplanned session');
   if (unplanned) { await unplanned.click(); await page.waitForTimeout(200); }
   for (let i = 0; i < 60; i++) {

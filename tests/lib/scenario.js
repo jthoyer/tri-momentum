@@ -73,7 +73,7 @@ async function scenario(browser, opts) {
     // Record every announcement the app makes (assert the history, not the last value).
     window.__live = [];
     document.addEventListener('DOMContentLoaded', () => {
-      ['live', 'live-splash'].forEach((id) => {
+      ['live'].forEach((id) => {
         const n = document.getElementById(id);
         if (n) new MutationObserver(() => { if (n.textContent) window.__live.push(n.textContent); }).observe(n, { childList: true, characterData: true, subtree: true });
       });
@@ -96,8 +96,9 @@ async function scenario(browser, opts) {
     ls: (k) => page.evaluate((key) => window.localStorage.getItem(key), k),
     lsJson: async (k) => JSON.parse(await page.evaluate((key) => window.localStorage.getItem(key), k)),
     // Wait for the app's own mode value, read from the account line it renders.
-    accountText: () => page.$eval('#splash-account-line', (n) => n.textContent).catch(() => null),
-    accountVisible: () => page.$eval('#splash-account', (n) => !n.hidden).catch(() => false),
+    accountText: () => page.$eval('#cal-account-line', (n) => n.textContent).catch(() => null),
+    // Present in the Calendar and the Calendar on screen (the line only exists there).
+    accountVisible: () => page.$eval('#cal-account', (n) => n.offsetParent !== null).catch(() => false),
     async open() {
       await page.goto(server.origin);
       return s;

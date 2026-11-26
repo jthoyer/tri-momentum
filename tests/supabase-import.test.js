@@ -54,7 +54,7 @@ async function clean(s) {
 const pending = (extra) => Object.assign({ backend: new Backend(), signedIn: true, sheet: SHEET }, extra || {});
 async function openDialog(s) {
   if (!s.opened) { await s.open(); s.opened = true; await s.settle(500); }
-  await s.page.click('#splash-account-btn');
+  await s.page.click('#cal-account-btn');
   await s.page.waitForSelector('#import-dialog[open] #import-go:not([hidden])');
 }
 async function runImport(s) {
@@ -75,7 +75,7 @@ describe('AC20 — offered only in import-pending mode', () => {
       const s = await scenario(browser, Object.assign({ sheet: SHEET }, opts));
       try {
         await s.open(); await s.settle(500);
-        assert.notStrictEqual((await s.page.textContent('#splash-account-btn')).trim(), 'Import from Sheet');
+        assert.notStrictEqual((await s.page.textContent('#cal-account-btn')).trim(), 'Import from Sheet');
         assert.strictEqual(await s.page.$eval('#import-dialog', (d) => d.open), false);
         assert.deepStrictEqual(s.sheet.requests, []);
         await clean(s);
@@ -101,7 +101,7 @@ describe('AC20 — preview, confirmation, order, report', () => {
       // Esc: cancelled, still nothing written, focus back on the button that opened it.
       await s.page.keyboard.press('Escape');
       assert.strictEqual(await s.page.$eval('#import-dialog', (d) => d.open), false);
-      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'splash-account-btn');
+      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'cal-account-btn');
       assert.strictEqual(rowsWritten(s.backend), 0);
       assert.ok((await s.accountText()).startsWith('Bring your history across'), 'still import-pending');
       await clean(s);
@@ -137,7 +137,9 @@ describe('AC20 — preview, confirmation, order, report', () => {
       assert.strictEqual(await s.page.evaluate(() => window.__noReload), 'same document');
       assert.strictEqual((await s.lsJson('triMomentumLog_v1')).length, 3);
       assert.ok((await s.ls('triMomentumRaces_v1')).includes('Sam Lee Tri'));
-      // announced via say(), once
+      // announced via say(), once. say() writes the text 20ms after clearing the
+      // region, so wait for the announcement before reading the history.
+      await s.page.waitForFunction(() => window.__live.some((m) => /^Imported/.test(m)));
       const live = await s.live();
       assert.strictEqual(live.filter((m) => /^Imported 3 sessions/.test(m)).length, 1, 'the result was announced once: ' + JSON.stringify(live));
       // only GETs ever went to the Sheet
@@ -146,7 +148,7 @@ describe('AC20 — preview, confirmation, order, report', () => {
       await s.page.click('#import-go');
       await s.page.waitForTimeout(100);
       assert.strictEqual(await s.page.$eval('#import-dialog', (d) => d.open), false);
-      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'splash-h');
+      assert.strictEqual(await s.page.evaluate(() => document.activeElement.id), 'calendar-h');
       await clean(s);
     } finally { await s.close(); }
   });
@@ -161,7 +163,7 @@ describe('AC20 — preview, confirmation, order, report', () => {
       // The owner deletes their sheet_import row in the dashboard and reloads.
       b.tables.sheet_import = [];
       await s.page.reload(); await s.settle(500);
-      await s.page.click('#splash-account-btn');
+      await s.page.click('#cal-account-btn');
       await s.page.waitForSelector('#import-dialog[open] #import-go:not([hidden])');
       await s.page.click('#import-go');
       await s.page.waitForFunction(() => /^Imported/.test(document.getElementById('import-msg').textContent), null, { timeout: 15000 });
@@ -242,7 +244,7 @@ describe('AC20 — a malformed envelope aborts with nothing written', () => {
           const body = typeof spec.body === 'string' ? spec.body : JSON.parse(JSON.stringify(spec.body).replace('__K__', key));
           s.sheet.overrides[query] = { status: spec.status, body };
           await s.open(); await s.settle(400);
-          await s.page.click('#splash-account-btn');
+          await s.page.click('#cal-account-btn');
           await s.page.waitForFunction(() => /Nothing was written/.test(document.getElementById('import-msg').textContent), null, { timeout: 10000 });
           const m = await msg(s);
           assert.ok(m.includes(query), 'the message names the endpoint (' + query + '): ' + m);
@@ -260,7 +262,7 @@ describe('AC20 — a malformed envelope aborts with nothing written', () => {
     const s = await scenario(browser, { backend: new Backend(), signedIn: true });   // sheet: none → TRAINING_LOG_WRITE_URL is ''
     try {
       await s.open(); await s.settle(400);
-      await s.page.click('#splash-account-btn');
+      await s.page.click('#cal-account-btn');
       await s.page.waitForFunction(() => /Nothing was written/.test(document.getElementById('import-msg').textContent));
       assert.match(await msg(s), /No Sheet address/);
       assert.strictEqual(s.backend.requests.filter((r) => r.method !== 'GET').length, 0);
@@ -280,7 +282,7 @@ describe('AC12 — the import dialog is operable and readable', () => {
       assert.strictEqual(dlg.modal, true, 'a modal dialog'); assert.strictEqual(dlg.label, 'Import from your Google Sheet');
       // Tab around: a modal dialog makes everything behind it inert, so focus is
       // either on one of the dialog's own controls or has left the page for the
-      // browser's chrome (activeElement = body). It never lands on the splash,
+      // browser's chrome (activeElement = body). It never lands on the Calendar,
       // the account button or the tab bar behind the scrim.
       for (let i = 0; i < 7; i++) {
         await s.page.keyboard.press('Tab');

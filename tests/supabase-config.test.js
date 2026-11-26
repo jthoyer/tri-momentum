@@ -13,7 +13,7 @@ const { ROOT, readIndex, inlineScript, extractFunction } = require('./lib/app');
 
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const html = readIndex();
-const BASE_COMMIT = '58ea18c'; // the last commit before storage moved to Supabase
+const BASE_COMMIT = 'f3c19c9'; // main as it was when the Supabase work was merged onto it (carries calendarSpike_); only comments may differ
 
 describe('vendored supabase-js (AC10)', () => {
   const dir = path.join(ROOT, 'vendor', 'supabase-js');

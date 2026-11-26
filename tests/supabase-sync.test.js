@@ -89,14 +89,17 @@ describe('AC15 — synced reads', () => {
     } finally { await s.close(); }
   });
 
-  test('boot reads all four; opening Races / This week / Plan and visibilitychange trigger the same refreshes as before', async () => {
+  test('boot reads all four; opening Races / the Calendar / This week and visibilitychange trigger the same refreshes the Sheet reads did on main', async () => {
     const b = new Backend({ imported: true });
     const s = await scenario(browser, synced(b, { localStorage: { triMomentumPhasePlan_v1: [{ id: 'ph', from: '2020-01-01', phase: 'base' }] } }));
     try {
       await s.open(); await s.settle(500);
       for (const t of READ_TABLES) assert.ok(reads(b, t).length >= 1, 'boot read ' + t);
       const tablesAfter = async (fn) => { const n = b.requests.length; await fn(); await s.settle(400); return Array.from(new Set(b.requests.slice(n).filter((r) => r.rest && r.method === 'GET').map((r) => r.table))).sort(); };
-      assert.deepStrictEqual(await tablesAfter(() => s.page.click('#tab-races')), ['phase_blocks', 'races']);
+      // Races no longer carries the month calendar (decision 50), so it reads only races.
+      assert.deepStrictEqual(await tablesAfter(() => s.page.click('#tab-races')), ['races']);
+      // The Calendar reads all four: the log, the plan, the races (strip, Month markers) and the phase plan.
+      assert.deepStrictEqual(await tablesAfter(() => s.page.click('#tab-flow')), ['phase_blocks', 'plan_sessions', 'races', 'session_checkins']);
       assert.deepStrictEqual(await tablesAfter(() => s.page.click('#tab-dash')), ['phase_blocks', 'session_checkins']);
       assert.deepStrictEqual(await tablesAfter(() => s.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))), ['phase_blocks', 'session_checkins']);
       await clean(s);
