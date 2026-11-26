@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only token. Pinning each action to a commit SHA is a deferred follow-up.
+permissions:
+  contents: read
+
 # A second push to a PR cancels the run still going for the first.
 concurrency:
   group: ci-${{ github.ref }}

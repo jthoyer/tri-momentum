@@ -1,8 +1,8 @@
 'use strict';
 // TM-015 AC-W1..W3. A static check of .github/workflows/keep-alive.yml, plus a run of its
 // shell step with a stub `curl` (no network, ever). The workflow must hold no project host,
-// no key and no project ref: the URL and the publishable key come from repository variables
-// (the key may also come from a secret). There is no YAML parser in this repo, so the file is
+// no key and no project ref: the URL comes from a repository variable and the publishable key
+// from a repository SECRET only (variables are echoed in run logs). There is no YAML parser in this repo, so the file is
 // read as text; checkWorkflow() is also run on planted bad copies to prove each rule can fail.
 
 const { test } = require('node:test');
@@ -55,16 +55,14 @@ function checkWorkflow(text) {
     if (m) bad.push('contains a key-shaped string: ' + m[0].slice(0, 12) + '...');
   }
 
-  // URL and key come from repository variables or secrets only
+  // URL from a repository variable; key from a repository secret ONLY (never a variable)
   const env = (name) => (body.match(new RegExp('^\\s*' + name + ':\\s*(.*)$', 'm')) || [])[1];
   if ((env('SUPABASE_URL') || '').trim() !== '${{ vars.SUPABASE_URL }}') bad.push('SUPABASE_URL must be exactly ${{ vars.SUPABASE_URL }}');
-  const k = (env('SUPABASE_KEY') || '').trim();
-  if (k !== '${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}' && k !== '${{ secrets.SUPABASE_KEY }}' && k !== '${{ vars.SUPABASE_KEY }}') {
-    bad.push('SUPABASE_KEY must come from vars.SUPABASE_KEY and/or secrets.SUPABASE_KEY');
-  }
+  if ((env('SUPABASE_KEY') || '').trim() !== '${{ secrets.SUPABASE_KEY }}') bad.push('SUPABASE_KEY must be exactly ${{ secrets.SUPABASE_KEY }}');
   for (const m of body.matchAll(/\$\{\{([^}]*)\}\}/g)) {
-    if (!/^\s*(vars|secrets)\.[A-Z_]+(\s*\|\|\s*(vars|secrets)\.[A-Z_]+)?\s*$/.test(m[1])) bad.push('unexpected expression: ' + m[0]);
+    if (!/^\s*(vars\.SUPABASE_URL|secrets\.SUPABASE_KEY)\s*$/.test(m[1])) bad.push('unexpected expression: ' + m[0]);
   }
+  if (/vars\.SUPABASE_KEY/.test(text)) bad.push('the key must not be read from vars.SUPABASE_KEY (variables show in run logs)');
 
   // fails cleanly: unset checks and URL shape check, each with a message on stderr and exit 1
   for (const v of ['SUPABASE_URL', 'SUPABASE_KEY']) {
@@ -107,7 +105,7 @@ test('the schedule is exactly one cron, every 3 days', () => {
 const PLANTS = [
   ['hardcoded project host', (t) => t.replace('${{ vars.SUPABASE_URL }}', 'https://abcdefghijklmnopqrst.supabase.co'), /supabase\.co hostname/],
   ['host hidden in a comment', (t) => '# see https://abcdefghijklmnopqrst.supabase.co\n' + t, /supabase\.co hostname/],
-  ['publishable key literal', (t) => t.replace('${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}', 'sb_' + 'publishable_AAAAAAAAAAAAAAAAAAAA'), /key-shaped/],
+  ['publishable key literal', (t) => t.replace('${{ secrets.SUPABASE_KEY }}', 'sb_' + 'publishable_AAAAAAAAAAAAAAAAAAAA'), /key-shaped/],
   ['JWT literal in a comment', (t) => '# eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.c2lnbmF0dXJl\n' + t, /key-shaped/],
   ['long token literal', (t) => t + '# ' + 'A'.repeat(48) + '\n', /key-shaped/],
   ['schedule every 4 days', (t) => t.replace('*/3', '*/4'), /N <= 3/],
@@ -116,9 +114,12 @@ const PLANTS = [
   ['no schedule', (t) => t.replace(/^\s*schedule:\n\s*- cron:.*\n/m, ''), /no cron/],
   ['permissions widened', (t) => t.replace('permissions: {}', 'permissions:\n  contents: read'), /permissions must be/],
   ['URL from a literal env value', (t) => t.replace('${{ vars.SUPABASE_URL }}', 'http://localhost'), /SUPABASE_URL must be exactly/],
-  ['key from an unrelated expression', (t) => t.replace('${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}', '${{ github.token }}'), /SUPABASE_KEY must come from|unexpected expression/],
+  ['key from an unrelated expression', (t) => t.replace('${{ secrets.SUPABASE_KEY }}', '${{ github.token }}'), /SUPABASE_KEY must be exactly|unexpected expression/],
+  ['key read from vars only', (t) => t.replace('${{ secrets.SUPABASE_KEY }}', '${{ vars.SUPABASE_KEY }}'), /must not be read from vars|SUPABASE_KEY must be exactly/],
+  ['key read from vars with a secrets fallback', (t) => t.replace('${{ secrets.SUPABASE_KEY }}', '${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}'), /must not be read from vars/],
+  ['a vars.SUPABASE_KEY use hidden in a comment', (t) => '# fallback: ${{ vars.SUPABASE_KEY }}\n' + t, /must not be read from vars/],
   ['unset-URL guard removed', (t) => t.replace(/if \[ -z "\$SUPABASE_URL" \]; then[\s\S]*?fi\n\s*if \[ -z "\$SUPABASE_KEY"/, 'if [ -z "$SUPABASE_KEY"'), /when SUPABASE_URL is unset/],
-  ['unset-key message not on stderr', (t) => t.replace('SUPABASE_KEY is not set as a repository variable or secret." >&2', 'SUPABASE_KEY is not set as a repository variable or secret."'), /when SUPABASE_KEY is unset/],
+  ['unset-key message not on stderr', (t) => t.replace('SUPABASE_KEY is not set as a repository secret." >&2', 'SUPABASE_KEY is not set as a repository secret."'), /when SUPABASE_KEY is unset/],
   ['URL shape check removed', (t) => t.replace(/grep -Eq '[^']*'/, 'grep -Eq "."'), /matches \^https/],
   ['5xx no longer fails', (t) => t.replace('-ge 500', '-ge 600'), /5xx/],
   ['reads a table', (t) => t.replace('/rest/v1/ /auth/v1/health', '/rest/v1/ /rest/v1/session_checkins'), /exactly \/rest\/v1\/ and|reads a table/],

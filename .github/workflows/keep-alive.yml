@@ -2,11 +2,12 @@
 # request to the project's public API every three days so it never goes quiet.
 # Adapted from the BalanceTRI-app keep-alive workflow.
 #
-# Nothing project-specific is committed here. Set two repository variables
-# (Settings > Secrets and variables > Actions > Variables):
-#   SUPABASE_URL  the project URL, https://<20 lowercase letters or digits>.supabase.co
-#   SUPABASE_KEY  the project's PUBLISHABLE key (a public value). A repository secret of
-#                 the same name is also accepted.
+# Nothing project-specific is committed here. Set one repository variable and one secret
+# (Settings > Secrets and variables > Actions > Variables / Secrets):
+#   SUPABASE_URL  (repository VARIABLE) the project URL,
+#                 https://<20 lowercase letters or digits>.supabase.co
+#   SUPABASE_KEY  (repository SECRET, never a variable: variables are echoed in run logs)
+#                 the project's PUBLISHABLE key.
 # The job reads no table: it only calls the API gateway (/rest/v1/) and the auth health
 # endpoint (/auth/v1/health). Any answer counts as traffic, so it fails only when a
 # variable is missing or malformed, on a network error, or on a 5xx response.
@@ -31,14 +32,14 @@ jobs:
       - name: Ping the Supabase API
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ vars.SUPABASE_KEY || secrets.SUPABASE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           if [ -z "$SUPABASE_URL" ]; then
             echo "SUPABASE_URL is not set as a repository variable." >&2
             exit 1
           fi
           if [ -z "$SUPABASE_KEY" ]; then
-            echo "SUPABASE_KEY is not set as a repository variable or secret." >&2
+            echo "SUPABASE_KEY is not set as a repository secret." >&2
             exit 1
           fi
           if ! printf '%s' "$SUPABASE_URL" | grep -Eq '^https://[a-z0-9]{20}\.supabase\.co$'; then
