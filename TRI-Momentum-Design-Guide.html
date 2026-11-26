@@ -258,7 +258,8 @@ section.doc:last-of-type{border-bottom:none}
 .pv-import-msg{margin-top:8px; font-family:'Outfit',sans-serif; font-size:15px; line-height:1.5; color:#4B5278}
 .pv-import-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:10px 0; border-top:1px solid rgba(14,16,32,.08); font-family:'Outfit',sans-serif; font-size:15px; color:#0E1020}
 .pv-import-row span:last-child{font-size:14px; color:#4B5278}
-.pv-import-actions{display:flex; gap:10px; margin-top:18px}
+.pv-import-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+.pv-import-actions .pv-btn{width:auto; flex:1 1 auto}
 .pv-splash-prev{margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,.22)}
 .pv-splash-prev-nav{margin-top:2px; display:flex; align-items:center; justify-content:center; gap:10px}
 .pv-splash-prev-nav-btn{flex:none; width:44px; height:44px; padding:0; border-radius:50%; background:rgba(255,255,255,.14); border:none; font-family:'Outfit',sans-serif; font-size:19px; font-weight:600; line-height:44px; color:#fff; text-align:center}
@@ -688,8 +689,8 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
               <p class="pv-import-error" role="presentation">That address is not an Apps Script web-app address. Nothing was read.</p>
             </div>
             <div class="pv-import-actions">
-              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; flex:none; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Cancel</span>
-              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center; flex:1">Read</span>
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Cancel</span>
+              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center">Read</span>
             </div>
           </div>
           <div class="pv-import">
@@ -703,8 +704,8 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
             </div>
             <p class="pv-import-msg" style="font-size:14px; margin-top:12px">Compare these counts with each tab of your Sheet (its rows, not counting the header row) before you confirm.</p>
             <div class="pv-import-actions">
-              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; flex:none; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Cancel</span>
-              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center; flex:1">Import</span>
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Cancel</span>
+              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center">Import</span>
             </div>
           </div>
           <div class="pv-import">
@@ -715,9 +716,9 @@ footer a{color:var(--blue); text-decoration:none; border-bottom:1px solid color-
               <div class="pv-import-row"><span>Phase blocks</span><span>9 on this device &middot; 9 new</span></div>
             </div>
             <div class="pv-import-actions">
-              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; flex:none; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Not now</span>
-              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; flex:none; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Discard</span>
-              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center; flex:1">Add to my account</span>
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Not now</span>
+              <span class="pv-btn pv-btn-ghost" style="display:inline-flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:10px; border:1px solid rgba(14,16,32,.14)">Discard</span>
+              <span class="pv-btn pv-btn-primary" style="display:inline-flex; align-items:center; justify-content:center">Add to my account</span>
             </div>
           </div>
         </div>
