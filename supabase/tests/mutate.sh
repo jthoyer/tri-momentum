@@ -16,6 +16,9 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN=$REPO/tests/run.sh
 S=$(mktemp -d /tmp/mut-XXXXXX); trap 'rm -rf "$S"' EXIT
 chmod 755 "$S"
+# run.sh reads $HERE/../checks/verify.sql, and in a mutation $HERE is $S/t, so the checks need to sit at $S/checks.
+# Without this copy every mutation went red with "verify.sql did not run", which also hid any survivor (M3 included).
+cp -r "$REPO/checks" "$S/checks"
 BAD=0   # set to 1 by a mutation that did not apply, or survived and is not on the expected-survivor list
 EXPECTED_SURVIVORS=" M3 "
 mutate() { # label  file-glob  perl-expression  [tests-dir-mutation: 1]
